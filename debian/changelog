@@ -1,3 +1,12 @@
+nfs-utils (1:1.0.6-3.1) unstable; urgency=HIGH
+
+  * NMU
+  * Ignore SIGPIPE to avoid statd dying when peers close their
+    TCP connection while we're trying to reply to them. 
+    (CAN-2004-1014) Closes: #284971
+
+ -- Joey Hess <joeyh@debian.org>  Wed,  5 Jan 2005 07:39:41 -0500
+
 nfs-utils (1:1.0.6-3) unstable; urgency=medium
 
   * Remove obsolete debconf-related files in debian/rules, because source

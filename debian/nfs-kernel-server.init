@@ -17,17 +17,39 @@ DESC="NFS kernel daemon"
 PREFIX=/usr
 
 # Exit if required binaries are missing.
-[ -x $PREFIX/sbin/rpc.nfsd ] || exit 0
-[ -x $PREFIX/sbin/rpc.mountd ] || exit 0
-[ -x $PREFIX/sbin/exportfs ] || exit 0
+[ -x $PREFIX/sbin/rpc.nfsd    ] || exit 0
+[ -x $PREFIX/sbin/rpc.mountd  ] || exit 0
+[ -x $PREFIX/sbin/exportfs    ] || exit 0
+[ -x $PREFIX/sbin/rpc.svcgssd ] || exit 0
 
 # Read config
 DEFAULTFILE=/etc/default/nfs-kernel-server
 RPCNFSDCOUNT=8
 RPCMOUNTDOPTS=
+NEED_SVCGSSD=yes
+RPCGSSDOPTS=
+RPCSVCGSSDOPTS=
+PROCNFSD_MOUNTPOINT=/proc/fs/nfsd
 if [ -f $DEFAULTFILE ]; then
     . $DEFAULTFILE
 fi
+
+do_modprobe() {
+    modprobe -q "$1" || true
+}
+
+do_mount() {
+    if ! grep -E -qs "$1\$" /proc/filesystems
+    then
+	return 1
+    fi
+    if ! mountpoint -q "$2"
+    then
+	mount -t "$1" "$1" "$2"
+	return
+    fi
+    return 0
+}
 
 # See how we were called.
 case "$1" in
@@ -35,11 +57,21 @@ case "$1" in
 	cd /	# daemons should have root dir as cwd
 	if grep -q '^/' /etc/exports
 	then
+		do_modprobe nfsd
+		do_mount nfsd $PROCNFSD_MOUNTPOINT || NEED_SVCGSSD=no
 		printf "Exporting directories for $DESC..."
 		$PREFIX/sbin/exportfs -r
 		echo "done."
 
 		printf "Starting $DESC:"
+		if [ "$NEED_SVCGSSD" = yes ]
+		then
+		    printf " svcgssd"
+		    start-stop-daemon --start --quiet \
+			    --make-pidfile --pidfile /var/run/rpc.svcgssd.pid \
+			    --exec $PREFIX/sbin/rpc.svcgssd -- $RPCSVCGSSDOPTS
+		fi
+
 		printf " nfsd"
 		start-stop-daemon --start --quiet \
 		    --exec $PREFIX/sbin/rpc.nfsd -- $RPCNFSDCOUNT
@@ -73,6 +105,13 @@ case "$1" in
 	printf "Stopping $DESC: mountd"
 	start-stop-daemon --stop --oknodo --quiet \
 	    --name rpc.mountd --user 0
+	if [ "$NEED_SVCGSSD" = yes ]
+	then
+	    printf " svcgssd"
+	    start-stop-daemon --stop --oknodo --quiet \
+		    --name rpc.svcgssd --user 0
+	    rm -f /var/run/rpc.svcgssd.pid
+	fi
 	printf " nfsd"
 	start-stop-daemon --stop --oknodo --quiet \
 	    --name nfsd --user 0 --signal 2

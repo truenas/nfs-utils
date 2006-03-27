@@ -87,8 +87,8 @@ getexportent(int fromkernel, int fromexports)
 		ee.e_flags &= ~NFSEXP_GATHERED_WRITES;
 	}
 	ee.e_maptype = CLE_MAP_IDENT;
-	ee.e_anonuid = -2;
-	ee.e_anongid = -2;
+	ee.e_anonuid = 65534;
+	ee.e_anongid = 65534;
 	ee.e_squids = NULL;
 	ee.e_sqgids = NULL;
 	ee.e_mountpoint = NULL;
@@ -161,7 +161,7 @@ putexportent(struct exportent *ep)
 
 	fp = efp->x_fp;
 	for (i=0; esc[i]; i++)
-	        if (iscntrl(esc[i]) || esc[i] == '"' || esc[i] == '\\'|| isspace(esc[i]))
+	        if (iscntrl(esc[i]) || esc[i] == '"' || esc[i] == '\\' || esc[i] == '#' || isspace(esc[i]))
 			fprintf(fp, "\\%03o", esc[i]);
 		else
 			fprintf(fp, "%c", esc[i]);
@@ -265,8 +265,8 @@ mkexportent(char *hname, char *path, char *options)
 
 	ee.e_flags = EXPORT_DEFAULT_FLAGS;
 	ee.e_maptype = CLE_MAP_IDENT;
-	ee.e_anonuid = -2;
-	ee.e_anongid = -2;
+	ee.e_anonuid = 65534;
+	ee.e_anongid = 65534;
 	ee.e_squids = NULL;
 	ee.e_sqgids = NULL;
 	ee.e_mountpoint = NULL;

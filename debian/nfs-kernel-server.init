@@ -25,6 +25,7 @@ PREFIX=/usr
 # Read config
 DEFAULTFILE=/etc/default/nfs-kernel-server
 RPCNFSDCOUNT=8
+RPCNFSDPRIORITY=0
 RPCMOUNTDOPTS=
 NEED_SVCGSSD=yes
 RPCGSSDOPTS=
@@ -35,7 +36,10 @@ if [ -f $DEFAULTFILE ]; then
 fi
 
 do_modprobe() {
-    modprobe -q "$1" || true
+    if [ -x /sbin/modprobe ]
+    then
+        modprobe -q "$1" || true
+    fi
 }
 
 do_mount() {
@@ -55,7 +59,7 @@ do_mount() {
 case "$1" in
   start)
 	cd /	# daemons should have root dir as cwd
-	if grep -q '^/' /etc/exports
+	if [ -f /etc/exports ]
 	then
 		do_modprobe nfsd
 		do_mount nfsd $PROCNFSD_MOUNTPOINT || NEED_SVCGSSD=no
@@ -74,6 +78,7 @@ case "$1" in
 
 		printf " nfsd"
 		start-stop-daemon --start --quiet \
+		    --nicelevel $RPCNFSDPRIORITY \
 		    --exec $PREFIX/sbin/rpc.nfsd -- $RPCNFSDCOUNT
 
 		printf " mountd"
@@ -119,6 +124,10 @@ case "$1" in
 
 	printf "Unexporting directories for $DESC..."
 	$PREFIX/sbin/exportfs -au
+	if mountpoint -q /proc/nfs/nfsd
+	then
+	    $PREFIX/sbin/exportfs -f
+	fi
 	echo "done."
 	;;
 

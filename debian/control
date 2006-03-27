@@ -2,13 +2,14 @@ Source: nfs-utils
 Priority: standard
 Section: net
 Maintainer: Anibal Monsalve Salazar <anibal@debian.org>
-Build-Depends: debhelper (>= 4.1.16), libwrap0-dev, libevent-dev, libnfsidmap-dev, libkrb5-dev
-Standards-Version: 3.6.1
+Uploaders: Steinar H. Gunderson <sesse@debian.org>, Daniel Baumann <daniel.baumann@panthera-systems.net>
+Build-Depends: debhelper (>= 5), autoconf2.13, autotools-dev, libwrap0-dev, libevent-dev, libnfsidmap-dev, libkrb5-dev
+Standards-Version: 3.6.2
 
 Package: nfs-kernel-server
 Priority: optional
 Architecture: any
-Depends: nfs-common (>= 1:0.3.3-3), debconf (>= 1.0), sysvinit (>= 2.80-1), ${shlibs:Depends}
+Depends: nfs-common (>= 1:0.3.3-3), sysvinit (>= 2.80-1), ${shlibs:Depends}
 Provides: knfs, nfs-server
 Conflicts: knfs, nfs-server
 Replaces: knfs, nfs-server
@@ -19,10 +20,12 @@ Description: Kernel NFS server support
  and easier to debug than the kernel-mode server.
  .
  Upstream: SourceForge project "nfs", CVS module nfs-utils.
+ .
+  Homepage: http://nfs.sourceforge.net/
 
 Package: nfs-common
 Architecture: any
-Depends: portmap, debconf (>= 1.0), sysvinit (>= 2.80-1), ${shlibs:Depends}
+Depends: portmap, sysvinit (>= 2.80-1), ${shlibs:Depends}
 Provides: nfs-client
 Conflicts: nfs-client
 Replaces: nfs-client
@@ -31,6 +34,8 @@ Description: NFS support files common to client and server
  server.  Programs included: lockd, statd, showmount, and nfsstat.
  .
  Upstream: SourceForge project "nfs", CVS module nfs-utils.
+ .
+  Homepage: http://nfs.sourceforge.net/
 
 Package: nhfsstone
 Priority: extra
@@ -38,5 +43,14 @@ Architecture: any
 Depends: nfs-common, ${shlibs:Depends}
 Replaces: nfs-kernel-server
 Description: NFS benchmark program
+ nhfsstone (pronounced n-f-s-stone, the "h" is silent) is used on a
+ NFS client to generate an artificial load with a particular mix of
+ NFS operations. It reports the average response time of the server
+ in milliseconds per call and the load in calls per second. The
+ program adjusts its calling patterns based on the client's kernel
+ NFS statistics and the elapsed time. Load can be generated over a
+ given time or number of NFS calls.
  .
  Upstream: SourceForge project "nfs", CVS module nfs-utils.
+ .
+  Homepage: http://nfs.sourceforge.net/

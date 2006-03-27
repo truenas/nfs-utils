@@ -1,6 +1,9 @@
 # Number of servers to start up
 RPCNFSDCOUNT=8
 
+# Runtime priority of server (see nice(1))
+RPCNFSDPRIORITY=0
+
 # Options for rpc.mountd
 RPCMOUNTDOPTS=
 

@@ -1,8 +1,7 @@
 #!/usr/bin/make -f
 # Sample debian/rules that uses debhelper. GNU copyright 1997 by Joey Hess.
-# Copyright (c) 2005 by Anibal Monsalve Salazar.
 
-# Uncomment this to turn on verbose mode.
+#export DH_COMPAT=5
 export DH_VERBOSE=1
 
 # You can use gcc 2.7.2 if it's installed,
@@ -23,6 +22,9 @@ build-stamp:
 
 	dh_testdir
 	# Add here commands to compile the package.
+	-test -r /usr/share/misc/config.sub && cp -f /usr/share/misc/config.sub config.sub
+	-test -r /usr/share/misc/config.guess && cp -f /usr/share/misc/config.guess config.guess
+	autoconf
 	$(SETGCC) ./configure \
 		--mandir='$${prefix}/share/man' \
 		--enable-secure-statd
@@ -34,7 +36,10 @@ clean:
 	dh_testroot
 	rm -f build-stamp
 	# Add here commands to clean up after the build process.
+	-test -r /usr/share/misc/config.sub && rm -f config.sub
+	-test -r /usr/share/misc/config.guess && rm -f config.guess
 	-$(MAKE) distclean
+	rm -f config.log configure
 	dh_clean
 
 # Build architecture-independent files here.
@@ -63,7 +68,7 @@ binary-arch: build
 	  rm -rf tmp/var/lib/nfs/*; \
 	  cp --preserve=timestamps etc.exports tmp/etc/exports
 	# Fixups End Here #
-	dh_installdocs -A README
+	dh_installdocs -A
 	dh_installexamples
 #	dh_installmenu
 	dh_installinit -n
@@ -74,7 +79,6 @@ binary-arch: build
 	dh_strip
 	dh_compress
 	dh_fixperms
-	dh_installdebconf
 	dh_installdeb
 #	dh_makeshlibs
 	dh_shlibdeps

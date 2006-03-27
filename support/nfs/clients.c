@@ -77,8 +77,8 @@ again:
 	cle.c_hostname[0] = '\0';
 	cle.c_fhkey.k_type = CLE_KEY_NONE;
 	cle.c_mapping = CLE_MAP_IDENT;
-	cle.c_anonuid = -2;
-	cle.c_anongid = -2;
+	cle.c_anonuid = 65534;
+	cle.c_anongid = 65534;
 
 	if (squash_uids)
 		xfree(squash_uids);

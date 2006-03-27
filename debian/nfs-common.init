@@ -117,25 +117,27 @@ case "$1" in
 	then
 	    printf " gssd"
 	    start-stop-daemon --stop --oknodo --quiet \
-		    --name rpc.gssd --user 0
+		    --name rpc.gssd
 	    rm -f $GSSD_PIDFILE
 	fi
 	if [ "$NEED_IDMAPD" = yes ]
 	then
 	    printf " idmapd"
 	    start-stop-daemon --stop --oknodo --quiet \
-		--name rpc.idmapd --user 0
+		--name rpc.idmapd
 	    rm -f $IDMAPD_PIDFILE
 	fi
 	if [ "$NEED_LOCKD" = yes ]
 	then
 	    printf " lockd"
 	    start-stop-daemon --stop --oknodo --quiet \
-		--name rpc.lockd --user 0  || true
+		--name rpc.lockd || true
+	else
+	    pkill -KILL -u root -x lockd
 	fi
 	printf " statd"
 	start-stop-daemon --stop --oknodo --quiet \
-	    --name rpc.statd --user 0
+	    --name rpc.statd
 	echo "."
 	;;
 

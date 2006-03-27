@@ -1,3 +1,53 @@
+nfs-utils (1:1.0.7-4) unstable; urgency=low
+
+  * Ack NMU. Thanks Steinar H. Gunderson.
+    Closes: #239230, #245449, #246904, #247473, #248300, #252081,
+    #287026, #294928, #303497, #310940, #323460, #326663, #332047,
+    #337836, #338292, #359024.
+  * Added Steinar H. Gunderson and Daniel Baumann as uploaders.
+  * Added homepage to package descriptions.
+  * Set Standards-Version to 3.6.2.
+  * Fixed outdated-autotools-helper-file.
+
+ -- Anibal Monsalve Salazar <anibal@debian.org>  Mon, 27 Mar 2006 13:22:51 +1100
+
+nfs-utils (1:1.0.7-3.1) unstable; urgency=low
+
+  * Non-maintainer upload.
+  * Set u+w on all files in debian/, so dch etc. actually works.
+  * Add /var/lib/nfs/v4recovery to nfs-kernel-server.dirs. (Closes: #337836).
+  * Add /var/lib/nfs/rpc_pipefs to nfs-kernel-server.dirs. (Closes: #310940).
+  * Fix problems with exportfs -o when there are multiple entries of the same
+    type for the same path that match a given client; patch from Fumihiko
+    Kakuma. (Closes: #245449)
+  * Start nfs-kernel-server even if /etc/exports is empty, as long as it
+    exists; patch from Alexis Huxley. (Closes: #246904) This patch also
+    happens to fix and thus Closes: #338292.
+  * When stopping daemons, do it even if they do not run as root; based on a
+    patch from Andreas Schmidt. (Closes: #247473)
+  * SIGKILL kernel lockd thread on stop, to make the kernel release all its
+    locks; patch from Jeffrey Layton. (Closes: #252081)
+  * Flush the kernel export table on stop; patch from Jeffrey Layton
+    (Closes: #248300).
+  * Change default root-squashed uid from -2 to 65534; the former changes
+    depending of the size of uid_t, and we want it to match the user "nobody"
+    (which has uid 65534). (Closes: #323460)
+  * Remove dependency on debconf, as it's no longer used. Also, don't run
+    dh_installdebconf anymore. (Closes: #332047)
+  * Check for /sbin/modprobe before using it, for non-modular kernels;
+    patch from Vincent Crvt. (Closes: #294928)
+  * Replaced the rather emtpy nhfsstone long description by the one from
+    its manpage. (Closes: #303497)
+  * Don't ship upstream README anymore, as it's not relevant for our users.
+    (Closes: #326663)
+  * Add the ability to start nfs-kernel-server niced; patch from Kimmo
+    Tervinen. (Closes: #287026)
+  * Escape '#' when writing export entries, so they are not mistakenly parsed
+    as comments when re-reading them. (Closes: #239230)
+  * Also Closes: #359024 automatically by recompiling package.
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Sun, 26 Mar 2006 14:57:50 +0200
+
 nfs-utils (1:1.0.7-3) unstable; urgency=medium
 
   * New maintainer, closes: #303559.

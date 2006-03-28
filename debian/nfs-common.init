@@ -133,7 +133,7 @@ case "$1" in
 	    start-stop-daemon --stop --oknodo --quiet \
 		--name rpc.lockd || true
 	else
-	    pkill -KILL -u root -x lockd
+	    pkill -KILL -u root -x lockd || true
 	fi
 	printf " statd"
 	start-stop-daemon --stop --oknodo --quiet \

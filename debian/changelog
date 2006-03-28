@@ -1,3 +1,45 @@
+nfs-utils (1:1.0.7-5) unstable; urgency=low
+
+  * Non-non-maintainer-upload this time, it seems. :-)
+  * Don't let the init script fail if there wasn't any lockd threads to kill;
+    this could cause the package to fail configuration.
+  * Move to debhelper compatibility level 5.
+    * Use dh_install instead of dh_movefiles (actually a combination was used
+      earlier). Move stuff from *.files accordingly into *.install.
+    * mkdir debian/tmp manually before doing make install, and remove it
+      in the clean target.
+    * Use straight cp -a instead of dh_install for the files that _don't_
+      come from debian/tmp/ (the two /etc files).
+    * Fix the "fixups" part in debian/rules to reflect the behaviour of
+      dh_install compared to dh_movefiles (ie. don't rm lots of stuff in
+      debian/tmp, etc.).
+    * Make a debian/nfs-kernel-server.install listing explicitly the files
+      we want in that package; with dh_movefiles everything from make install
+      was implicitly put there. This has the side effect that the man pages
+      for rpc.gssd and idmap.conf are no longer put in nfs-kernel-server, but
+      in nfs-common, where they should be.
+    * Use dh_installman to install the manpages, to make sure they're in the
+      right place (and move the manpage lists from *.files to *.manpages
+      accordingly). List the rpc.* variants of the manpages in *.links,
+      instead of assuming dh_compress (!) will make them for us. Bonus points
+      for then not including the nonsensical rpc.* variants, such as
+      rpc.idmapd.conf(5).
+    * Don't mv lockd, statd and showmount manually from /usr/sbin to /sbin;
+      let the .install file do it for us.
+    * Remove *.conffiles; debhelper now sets everything in /etc as conffiles
+      automatically.
+    * Extend the debian/rules rm hack to the files we removed in this version
+      (ick).
+    * In debian/control, make nfs-common replace nfs-kernel-server
+      (<< 1:1.0.7-5), since the idmapd manpage switched packages.
+  * Remove old cruft in debian/rules file:
+    * Remove non-used dh_* programs.
+    * Remove obsolete source and diff targets.
+    * Remove SETGCC hack.
+  * Don't set rpath for rpc.gssd and rpc.svcgssd (fixes lintian warnings).
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Tue, 28 Mar 2006 02:57:23 +0200
+
 nfs-utils (1:1.0.7-4) unstable; urgency=low
 
   * Ack NMU. Thanks Steinar H. Gunderson.

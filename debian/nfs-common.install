@@ -1,2 +1,6 @@
-debian/idmapd.conf etc
-debian/gssapi_mech.conf etc
+usr/sbin/rpc.lockd sbin/
+usr/sbin/rpc.statd sbin/
+usr/sbin/showmount sbin/
+usr/sbin/nfsstat
+usr/sbin/rpc.gssd
+usr/sbin/rpc.idmapd

@@ -1,0 +1,4 @@
+usr/sbin/exportfs
+usr/sbin/rpc.mountd
+usr/sbin/rpc.nfsd
+usr/sbin/rpc.svcgssd

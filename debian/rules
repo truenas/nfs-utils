@@ -50,12 +50,12 @@ binary-arch: build
 	mkdir $(DEBTMP)
 	# Add here commands to install the files into debian/tmp
 	$(MAKE) install_prefix='$(DEBTMP)' install
-	dh_install --sourcedir=debian/tmp/
+	dh_install --sourcedir=debian/tmp
 	# Fixups Start Here #
 	cd debian && \
 	  for f in lockd statd showmount; do \
 	    perl -pi -e "s#/usr(/sbin/(rpc\\.)?$$f)#\$$1#g" \
-		nfs-common/usr/share/man/man8/$$f.8; \
+		tmp/usr/share/man/man8/$$f.8; \
 	  done; \
 	  cp --preserve=timestamps etc.exports nfs-kernel-server/etc/exports; \
 	  cp --preserve=timestamps idmapd.conf nfs-common/etc/; \

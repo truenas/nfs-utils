@@ -1,3 +1,19 @@
+nfs-utils (1:1.0.7-6) unstable; urgency=low
+
+  * Let the man-page fixup script in debian/rules look for the man pages in
+    the right place.
+  * Modprobe nfs4 along with nfs in the nfs-common init script. Also modprobe
+    rpcsec_gss_krb5 before we start gssd.
+  * Implement autodetection for NEED_IDMAPD and NEED_GSSD, based on /etc/fstab.
+  * Add a note to the top of /etc/defaults/nfs-common that the default is to
+    autodetect.
+  * Move /var/lib/nfs/rpc_pipefs from nfs-kernel-server.dirs to
+    nfs-common.dirs; it's needed by the client as well.
+  * Let dh_install install from debian/tmp/ instead of debian/tmp; it fixes
+    minor aesthetic issues in the build log.
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Sat,  1 Apr 2006 02:46:53 +0200
+
 nfs-utils (1:1.0.7-5) unstable; urgency=low
 
   * Non-non-maintainer-upload this time, it seems. :-)

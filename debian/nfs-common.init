@@ -18,9 +18,9 @@ DESC="NFS common utilities"
 DEFAULTFILE=/etc/default/nfs-common
 PREFIX=
 NEED_LOCKD=
-NEED_IDMAPD=yes
+NEED_IDMAPD=
 IDMAPD_PIDFILE=/var/run/rpc.idmapd.pid
-NEED_GSSD=yes
+NEED_GSSD=
 GSSD_PIDFILE=/var/run/rpc.gssd.pid
 PIPEFS_MOUNTPOINT=/var/lib/nfs/rpc_pipefs
 RPCGSSDOPTS=
@@ -48,6 +48,46 @@ yes|no)	;;
 	;;
     esac
     ;;
+esac
+
+#
+# Parse the fstab file, and determine whether we need idmapd and gssd. (The
+# /etc/defaults settings, if any, will override our autodetection.) This code
+# is partially adapted from the mountnfs.sh script in the sysvinit package.
+#
+AUTO_NEED_IDMAPD=no
+AUTO_NEED_GSSD=no
+
+exec 9<&0 </etc/fstab
+
+while read DEV MTPT FSTYPE OPTS REST
+do
+    if [ "$FSTYPE" = "nfs4" ]; then
+        AUTO_NEED_IDMAPD=yes
+    fi
+    case "$OPTS" in
+        sec=krb5|*,sec=krb5|sec=krb5,*|*,sec=krb5i,*|sec=krb5i|*,sec=krb5i|sec=krb5i,*|*,sec=krb5i,*|sec=krb5p|*,sec=krb5p|sec=krb5p,*|*,sec=krb5p,*)
+	    AUTO_NEED_GSSD=yes
+	;;
+    esac
+done
+
+exec 0<&9 9<&-
+
+case "$NEED_IDMAPD" in
+    yes|no)	
+        ;;
+    *)
+        NEED_IDMAPD=$AUTO_NEED_IDMAPD
+	;;
+esac
+
+case "$NEED_GSSD" in
+    yes|no)	
+        ;;
+    *)
+        NEED_GSSD=$AUTO_NEED_GSSD
+	;;
 esac
 
 # Exit if required binaries are missing.
@@ -90,6 +130,7 @@ case "$1" in
 	if [ "$NEED_IDMAPD" = yes ] || [ "$NEED_GSSD" = yes ]
 	then
 	    do_modprobe nfs
+	    do_modprobe nfs4
 	    if do_mount rpc_pipefs $PIPEFS_MOUNTPOINT
 	    then
 	    	if [ "$NEED_IDMAPD" = yes ]
@@ -101,6 +142,7 @@ case "$1" in
 		fi
 		if [ "$NEED_GSSD" = yes ]
 		then
+		    do_modprobe rpcsec_gss_krb5
 		    printf " gssd"
 		    start-stop-daemon --start --quiet \
 			    --make-pidfile --pidfile $GSSD_PIDFILE \

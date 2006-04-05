@@ -54,6 +54,7 @@ static struct option longopts[] =
 	{ "port", 1, 0, 'p' },
 	{ "no-tcp", 0, 0, 'n' },
 	{ "ha-callout", 1, 0, 'H' },
+	{ "state-directory-path", 1, 0, 's' },
 	{ NULL, 0, 0, 0 }
 };
 
@@ -441,6 +442,7 @@ int
 main(int argc, char **argv)
 {
 	char	*export_file = _PATH_EXPORTS;
+	char    *state_dir = NFS_STATEDIR;
 	int	foreground = 0;
 	int	port = 0;
 	int	descriptors = 0;
@@ -490,6 +492,13 @@ main(int argc, char **argv)
 		case 'n':
 			_rpcfdtype = SOCK_DGRAM;
 			break;
+		case 's':
+			if ((state_dir = xstrdup(optarg)) == NULL) {
+				fprintf(stderr, "%s: xstrdup(%s) failed!\n",
+					argv[0], optarg);
+				exit(1);
+			}
+			break;
 		case 'V':
 			nfs_version |= 1 << (atoi (optarg) - 1);
 			break;
@@ -507,9 +516,9 @@ main(int argc, char **argv)
 	if (optind != argc || !(nfs_version & 0x7))
 		usage(argv [0], 1);
 
-	if (chdir(NFS_STATEDIR)) {
+	if (chdir(state_dir)) {
 		fprintf(stderr, "%s: chdir(%s) failed: %s\n",
-			argv [0], NFS_STATEDIR, strerror(errno));
+			argv [0], state_dir, strerror(errno));
 		exit(1);
 	}
 
@@ -606,6 +615,6 @@ usage(const char *prog, int n)
 "	[-o num|--descriptors num] [-f exports-file|--exports-file=file]\n"
 "	[-p|--port port] [-V version|--nfs-version version]\n"
 "	[-N version|--no-nfs-version version] [-n|--no-tcp]\n"
-"	[-H ha-callout-prog]\n", prog);
+"	[-H ha-callout-prog] [-s|--state-directory-path path]\n", prog);
 	exit(n);
 }

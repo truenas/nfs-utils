@@ -29,6 +29,9 @@ double quotes. You can also specify spaces or other unusual character in
 the export name using a backslash followed by the character code as three
 octal digits.
 .PP
+To apply changes to this file, run exportfs -ra or (on Debian)
+/etc/init.d/nfs-kernel-server reload.
+.PP
 .SS Machine Name Formats
 NFS clients may be specified in a number of ways:
 .IP "single host
@@ -108,6 +111,13 @@ committed to stable storage (e.g. disc drive).
 Using this option usually improves performance, but at the cost that
 an unclean server restart (i.e. a crash) can cause data to be lost or
 corrupted.
+
+.TP
+.IR sync
+Reply to requests only after the changes have been committed to stable
+storage (see
+.IR async
+above).
 
 In releases of nfs-utils upto and including 1.0.0, this option was the
 default.  In this and future releases,

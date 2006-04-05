@@ -62,6 +62,13 @@ case "$1" in
 	if [ -f /etc/exports ]
 	then
 		do_modprobe nfsd
+
+		# See if our running kernel supports the NFS kernel server
+		if [ -f /proc/kallsyms ] && ! grep -q nfsd_version /proc/kallsyms; then
+			echo "Not starting $DESC: no support in current kernel."
+			exit 0
+		fi
+		
 		do_mount nfsd $PROCNFSD_MOUNTPOINT || NEED_SVCGSSD=no
 		printf "Exporting directories for $DESC..."
 		$PREFIX/sbin/exportfs -r

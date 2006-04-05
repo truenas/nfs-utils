@@ -1,3 +1,17 @@
+nfs-utils (1:1.0.7-7) unstable; urgency=high
+
+  * urgency=high, fixes an RC bug.
+  * Let the init script test for kernel support before trying to start
+    nfs-kernel-server. (Closes: #360420)
+  * Include help on how to activate /etc/exports changes; text from
+    Martin Pool. (Closes: #239286)
+  * Document sync option in exports man page. (Closes: #297135)
+  * Give an example in /etc/exports. (Closes: #345460)
+  * Write a mini-HOWTO on how to get NFSv4 up and running. (Closes: #294468)
+    * Install it in debian/rules.
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Wed,  5 Apr 2006 18:15:20 +0200
+
 nfs-utils (1:1.0.7-6) unstable; urgency=low
 
   * Let the man-page fixup script in debian/rules look for the man pages in

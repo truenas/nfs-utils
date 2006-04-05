@@ -1,0 +1,4 @@
+
+#define NFS3_SUPPORTED 1
+#define NFS4_SUPPORTED 1
+#define GSS_SUPPORTED 1

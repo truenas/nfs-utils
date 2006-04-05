@@ -62,6 +62,7 @@ binary-arch: build
 	  cp --preserve=timestamps gssapi_mech.conf nfs-common/etc/; \
 	# Fixups End Here #
 	dh_installdocs -A
+	dh_installdocs -pnfs-common debian/README.Debian.nfsv4
 	dh_installexamples
 	dh_installinit -n
 	dh_installman

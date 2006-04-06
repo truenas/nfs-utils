@@ -1,3 +1,12 @@
+nfs-utils (1:1.0.7-9) unstable; urgency=low
+
+  * When checking for nfsd support in the kernel, check for init_nfsd
+    (which is a function) rather than nfsd_version (which is a variable);
+    kernels compiled without CONFIG_KALLSYMS_ALL=y have only the former.
+    (Closes: #361026)
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Thu,  6 Apr 2006 13:31:48 +0200
+
 nfs-utils (1:1.0.7-8) unstable; urgency=low
 
   * Don't complain about missing sync/async for a read-only export.

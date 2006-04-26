@@ -7,14 +7,12 @@
 #   If so, set this variable to a statd argument like: "--port 1000".
 STATDOPTS=
 
-# Are you _sure_ that your kernel does or does not need a lockd daemon?
-# If so, set this variable to either "yes" or "no".
+# Some kernels need a separate lockd daemon; most don't. Set this if you
+# want to force an explicit choice for some reason.
 NEED_LOCKD=
 
-# If you are not using NFSv4 and wish to disable the idmapd daemon,
-# then set NEED_IDMAPD to "no". 
+# Do you want to start the idmapd daemon? It is only needed for NFSv4.
 NEED_IDMAPD=
 
-# If you are not running NFS with RPCSEC_GSS security, and wish to
-# disable the gssd client daemon, then set NEED_GSSD to "no".
+# Do you want to start the gssd daemon? It is required for Kerberos mounts.
 NEED_GSSD=

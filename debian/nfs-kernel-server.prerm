@@ -5,7 +5,7 @@
 case "$1" in
     remove|purge)
 	[ -x /etc/init.d/nfs-kernel-server ] &&
-	   /etc/init.d/nfs-kernel-server stop
+	    invoke-rc.d nfs-kernel-server stop
 	;;
 esac
 

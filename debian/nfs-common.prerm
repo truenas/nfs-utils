@@ -5,7 +5,7 @@
 case "$1" in
     remove|purge)
 	[ -x /etc/init.d/nfs-common ] &&
-	   /etc/init.d/nfs-common stop
+	    invoke-rc.d nfs-common stop
 	;;
 esac
 

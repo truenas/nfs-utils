@@ -1,3 +1,20 @@
+nfs-utils (1:1.0.7-10) unstable; urgency=low
+
+  * Intermediate 1.0.7 release, waiting for librpcsecgss to be uploaded into
+    Debian so we can upload 1.0.8.
+  * Clarify what the NEED_* options in /etc/default/nfs-common mean.
+    (Closes: #364625)
+  * Make /var/lib/nfs/{sm,sm.bak,state,rpc_pipefs} be owned by a new "statd"
+    user (created in postinst), causing rpc.statd to be run as that user
+    instead of root. (Closes: #240689)
+    * Make nfs-common depend on adduser.
+  * Clear out obsolete (pre-sarge) debconf and rc.d purging from postinst
+    script.
+  * Use invoke-rc.d in nfs-common and nfs-kernel-server prerms instead of
+    calling the /etc/init.d script directly; fixes two lintian warnings.
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Thu, 27 Apr 2006 00:32:27 +0200
+
 nfs-utils (1:1.0.7-9) unstable; urgency=low
 
   * When checking for nfsd support in the kernel, check for init_nfsd

@@ -1,3 +1,12 @@
+nfs-utils (1:1.0.7-11) unstable; urgency=low
+
+  * When creating statd user, create it with a home directory of /nonexistant;
+    it doesn't really require a home directory. (Closes: #365514, #365721)
+  * Fix the signal number for USR1 (actually, use the name instead) in
+    nhfsrun. (Closes: #365657)
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Wed,  3 May 2006 19:51:17 +0200
+
 nfs-utils (1:1.0.7-10) unstable; urgency=low
 
   * Intermediate 1.0.7 release, waiting for librpcsecgss to be uploaded into

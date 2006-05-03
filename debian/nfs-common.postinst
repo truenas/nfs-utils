@@ -7,7 +7,7 @@ case "$1" in
 	update-rc.d nfs-common defaults 21 79 >/dev/null
 
 	if ! getent passwd statd >/dev/null; then
-	    adduser --system --home /nonexistent --no-create-home statd
+	    adduser --system --home /var/lib/nfs --no-create-home statd
 	fi
 	if [ "$2" = "" ] || dpkg --compare-versions "$2" lt 1.0.7-10; then
 	    chown statd /var/lib/nfs/sm \

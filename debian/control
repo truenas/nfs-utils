@@ -4,7 +4,7 @@ Section: net
 Maintainer: Anibal Monsalve Salazar <anibal@debian.org>
 Uploaders: Steinar H. Gunderson <sesse@debian.org>, Daniel Baumann <daniel.baumann@panthera-systems.net>
 Build-Depends: debhelper (>= 5), autoconf2.13, autotools-dev, libwrap0-dev, libevent-dev, libnfsidmap-dev, libkrb5-dev
-Standards-Version: 3.6.2
+Standards-Version: 3.7.2
 
 Package: nfs-kernel-server
 Priority: optional

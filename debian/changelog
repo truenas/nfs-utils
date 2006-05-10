@@ -1,3 +1,15 @@
+nfs-utils (1:1.0.7-14) unstable; urgency=high
+
+  * urgency=high; fixes RC bugs (or at least, bugs that should have been RC).
+  * Add /var/lib/nfs/state to nfs-common.dirs, since we chown it in the
+    postinst. This would prevent nfs-common from configuring on initial
+    install. (Closes: #366654)
+  * Grep after "init_nf(sd|<tab>)" instead of "init_nfsd" in kallsyms, to work
+    around some odd symbol mangling problems on some alpha kernels.
+    (Closes: #363932)
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Wed, 10 May 2006 22:00:59 +0200
+
 nfs-utils (1:1.0.7-13) unstable; urgency=low
 
   * Up the Standards-Version to 3.7.2; no changes needed.

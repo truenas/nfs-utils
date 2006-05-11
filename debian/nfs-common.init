@@ -113,6 +113,14 @@ do_mount() {
     return 0
 }
 
+do_umount() {
+    if mountpoint -q "$1"
+    then
+	umount "$1"
+    fi
+    return 0
+}
+
 # See how we were called.
 case "$1" in
   start)
@@ -180,6 +188,7 @@ case "$1" in
 	printf " statd"
 	start-stop-daemon --stop --oknodo --quiet \
 	    --name rpc.statd
+	do_umount $PIPEFS_MOUNTPOINT
 	echo "."
 	;;
 

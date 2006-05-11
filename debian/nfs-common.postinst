@@ -18,8 +18,11 @@ case "$1" in
 	if [ "$2" = "" ] || dpkg --compare-versions "$2" lt 1:1.0.7-13; then
 	    chown statd /var/lib/nfs/sm \
 		/var/lib/nfs/sm.bak \
-		/var/lib/nfs/state \
-		/var/lib/nfs/rpc_pipefs
+		/var/lib/nfs/rpc_pipefs \
+		/var/lib/nfs
+            if [ -f /var/lib/nfs/state ]; then
+	        chown statd /var/lib/nfs/state
+            fi
 	fi
     ;;
 esac

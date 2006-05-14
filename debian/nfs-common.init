@@ -188,7 +188,7 @@ case "$1" in
 	printf " statd"
 	start-stop-daemon --stop --oknodo --quiet \
 	    --name rpc.statd
-	do_umount $PIPEFS_MOUNTPOINT
+	do_umount $PIPEFS_MOUNTPOINT 2>/dev/null || true
 	echo "."
 	;;
 

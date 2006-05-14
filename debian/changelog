@@ -1,3 +1,12 @@
+nfs-utils (1:1.0.7-17) unstable; urgency=low
+
+  * The umounting of rpc_pipefs is non-critical and will fail if there are
+    any active NFS mounts during, say, a restart. Thus, send its stderr to
+    /dev/null, and ignore its error status.
+  * Build-Depend on perl, as it's used in debian/rules.
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Sun, 14 May 2006 18:22:19 +0200
+
 nfs-utils (1:1.0.7-16) unstable; urgency=high
 
   * urgency=high; fixes an RC bug.

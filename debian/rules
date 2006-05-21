@@ -56,15 +56,26 @@ binary-arch: build
 	  for f in lockd statd showmount; do \
 	    perl -pi -e "s#/usr(/sbin/(rpc\\.)?$$f)#\$$1#g" \
 		tmp/usr/share/man/man8/$$f.8; \
-	  done; \
-	  cp --preserve=timestamps etc.exports nfs-kernel-server/etc/exports; \
-	  cp --preserve=timestamps idmapd.conf nfs-common/etc/; \
-	  cp --preserve=timestamps gssapi_mech.conf nfs-common/etc/; \
+	  done;
 	# Fixups End Here #
+	
+	# Move all files that will be managed by ucf
+	install -m 0644 debian/idmapd.conf debian/nfs-common/usr/share/nfs-common/conffiles/
+	install -m 0644 debian/gssapi_mech.conf debian/nfs-common/usr/share/nfs-common/conffiles/
+	install -m 0644 debian/nfs-common.default debian/nfs-common/usr/share/nfs-common/conffiles/
+	install -m 0644 debian/nfs-kernel-server.default debian/nfs-kernel-server/usr/share/nfs-kernel-server/conffiles/
+	install -m 0644 debian/etc.exports debian/nfs-kernel-server/usr/share/nfs-kernel-server/conffiles/
+	
+	install -m 0644 debian/idmapd.conf.md5sum debian/nfs-common/usr/share/nfs-common/conffiles/
+	install -m 0644 debian/gssapi_mech.conf.md5sum debian/nfs-common/usr/share/nfs-common/conffiles/
+	install -m 0644 debian/nfs-common.default.md5sum debian/nfs-common/usr/share/nfs-common/conffiles/
+	install -m 0644 debian/nfs-kernel-server.default.md5sum debian/nfs-kernel-server/usr/share/nfs-kernel-server/conffiles/
+	install -m 0644 debian/etc.exports.md5sum debian/nfs-kernel-server/usr/share/nfs-kernel-server/conffiles/
+	
 	dh_installdocs -A
 	dh_installdocs -pnfs-common debian/README.Debian.nfsv4
-	dh_installexamples
-	dh_installinit -n
+	install -m 0755 debian/nfs-common.init debian/nfs-common/etc/init.d/nfs-common
+	install -m 0755 debian/nfs-kernel-server.init debian/nfs-kernel-server/etc/init.d/nfs-kernel-server
 	dh_installman
 	dh_link
 	dh_installchangelogs ChangeLog

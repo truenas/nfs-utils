@@ -4,6 +4,9 @@
 
 case "$1" in
     configure)
+	ucf --three-way /usr/share/nfs-kernel-server/conffiles/etc.exports /etc/exports
+	ucf --three-way /usr/share/nfs-kernel-server/conffiles/nfs-kernel-server.default /etc/default/nfs-kernel-server
+
 	for f in /var/lib/nfs/etab  \
 		 /var/lib/nfs/rmtab \
 		 /var/lib/nfs/xtab; do

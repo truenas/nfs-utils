@@ -1,3 +1,32 @@
+nfs-utils (1:1.0.7-18) unstable; urgency=low
+
+  * Make /etc/exports, /etc/default/nfs-{common,kernel-server},
+    /etc/idmapd.conf and /etc/gssapi_mech.conf be managed by ucf
+    instead of being conffiles. (Closes: #353501)
+    * Make directories /usr/share/nfs-{common,kernel-server}/conffiles,
+      and install files in there at debian/rules time. At the same time,
+      install the files with install instead of cp.
+    * Call ucf at postinst time to get the files in.
+    * Correspondingly, call ucf at purge time to remove them as needed (code
+      snippets lifted from autofs).
+    * Make nfs-common and nfs-kernel-server depend on ucf.
+    * Remove the call to dh_installinit -- since it was already not modifying
+      postinst/postrm/prerm scripts due to being called with -n (I must admit
+      I don't know why, but I assume this has a good reason :-) ) and we now
+      install the init script ourself (because we don't want dh_installinit
+      to install our .default files to /etc), it doesn't do anything useful
+      for us.
+    * Include .md5sum files with MD5 checksums of previous defaults shipped,
+      to ease the transition into ucf; at the moment, only checksums from
+      1:1.0.7-17 (the last non-ucf version) and 1:1.0.6-3.1 (the version
+      shipped in sarge) are included, but I think that should actually cover
+      all the defaults shipped in the period between as well.
+    * Install the .md5sum files in debian/rules.
+  * Remove call to dh_installexamples in debian/rules; we don't install any
+    examples.
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Mon, 22 May 2006 01:44:33 +0200
+
 nfs-utils (1:1.0.7-17) unstable; urgency=low
 
   * The umounting of rpc_pipefs is non-critical and will fail if there are

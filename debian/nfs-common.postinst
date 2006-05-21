@@ -4,6 +4,10 @@
 
 case "$1" in
     configure)
+	ucf --three-way /usr/share/nfs-common/conffiles/idmapd.conf /etc/idmapd.conf
+	ucf --three-way /usr/share/nfs-common/conffiles/gssapi_mech.conf /etc/gssapi_mech.conf
+	ucf --three-way /usr/share/nfs-common/conffiles/nfs-common.default /etc/default/nfs-common
+
 	update-rc.d nfs-common defaults 21 79 >/dev/null
 
 	if ! getent passwd statd >/dev/null; then

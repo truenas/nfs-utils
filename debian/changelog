@@ -1,3 +1,10 @@
+nfs-utils (1:1.0.7-19) unstable; urgency=low
+
+  * Include the md5sum for /etc/default/nfs-common from 1:1.0.7-15, to
+    make ucf not complain when upgrading from that version. (Closes: #368982)
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Sat, 27 May 2006 12:54:50 +0200
+
 nfs-utils (1:1.0.7-18) unstable; urgency=low
 
   * Make /etc/exports, /etc/default/nfs-{common,kernel-server},

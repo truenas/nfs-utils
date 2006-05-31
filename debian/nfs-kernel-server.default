@@ -9,7 +9,3 @@ RPCNFSDPRIORITY=0
 # a fixed port here using the --port option. For more information, 
 # see rpc.mountd(8) or http://wiki.debian.org/?SecuringNFS
 RPCMOUNTDOPTS=
-
-# If you are not running NFS with RPCSEC_GSS security, and wish to
-# disable the gssd server daemon, then set NEED_SVCGSSD to "no".
-NEED_SVCGSSD=no

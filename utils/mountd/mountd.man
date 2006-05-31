@@ -121,7 +121,7 @@ has of that path.
 .TP
 .BI "\-P," "" " \-\-state\-directory\-path "  directory
 specify a directory in which to place statd state information.
-If this option is not specified the default of 
+If this option is not specified the default of
 .BR /var/lib/nfs
 is used. (This is a Debian-specific extension.)
 .TP

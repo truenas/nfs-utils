@@ -8,21 +8,9 @@ DEBTMP	:= $(shell pwd)/debian/tmp
 
 build: build-stamp
 build-stamp:
-	# Debian source diffs don't reflect removals.
-	# This kludge will suffice until the next upstream version. *sigh*
-	rm -f debian/nfs-common.conffiles	\
-	      debian/nfs-common.config		\
-	      debian/nfs-common.files		\
-	      debian/nfs-common.templates	\
-	      debian/nfs-kernel-server.conffiles\
-	      debian/nfs-kernel-server.config	\
-	      debian/nfs-kernel-server.templates\
-	      debian/nhfsstone.files
-
 	dh_testdir
 	-test -r /usr/share/misc/config.sub && cp -f /usr/share/misc/config.sub config.sub
 	-test -r /usr/share/misc/config.guess && cp -f /usr/share/misc/config.guess config.guess
-	autoconf
 	./configure \
 		--mandir='$${prefix}/share/man' \
 		--enable-secure-statd
@@ -34,11 +22,7 @@ clean:
 	dh_testroot
 	rm -f build-stamp
 	rm -rf $(DEBTMP)
-	# Add here commands to clean up after the build process.
-	-test -r /usr/share/misc/config.sub && rm -f config.sub
-	-test -r /usr/share/misc/config.guess && rm -f config.guess
 	-$(MAKE) distclean
-	rm -f config.log configure
 	dh_clean
 
 binary-indep: build
@@ -48,29 +32,14 @@ binary-arch: build
 	dh_clean -k
 	dh_installdirs
 	mkdir $(DEBTMP)
-	# Add here commands to install the files into debian/tmp
-	$(MAKE) install_prefix='$(DEBTMP)' install
-	dh_install --sourcedir=debian/tmp
-	# Fixups Start Here #
-	cd debian && \
-	  for f in lockd statd showmount; do \
-	    perl -pi -e "s#/usr(/sbin/(rpc\\.)?$$f)#\$$1#g" \
-		tmp/usr/share/man/man8/$$f.8; \
-	  done;
-	# Fixups End Here #
+	$(MAKE) DESTDIR='$(DEBTMP)' install
+	dh_install
 	
-	# Move all files that will be managed by ucf
-	install -m 0644 debian/idmapd.conf debian/nfs-common/usr/share/nfs-common/conffiles/
-	install -m 0644 debian/gssapi_mech.conf debian/nfs-common/usr/share/nfs-common/conffiles/
-	install -m 0644 debian/nfs-common.default debian/nfs-common/usr/share/nfs-common/conffiles/
-	install -m 0644 debian/nfs-kernel-server.default debian/nfs-kernel-server/usr/share/nfs-kernel-server/conffiles/
-	install -m 0644 debian/etc.exports debian/nfs-kernel-server/usr/share/nfs-kernel-server/conffiles/
-	
-	install -m 0644 debian/idmapd.conf.md5sum debian/nfs-common/usr/share/nfs-common/conffiles/
-	install -m 0644 debian/gssapi_mech.conf.md5sum debian/nfs-common/usr/share/nfs-common/conffiles/
-	install -m 0644 debian/nfs-common.default.md5sum debian/nfs-common/usr/share/nfs-common/conffiles/
-	install -m 0644 debian/nfs-kernel-server.default.md5sum debian/nfs-kernel-server/usr/share/nfs-kernel-server/conffiles/
-	install -m 0644 debian/etc.exports.md5sum debian/nfs-kernel-server/usr/share/nfs-kernel-server/conffiles/
+	# Fix up the manpages
+	for f in lockd statd showmount; do \
+	  perl -pi -e "s#/usr(/sbin/(rpc\\.)?$$f)#\$$1#g" \
+	    debian/tmp/usr/share/man/man8/$$f.8; \
+	done;
 	
 	dh_installdocs -A
 	dh_installdocs -pnfs-common debian/README.Debian.nfsv4

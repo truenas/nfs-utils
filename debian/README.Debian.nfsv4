@@ -41,9 +41,8 @@ or in /etc/fstab:
 If you do not wish to use host-based authentication, you can specify "gss/krb5"
 instead of a hostname to get Kerberos-based authentication instead. For this, 
 you will need an "nfs/hostname@REALM" entry in /etc/krb5.keytab, as well as
-rpc.gssd running on the client (enable it manually in /etc/default/nfs-common)
-and rpc.svcgssd running on the server (it should be autodetected once you put
-Kerberos mounts in /etc/exports).
+rpc.gssd running on both the client and the server (enable it manually in
+/etc/default/nfs-common if the autodetection fails).
 
 If you use "gss/krb5i", you will also get integrity (ie. authentication), and
 with "gss/krb5p", you'll also get privacy (ie.  encryption). Make sure your

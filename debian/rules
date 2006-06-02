@@ -32,14 +32,27 @@ binary-arch: build
 	dh_clean -k
 	dh_installdirs
 	mkdir $(DEBTMP)
+	# Add here commands to install the files into debian/tmp
 	$(MAKE) DESTDIR='$(DEBTMP)' install
-	dh_install
+	dh_install --sourcedir=debian/tmp
+	# Fixups Start Here #
+	cd debian && \
+	  for f in lockd statd showmount; do \
+	    perl -pi -e "s#/usr(/sbin/(rpc\\.)?$$f)#\$$1#g" \
+		tmp/usr/share/man/man8/$$f.8; \
+	  done;
+	# Fixups End Here #
 	
-	# Fix up the manpages
-	for f in lockd statd showmount; do \
-	  perl -pi -e "s#/usr(/sbin/(rpc\\.)?$$f)#\$$1#g" \
-	    debian/tmp/usr/share/man/man8/$$f.8; \
-	done;
+	# Move all files that will be managed by ucf
+	install -m 0644 debian/idmapd.conf debian/nfs-common/usr/share/nfs-common/conffiles/
+	install -m 0644 debian/nfs-common.default debian/nfs-common/usr/share/nfs-common/conffiles/
+	install -m 0644 debian/nfs-kernel-server.default debian/nfs-kernel-server/usr/share/nfs-kernel-server/conffiles/
+	install -m 0644 debian/etc.exports debian/nfs-kernel-server/usr/share/nfs-kernel-server/conffiles/
+	
+	install -m 0644 debian/idmapd.conf.md5sum debian/nfs-common/usr/share/nfs-common/conffiles/
+	install -m 0644 debian/nfs-common.default.md5sum debian/nfs-common/usr/share/nfs-common/conffiles/
+	install -m 0644 debian/nfs-kernel-server.default.md5sum debian/nfs-kernel-server/usr/share/nfs-kernel-server/conffiles/
+	install -m 0644 debian/etc.exports.md5sum debian/nfs-kernel-server/usr/share/nfs-kernel-server/conffiles/
 	
 	dh_installdocs -A
 	dh_installdocs -pnfs-common debian/README.Debian.nfsv4

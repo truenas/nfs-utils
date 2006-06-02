@@ -1,3 +1,9 @@
+nfs-utils (1:1.0.8-2) unstable; urgency=low
+
+  * Added missing dependency on pkg-config.
+
+ -- Anibal Monsalve Salazar <anibal@debian.org>  Fri, 02 Jun 2006 19:08:11 +1000
+
 nfs-utils (1:1.0.8-1) unstable; urgency=low
 
   * New upstream version. (Closes: #364902)
@@ -11,26 +17,12 @@ nfs-utils (1:1.0.8-1) unstable; urgency=low
       needed to build nfs-utils.
     * Give DESTDIR instead of install_prefix to "make install" (install_prefix
       no longer works).
-    * Build-depend on librpcsecgss-dev and libgssapi-dev, as they are now both
-      needed. Also build-depend on pkg-config, as it is needed to detect
-      librpcsecgss-dev.
-  * No longer handle gssapi_mech.conf; it is now managed by the librpcsecgss
-    package. Remove all references to it in debian/rules.
+  * No longer handle gssapi_mech.conf via ucf; it is now managed by the
+    librpcsecgss package. Remove all references to it in debian/rules.
   * We no longer need to run autoconf as a part of debian/rules; its results
     are parts of the diff instead, as per usual packaging practices.
     * Drop the build-dependency on autoconf2.13 and autotools-dev.
     * No longer rm various autotools-generated files in the clean target.
-  * Tweaks to debian/rules:
-    * Drop --sourcedir=debian/tmp from dh_install so we can also install files
-      directly from the debian/ directory.
-    * Minimize direct uses of install; move all the ucf installation into the
-      debhelper .install files.
-    * Remove some obsolete comments.
-  * Remove empty (modulo #DEBHELPER# tokens) nhfsstone.{postinst,prerm}
-    scripts.
-  * Clear out obsolete (pre-sarge) debconf and rc.d purging from postinst
-    script. (Same as in 1:1.0.7-10, but for nfs-kernel-server too, not just
-    nfs-common.) Minor style cleanup.
 
  -- Steinar H. Gunderson <sesse@debian.org>  Thu,  1 Jun 2006 01:59:39 +0200
 

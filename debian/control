@@ -3,7 +3,7 @@ Priority: standard
 Section: net
 Maintainer: Anibal Monsalve Salazar <anibal@debian.org>
 Uploaders: Steinar H. Gunderson <sesse@debian.org>, Daniel Baumann <daniel.baumann@panthera-systems.net>
-Build-Depends: debhelper (>= 5), libwrap0-dev, libevent-dev, libnfsidmap-dev, libkrb5-dev, libgssapi-dev, librpcsecgss-dev, pkg-config, perl
+Build-Depends: debhelper (>= 5), libwrap0-dev, libevent-dev, libnfsidmap-dev, libkrb5-dev, libgssapi-dev, librpcsecgss-dev, perl, pkg-config
 Standards-Version: 3.7.2
 
 Package: nfs-kernel-server

@@ -1,7 +1,3 @@
-debian/tmp/usr/sbin/exportfs
-debian/tmp/usr/sbin/rpc.mountd
-debian/tmp/usr/sbin/rpc.nfsd
-debian/nfs-kernel-server.default /usr/share/nfs-kernel-server/conffiles/
-debian/etc.exports /usr/share/nfs-kernel-server/conffiles/
-debian/nfs-kernel-server.default.md5sum /usr/share/nfs-kernel-server/conffiles/
-debian/etc.exports.md5sum /usr/share/nfs-kernel-server/conffiles/
+usr/sbin/exportfs
+usr/sbin/rpc.mountd
+usr/sbin/rpc.nfsd

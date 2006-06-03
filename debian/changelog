@@ -1,3 +1,23 @@
+nfs-utils (1:1.0.8-3) unstable; urgency=low
+
+  * The "what the heck, I uploaded an outdated 1:1.0.8-1 release without
+    the pkg-config fix and some other changes" release.
+  * Tweaks to debian/rules:
+    * Drop --sourcedir=debian/tmp from dh_install so we can also install files
+      directly from the debian/ directory.
+    * Minimize direct uses of install; move all the ucf installation into the
+      debhelper .install files.
+    * Remove some obsolete comments.
+  * Remove empty (modulo #DEBHELPER# tokens) nhfsstone.{postinst,prerm}
+    scripts.
+  * Clear out obsolete (pre-sarge) debconf and rc.d purging from postinst
+    script. (Same as in 1:1.0.7-10, but for nfs-kernel-server too, not just
+    nfs-common.) Minor style cleanup.
+  * Include the md5sum for /etc/default/nfs-kernel-server from 1:1.0.7-13, 
+    to make ucf not complain when upgrading from that version.
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Sat,  3 Jun 2006 11:00:14 +0200
+
 nfs-utils (1:1.0.8-2) unstable; urgency=low
 
   * Added missing dependency on pkg-config.

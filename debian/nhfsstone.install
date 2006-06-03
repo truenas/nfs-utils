@@ -1,2 +1,2 @@
-usr/sbin/nhfs*
-usr/share/man/man8/nhfs*
+debian/tmp/usr/sbin/nhfs*
+debian/tmp/usr/share/man/man8/nhfs*

@@ -1,3 +1,10 @@
+nfs-utils (1:1.0.8-4) unstable; urgency=low
+
+  * Fix a few spelling errors in the man pages; patches from A Costa.
+    (Closes: #370561, #370562, #370563)
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Tue,  6 Jun 2006 11:59:28 +0200
+
 nfs-utils (1:1.0.8-3) unstable; urgency=low
 
   * The "what the heck, I uploaded an outdated 1:1.0.8-1 release without

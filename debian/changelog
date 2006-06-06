@@ -1,3 +1,10 @@
+nfs-utils (1:1.0.8-5) unstable; urgency=low
+
+  * Make nfs-kernel-server depend on at least version 1.0.8 of nfs-common;
+    lots of stuff will break with an upstream version mismatch.
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Wed,  7 Jun 2006 01:13:28 +0200
+
 nfs-utils (1:1.0.8-4) unstable; urgency=low
 
   * Fix a few spelling errors in the man pages; patches from A Costa.

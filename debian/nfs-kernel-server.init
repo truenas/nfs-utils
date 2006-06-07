@@ -75,7 +75,7 @@ case "$1" in
 
 		printf "Starting $DESC:"
 		printf " nfsd"
-		start-stop-daemon --start --quiet \
+		start-stop-daemon --start --oknodo --quiet \
 		    --nicelevel $RPCNFSDPRIORITY \
 		    --exec $PREFIX/sbin/rpc.nfsd -- $RPCNFSDCOUNT
 
@@ -96,7 +96,7 @@ case "$1" in
 
 		[ -z "$ClearAddr" ] || echo "nfsd 127.0.0.1 1" >/proc/net/rpc/auth.unix.ip/channel
 
-		start-stop-daemon --start --quiet \
+		start-stop-daemon --start --oknodo --quiet \
 		    --exec $PREFIX/sbin/rpc.mountd -- $RPCMOUNTDOPTS
 		echo "."
 	else
@@ -122,6 +122,17 @@ case "$1" in
 	echo "done."
 	;;
 
+  status)
+	if pidof nfsd >/dev/null
+	then
+	    echo "nfsd running"
+	    exit 0
+	else
+	    echo "nfsd not running"
+	    exit 3
+	fi
+	;;
+
   reload | force-reload)
 	printf "Re-exporting directories for $DESC..."
 	$PREFIX/sbin/exportfs -r
@@ -135,7 +146,7 @@ case "$1" in
 	;;
 
   *)
-	echo "Usage: nfs-kernel-server {start|stop|reload|force-reload|restart}"
+	echo "Usage: nfs-kernel-server {start|stop|status|reload|force-reload|restart}"
 	exit 1
 	;;
 esac

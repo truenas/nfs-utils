@@ -9,7 +9,7 @@ Standards-Version: 3.7.2
 Package: nfs-kernel-server
 Priority: optional
 Architecture: any
-Depends: nfs-common (>= 1:1.0.8-1), sysvinit (>= 2.80-1), ucf, ${shlibs:Depends}
+Depends: nfs-common (>= 1:0.3.3-3), sysvinit (>= 2.80-1), ucf, ${shlibs:Depends}
 Provides: knfs, nfs-server
 Conflicts: knfs, nfs-server
 Replaces: knfs, nfs-server

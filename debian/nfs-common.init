@@ -127,12 +127,12 @@ case "$1" in
 	cd /	# daemons should have root dir as cwd
 	printf "Starting $DESC:"
 	printf " statd"
-	start-stop-daemon --start --quiet \
+	start-stop-daemon --start --oknodo --quiet \
 	    --exec $PREFIX/sbin/rpc.statd -- $STATDOPTS
 	if [ "$NEED_LOCKD" = yes ]
 	then
 	    printf " lockd"
-	    start-stop-daemon --start --quiet \
+	    start-stop-daemon --start --oknodo --quiet \
 		--exec $PREFIX/sbin/rpc.lockd  || true
 	fi
 	if [ "$NEED_IDMAPD" = yes ] || [ "$NEED_GSSD" = yes ]
@@ -144,7 +144,7 @@ case "$1" in
 	    	if [ "$NEED_IDMAPD" = yes ]
 		then
 		    printf " idmapd"
-		    start-stop-daemon --start --quiet \
+		    start-stop-daemon --start --oknodo --quiet \
 			    --make-pidfile --pidfile $IDMAPD_PIDFILE \
 			    --exec /usr/sbin/rpc.idmapd
 		fi
@@ -152,7 +152,7 @@ case "$1" in
 		then
 		    do_modprobe rpcsec_gss_krb5
 		    printf " gssd"
-		    start-stop-daemon --start --quiet \
+		    start-stop-daemon --start --oknodo --quiet \
 			    --make-pidfile --pidfile $GSSD_PIDFILE \
 			    --exec /usr/sbin/rpc.gssd -- $RPCGSSDOPTS
 		fi
@@ -190,6 +190,44 @@ case "$1" in
 	    --name rpc.statd
 	do_umount $PIPEFS_MOUNTPOINT 2>/dev/null || true
 	echo "."
+	;;
+
+  status)
+	if ! pidof rpc.statd >/dev/null
+	then
+	    echo "rpc.statd not running"
+	    exit 3
+	fi
+
+	if [ "$NEED_GSSD" = yes ]
+	then
+            if [ ! -f "$GSSD_PIDFILE" ] || [ "$( pidof rpc.gssd )" != "$( cat $GSSD_PIDFILE )"]
+	    then
+		echo "rpc.statd running, but rpc.gssd halted"
+		exit 3
+	    fi
+	fi
+
+	if [ "$NEED_LOCKD" = yes ]
+	then
+	    if ! pidof rpc.lockd >/dev/null
+	    then
+		echo "rpc.statd running, but rpc.lockd halted"
+		exit 3
+	    fi
+	fi
+	    
+	if [ "$NEED_IDMAPD" = yes ]
+	then
+            if [ ! -f "$IDMAPD_PIDFILE" ] || [ "$( pidof rpc.idmapd )" != "$( cat $IDMAPD_PIDFILE )"]
+	    then
+		echo "rpc.statd running, but rpc.idmapd halted"
+		exit 3
+	    fi
+	fi
+
+	echo "rpc.statd running"
+	exit 0
 	;;
 
   restart | force-reload)

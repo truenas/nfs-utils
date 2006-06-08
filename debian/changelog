@@ -1,12 +1,10 @@
-nfs-utils (1:1.0.8-6) unstable; urgency=low
+nfs-utils (1:1.0.8-7) unstable; urgency=low
 
-  * The last upload was a bit premature; it missed a change or two to the
-    init scripts (stdout vs. stderr output). Correcting now.
-
- -- Steinar H. Gunderson <sesse@debian.org>  Wed,  7 Jun 2006 23:30:15 +0200
-
-nfs-utils (1:1.0.8-5) unstable; urgency=low
-
+  * For some odd reason (ie. human error) this package has branched into two
+    different versions from 1:1.0.8-5 on. This package rejoins the two branches.
+    The changelog from the other 1:1.0.8-5 (which was probably never accepted
+    except as part of 1:1.0.8-6) is repeated for convenience and automated bug
+    closing below:
   * Patch nfs-common and nfs-kernel-server init scripts to make them more LSB
     compatible, fixing issues with heartbeat2; based on patches by Kilian
     CAVALOTTI. (Closes: #371084, #371085)
@@ -15,7 +13,14 @@ nfs-utils (1:1.0.8-5) unstable; urgency=low
     * Add status targets to the two init scripts, with correct output and
       exit codes.
 
- -- Steinar H. Gunderson <sesse@debian.org>  Wed,  7 Jun 2006 22:49:54 +0200
+ -- Steinar H. Gunderson <sesse@debian.org>  Thu, 08 Jun 2006 17:31:28 +0200
+
+nfs-utils (1:1.0.8-5) unstable; urgency=low
+
+  * Make nfs-kernel-server depend on at least version 1.0.8 of nfs-common;
+    lots of stuff will break with an upstream version mismatch.
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Wed,  7 Jun 2006 01:13:28 +0200
 
 nfs-utils (1:1.0.8-4) unstable; urgency=low
 

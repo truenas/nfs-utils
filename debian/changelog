@@ -1,3 +1,12 @@
+nfs-utils (1:1.0.8-8) unstable; urgency=low
+
+  * Include yet more ucf md5sums for /etc/default/nfs-common and
+    /etc/default/nfs-kernel-server (/etc/exports was already OK); this time,
+    I've gone through the entire 1.0.7 series programmatically, so hopefully
+    there should finally be none left.
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Wed, 14 Jun 2006 10:47:23 +0200
+
 nfs-utils (1:1.0.8-7) unstable; urgency=low
 
   * For some odd reason (ie. human error) this package has branched into two

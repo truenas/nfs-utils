@@ -1,3 +1,11 @@
+nfs-utils (1:1.0.8-9) unstable; urgency=high
+
+  * svcgssd_proc.c: Temporary patch to do default mapping if we get an
+    error while trying to map a gss principal to the appropriate uid/gid.
+    This currently returns hardcoded values. Closes: #376258.
+
+ -- Anibal Monsalve Salazar <anibal@debian.org>  Sat, 01 Jul 2006 22:30:11 +1000
+
 nfs-utils (1:1.0.8-8) unstable; urgency=low
 
   * Include yet more ucf md5sums for /etc/default/nfs-common and

@@ -222,6 +222,21 @@ get_ids(gss_name_t client_name, gss_OID mech, struct svc_cred *cred)
 	if (res < 0) {
 		printerr(0, "WARNING: get_ids: unable to map "
 			"name '%s' to a uid\n", sname);
+		/*
+		 * -ENOENT means there was no mapping, any other error
+		 * value means there was an error trying to do the
+		 * mapping.
+		 */
+		if (res == -ENOENT) {
+			cred->cr_uid = -2;	/* XXX */
+			cred->cr_gid = -2;	/* XXX */
+			cred->cr_groups[0] = -2;/* XXX */
+			cred->cr_ngroups = 1;
+			res = 0;
+			goto out_free;
+		}
+		printerr(0, "WARNING: get_ids: failed to map name '%s' "
+			"to uid/gid: %s\n", sname, strerror(-res));
 		goto out_free;
 	}
 	cred->cr_uid = uid;

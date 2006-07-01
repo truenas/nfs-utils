@@ -1,3 +1,11 @@
+nfs-utils (1:1.0.8-10) unstable; urgency=high
+
+  * Added nfs-common dependency on coreutils (>= 5.93-1). The readlink
+    option -e was introduced since version 5.91 of coreutils. Closes:
+    #376285.
+
+ -- Anibal Monsalve Salazar <anibal@debian.org>  Sun, 02 Jul 2006 09:53:16 +1000
+
 nfs-utils (1:1.0.8-9) unstable; urgency=high
 
   * svcgssd_proc.c: Temporary patch to do default mapping if we get an

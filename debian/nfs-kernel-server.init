@@ -10,8 +10,6 @@
 #              which is configured via the /etc/exports file.
 #
 
-set -e
-
 # What is this?
 DESC="NFS kernel daemon"
 PREFIX=/usr
@@ -33,6 +31,8 @@ PROCNFSD_MOUNTPOINT=/proc/fs/nfsd
 if [ -f $DEFAULTFILE ]; then
     . $DEFAULTFILE
 fi
+
+. /lib/lsb/init-functions
 
 do_modprobe() {
     if [ -x /sbin/modprobe ]
@@ -57,29 +57,34 @@ do_mount() {
 # See how we were called.
 case "$1" in
   start)
-	cd /	# daemons should have root dir as cwd
 	if [ -f /etc/exports ]
 	then
 		do_modprobe nfsd
 
 		# See if our running kernel supports the NFS kernel server
 		if [ -f /proc/kallsyms ] && ! grep -qE 'init_nf(sd|	)' /proc/kallsyms; then
-			echo "Not starting $DESC: no support in current kernel."
+			log_warning_msg "Not starting $DESC: no support in current kernel."
 			exit 0
 		fi
 		
 		do_mount nfsd $PROCNFSD_MOUNTPOINT || NEED_SVCGSSD=no
-		printf "Exporting directories for $DESC..."
+		log_begin_msg "Exporting directories for $DESC..."
 		$PREFIX/sbin/exportfs -r
-		echo "done."
+		if [ $? != 0 ]; then
+			log_end_msg $?
+			exit $?
+		fi
+		log_end_msg 0
 
-		printf "Starting $DESC:"
-		printf " nfsd"
+		log_daemon_msg "Starting $DESC"
+		log_progress_msg "nfsd"
 		start-stop-daemon --start --oknodo --quiet \
 		    --nicelevel $RPCNFSDPRIORITY \
 		    --exec $PREFIX/sbin/rpc.nfsd -- $RPCNFSDCOUNT
-
-		printf " mountd"
+		if [ $? != 0 ]; then
+			log_end_msg $?
+			exit $?
+		fi
 
 		# make sure 127.0.0.1 is a valid source for requests
 		ClearAddr=
@@ -96,30 +101,53 @@ case "$1" in
 
 		[ -z "$ClearAddr" ] || echo "nfsd 127.0.0.1 1" >/proc/net/rpc/auth.unix.ip/channel
 
+		log_progress_msg "mountd"
 		start-stop-daemon --start --oknodo --quiet \
 		    --exec $PREFIX/sbin/rpc.mountd -- $RPCMOUNTDOPTS
-		echo "."
+		if [ $? != 0 ]; then
+			log_end_msg $?
+			exit $?
+		fi
+
+		log_end_msg 0
 	else
-		echo "Not starting $DESC: No exports."
+		log_warning_msg "Not starting $DESC: no exports."
 	fi
 	;;
 
   stop)
-	printf "Stopping $DESC: mountd"
+	log_daemon_msg "Stopping $DESC"
+	
+	log_progress_msg "mountd"
 	start-stop-daemon --stop --oknodo --quiet \
 	    --name rpc.mountd --user 0
-	printf " nfsd"
+	if [ $? != 0 ]; then
+		log_end_msg $?
+		exit $?
+	fi
+
+	log_progress_msg "nfsd"
 	start-stop-daemon --stop --oknodo --quiet \
 	    --name nfsd --user 0 --signal 2
-	echo "."
+	if [ $? != 0 ]; then
+		log_end_msg $?
+		exit $?
+	fi
 
-	printf "Unexporting directories for $DESC..."
+	log_end_msg 0
+
+	log_begin_msg "Unexporting directories for $DESC..."
 	$PREFIX/sbin/exportfs -au
+	if [ $? != 0 ]; then
+		log_end_msg $?
+		exit $?
+	fi
+	log_end_msg 0
+
 	if mountpoint -q /proc/nfs/nfsd
 	then
 	    $PREFIX/sbin/exportfs -f
 	fi
-	echo "done."
 	;;
 
   status)
@@ -134,9 +162,10 @@ case "$1" in
 	;;
 
   reload | force-reload)
-	printf "Re-exporting directories for $DESC..."
+	log_begin_msg "Re-exporting directories for $DESC..."
 	$PREFIX/sbin/exportfs -r
-	echo "done."
+	log_end_msg $?
+	exit $?
 	;;
 
   restart)
@@ -146,7 +175,7 @@ case "$1" in
 	;;
 
   *)
-	echo "Usage: nfs-kernel-server {start|stop|status|reload|force-reload|restart}"
+	log_success_msg "Usage: nfs-kernel-server {start|stop|status|reload|force-reload|restart}"
 	exit 1
 	;;
 esac

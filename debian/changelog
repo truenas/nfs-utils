@@ -1,3 +1,38 @@
+nfs-utils (1:1.0.8+1.0.9pre1-1) unstable; urgency=low
+
+  * New upstream release.
+    * debian/ directory removed from upstream; no need to repack or do ugly
+      hacks in debian/rules anymore.
+    * Obsoletes most Debian-specific patches, as they are already included
+      upstream. For reference, the patches that are still Debian-specific are:
+      * Use 65534 instead of -2 for anonuid, update manpage accordingly.
+      * Debian-specific information in exports man page.
+      * Don't use -rpath for gssd.
+      * Hardcode default mapping in svcgssd. Adjust patch to use uid/gid 
+        65534 instead of -2, for consistency; also remove double error
+        message. 
+      * Spelling fixes in nfsstat, showmount and statd man pages.
+    * Supports options to bind to specific IPs. (Closes: #246939, #312720)
+    * Include mount.nfs and friends, which will over time take over the job of
+      doing NFS mounting from util-linux.
+  * Complete sync with Ubuntu:
+    * Pull in changes to use LSB display functions in init scripts; adapted
+      to give output more like what was already in Debian, to fix a few bugs,
+      and use plain echo in "status" targets, where using LSB functions makes
+      no sense.
+    * Depend on lsb-base from nfs-common and nfs-kernel-server.
+  * Init script updates:
+    * Document "status" option in the nfs-common init script's help message.
+    * Drop "set -e"; it makes error checking wrt. the LSB functions harder.
+    * Drop obsolete "cd /".
+    * Fix syntax errors in "status" target.
+    * In the "status" target, don't check that the output of pidof matches the
+      pidfiles for gssd and idmapd, as they fork after start and thus get a
+      different pid.
+  * Include gss_clnt_send_err and gss_destroy_creds binaries.
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Tue,  4 Jul 2006 18:55:51 +0200
+
 nfs-utils (1:1.0.8-10) unstable; urgency=high
 
   * Added nfs-common dependency on coreutils (>= 5.93-1). The readlink

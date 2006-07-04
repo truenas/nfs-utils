@@ -9,8 +9,6 @@
 #	       locking functionality.
 #
 
-set -e
-
 # What is this?
 DESC="NFS common utilities"
 
@@ -27,6 +25,8 @@ RPCGSSDOPTS=
 if [ -f $DEFAULTFILE ]; then
     . $DEFAULTFILE
 fi
+
+. /lib/lsb/init-functions
 
 # Determine whether lockd daemon is required.
 case "$NEED_LOCKD" in
@@ -124,16 +124,25 @@ do_umount() {
 # See how we were called.
 case "$1" in
   start)
-	cd /	# daemons should have root dir as cwd
-	printf "Starting $DESC:"
-	printf " statd"
+	log_daemon_msg "Starting $DESC"
+
+	log_progress_msg "statd"
 	start-stop-daemon --start --oknodo --quiet \
 	    --exec $PREFIX/sbin/rpc.statd -- $STATDOPTS
+	if [ $? != 0 ]; then
+	    log_end_msg $?
+	    exit $?
+	fi
+
 	if [ "$NEED_LOCKD" = yes ]
 	then
-	    printf " lockd"
+	    log_progress_msg "lockd"
 	    start-stop-daemon --start --oknodo --quiet \
-		--exec $PREFIX/sbin/rpc.lockd  || true
+		--exec $PREFIX/sbin/rpc.lockd
+	    if [ $? != 0 ]; then
+	        log_end_msg $?
+	        exit $?
+            fi
 	fi
 	if [ "$NEED_IDMAPD" = yes ] || [ "$NEED_GSSD" = yes ]
 	then
@@ -143,53 +152,78 @@ case "$1" in
 	    then
 	    	if [ "$NEED_IDMAPD" = yes ]
 		then
-		    printf " idmapd"
+	            log_progress_msg "idmapd"
 		    start-stop-daemon --start --oknodo --quiet \
 			    --make-pidfile --pidfile $IDMAPD_PIDFILE \
 			    --exec /usr/sbin/rpc.idmapd
+	            if [ $? != 0 ]; then
+        	        log_end_msg $?
+        	        exit $?
+                    fi
 		fi
 		if [ "$NEED_GSSD" = yes ]
 		then
 		    do_modprobe rpcsec_gss_krb5
-		    printf " gssd"
+	            log_progress_msg "gssd"
 		    start-stop-daemon --start --oknodo --quiet \
 			    --make-pidfile --pidfile $GSSD_PIDFILE \
 			    --exec /usr/sbin/rpc.gssd -- $RPCGSSDOPTS
+	            if [ $? != 0 ]; then
+        	        log_end_msg $?
+        	        exit $?
+                    fi
 		fi
 	    fi
 	fi
-	echo "."
+	log_end_msg 0
 	;;
 
   stop)
-	printf "Stopping $DESC:"
+	log_daemon_msg "Stopping $DESC"
+
 	if [ "$NEED_GSSD" = yes ]
 	then
-	    printf " gssd"
+	    log_progress_msg "gssd"
 	    start-stop-daemon --stop --oknodo --quiet \
 		    --name rpc.gssd
+	    if [ $? != 0 ]; then
+                log_end_msg $?
+                exit $?
+            fi
 	    rm -f $GSSD_PIDFILE
 	fi
 	if [ "$NEED_IDMAPD" = yes ]
 	then
-	    printf " idmapd"
+	    log_progress_msg "idmapd"
 	    start-stop-daemon --stop --oknodo --quiet \
 		--name rpc.idmapd
+	    if [ $? != 0 ]; then
+                log_end_msg $?
+                exit $?
+            fi
 	    rm -f $IDMAPD_PIDFILE
 	fi
 	if [ "$NEED_LOCKD" = yes ]
 	then
-	    printf " lockd"
+	    log_progress_msg "lockd"
 	    start-stop-daemon --stop --oknodo --quiet \
-		--name rpc.lockd || true
+		--name rpc.lockd
+	    if [ $? != 0 ]; then
+                log_end_msg $?
+                exit $?
+            fi
 	else
 	    pkill -KILL -u root -x lockd || true
 	fi
-	printf " statd"
+	log_progress_msg "statd"
 	start-stop-daemon --stop --oknodo --quiet \
 	    --name rpc.statd
+	if [ $? != 0 ]; then
+            log_end_msg $?
+            exit $?
+        fi
 	do_umount $PIPEFS_MOUNTPOINT 2>/dev/null || true
-	echo "."
+	log_end_msg 0
 	;;
 
   status)
@@ -201,7 +235,7 @@ case "$1" in
 
 	if [ "$NEED_GSSD" = yes ]
 	then
-            if [ ! -f "$GSSD_PIDFILE" ] || [ "$( pidof rpc.gssd )" != "$( cat $GSSD_PIDFILE )"]
+            if [ ! -f "$GSSD_PIDFILE" ] || ! pidof rpc.gssd >/dev/null
 	    then
 		echo "rpc.statd running, but rpc.gssd halted"
 		exit 3
@@ -219,7 +253,7 @@ case "$1" in
 	    
 	if [ "$NEED_IDMAPD" = yes ]
 	then
-            if [ ! -f "$IDMAPD_PIDFILE" ] || [ "$( pidof rpc.idmapd )" != "$( cat $IDMAPD_PIDFILE )"]
+            if [ ! -f "$IDMAPD_PIDFILE" ] || ! pidof rpc.idmapd >/dev/null
 	    then
 		echo "rpc.statd running, but rpc.idmapd halted"
 		exit 3
@@ -237,7 +271,7 @@ case "$1" in
 	;;
 
   *)
-	echo "Usage: nfs-common {start|stop|restart}"
+	log_success_msg "Usage: nfs-common {start|stop|status|restart}"
 	exit 1
 	;;
 esac

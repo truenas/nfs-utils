@@ -1,3 +1,11 @@
+nfs-utils (1:1.0.8+1.0.9pre1-2) unstable; urgency=low
+
+  * Provide LSB dependency information in the nfs-common and nfs-kernel-server
+    init scripts; replaces the obsolete chkconfig info. (Closes: #376976)
+  * Update the long descriptions.
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Thu,  6 Jul 2006 19:37:58 +0200
+
 nfs-utils (1:1.0.8+1.0.9pre1-1) unstable; urgency=low
 
   * New upstream release.

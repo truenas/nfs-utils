@@ -14,10 +14,9 @@ Provides: knfs, nfs-server
 Conflicts: knfs, nfs-server
 Replaces: knfs, nfs-server
 Description: Kernel NFS server support
- Use this package if you have a fairly recent kernel (2.2.13 or better)
- and you want to use the kernel-mode NFS server.  The user-mode NFS
- server in the "nfs-user-server" package is slower but more featureful
- and easier to debug than the kernel-mode server.
+ Use this package if you want to use the kernel-mode NFS server.
+ The user-mode NFS server in the "nfs-user-server" package is slower
+ and less featureful but easier to debug than the kernel-mode server.
  .
  Upstream: SourceForge project "nfs", CVS module nfs-utils.
  .
@@ -30,8 +29,9 @@ Provides: nfs-client
 Conflicts: nfs-client
 Replaces: nfs-client, nfs-kernel-server (<< 1:1.0.7-5)
 Description: NFS support files common to client and server
- Use this package on any machine that does NFS either as client or
- server.  Programs included: lockd, statd, showmount, and nfsstat.
+ Use this package on any machine that uses NFS, either as client or
+ server.  Programs included: lockd, statd, showmount, nfsstat, gssd
+ and idmapd.
  .
  Upstream: SourceForge project "nfs", CVS module nfs-utils.
  .

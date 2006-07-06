@@ -1,13 +1,15 @@
 #!/bin/sh
-#
-# nfs-common    This shell script takes care of starting and stopping
-#               common daemons required for NFS clients and servers.
-#
-# chkconfig: 345 20 80
-# description: NFS is a popular protocol for file sharing across \
-#	       TCP/IP networks. This service provides NFS file \
-#	       locking functionality.
-#
+
+### BEGIN INIT INFO
+# Provides:          nfs-common
+# Required-Start:    $time
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: NFS support files common to client and server
+# Description:       NFS is a popular protocol for file sharing across
+#		     TCP/IP networks. This service provides various
+#                    support functions for NFS mounts.
+### END INIT INFO
 
 # What is this?
 DESC="NFS common utilities"

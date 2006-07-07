@@ -28,6 +28,7 @@
 #include <sys/mount.h>
 #include <getopt.h>
 #include <mntent.h>
+#include <pwd.h>
 
 #include "fstab.h"
 #include "xcommon.h"
@@ -74,6 +75,14 @@ struct opt_map {
   int  mask;                    /* flag mask value */
 };
 
+/* Custom mount options for our own purposes.  */
+/* Maybe these should now be freed for kernel use again */
+#define MS_DUMMY	0x00000000
+#define MS_USERS	0x40000000
+#define MS_USER		0x20000000
+#define MS_OWNER	0x10000000
+#define MS_GROUP	0x08000000
+
 static const struct opt_map opt_map[] = {
   { "defaults", 0, 0, 0         },      /* default options */
   { "ro",       1, 0, MS_RDONLY },      /* read-only */
@@ -90,6 +99,18 @@ static const struct opt_map opt_map[] = {
   { "remount",  0, 0, MS_REMOUNT},      /* Alter flags of mounted FS */
   { "bind",     0, 0, MS_BIND   },      /* Remount part of tree elsewhere */
   { "rbind",    0, 0, MS_BIND|MS_REC }, /* Idem, plus mounted subtrees */
+  { "auto",     0, 0, MS_DUMMY },      /* Can be mounted using -a */
+  { "noauto",   0, 0, MS_DUMMY },      /* Can  only be mounted explicitly */
+  { "users",    0, 0, MS_USERS  },      /* Allow ordinary user to mount */
+  { "nousers",  0, 0, MS_USERS  },      /* Forbid ordinary user to mount */
+  { "user",     0, 0, MS_USER   },      /* Allow ordinary user to mount */
+  { "nouser",   0, 0, MS_USER   },      /* Forbid ordinary user to mount */
+  { "owner",    0, 0, MS_OWNER  },      /* Let the owner of the device mount */
+  { "noowner",  0, 0, MS_OWNER  },      /* Device owner has no special privs */
+  { "group",    0, 0, MS_GROUP  },      /* Let the group of the device mount */
+  { "nogroup",  0, 0, MS_GROUP  },      /* Device group has no special privs */
+  { "_netdev",  0, 0, MS_DUMMY},      /* Device requires network */
+  { "comment",  0, 0, MS_DUMMY},      /* fstab comment only (kudzu,_netdev)*/
 
   /* add new options here */
 #ifdef MS_NOSUB
@@ -104,6 +125,7 @@ static const struct opt_map opt_map[] = {
   { "mand",     0, 0, MS_MANDLOCK },    /* Allow mandatory locks on this FS */
   { "nomand",   0, 1, MS_MANDLOCK },    /* Forbid mandatory locks on this FS */
 #endif
+  { "loop",     1, 0, MS_DUMMY   },      /* use a loop device */
 #ifdef MS_NOATIME
   { "atime",    0, 1, MS_NOATIME },     /* Update access time */
   { "noatime",  0, 0, MS_NOATIME },     /* Do not update access time */
@@ -121,6 +143,12 @@ static char * fix_opts_string (int flags, const char *extra_opts) {
 	char *new_opts;
 
 	new_opts = xstrdup((flags & MS_RDONLY) ? "ro" : "rw");
+	if (flags & MS_USER) {
+		struct passwd *pw = getpwuid(getuid());
+		if(pw)
+			new_opts = xstrconcat3(new_opts, ",user=", pw->pw_name);
+	}
+	
 	for (om = opt_map; om->opt != NULL; om++) {
 		if (om->skip)
 			continue;
@@ -132,9 +160,20 @@ static char * fix_opts_string (int flags, const char *extra_opts) {
 	if (extra_opts && *extra_opts) {
 		new_opts = xstrconcat3(new_opts, ",", extra_opts);
 	}
+
 	return new_opts;
 }
 
+void copy_mntent(struct mntent *ment, nfs_mntent_t *nment)
+{
+	/* Not sure why nfs_mntent_t should exist */
+	strcpy(nment->mnt_fsname, ment->mnt_fsname);
+	strcpy(nment->mnt_dir, ment->mnt_dir);
+	strcpy(nment->mnt_type, ment->mnt_type);
+	strcpy(nment->mnt_opts, ment->mnt_opts);
+	nment->mnt_freq = ment->mnt_freq;
+	nment->mnt_passno = ment->mnt_passno;
+}
 
 int add_mtab(char *fsname, char *mount_point, char *fstype, int flags, char *opts, int freq, int passno)
 {
@@ -146,8 +185,16 @@ int add_mtab(char *fsname, char *mount_point, char *fstype, int flags, char *opt
 	ment.mnt_dir = mount_point;
 	ment.mnt_type = fstype;
 	ment.mnt_opts = fix_opts_string(flags, opts);
-	ment.mnt_freq = 0;
-	ment.mnt_passno= 0;
+	ment.mnt_freq = freq;
+	ment.mnt_passno= passno;
+
+	if(flags & MS_REMOUNT) {
+		nfs_mntent_t nment;
+		
+		copy_mntent(&ment, &nment);
+		update_mtab(nment.mnt_dir, &nment);
+		return 0;
+	}
 
 	if ((fd = open(MOUNTED"~", O_RDWR|O_CREAT|O_EXCL, 0600)) == -1)	{
 		fprintf(stderr, "Can't get "MOUNTED"~ lock file");
@@ -246,16 +293,16 @@ static void mount_error(char *node)
 {
 	switch(errno) {
 		case ENOTDIR:
-			printf("%s: mount point %s is not a directory\n", progname, node);
+			fprintf(stderr, "%s: mount point %s is not a directory\n", progname, node);
 			break;
 		case EBUSY:
-			printf("%s: %s is already mounted or busy\n", progname, node);
+			fprintf(stderr, "%s: %s is already mounted or busy\n", progname, node);
 			break;
 		case ENOENT:
-			printf("%s: mount point %s does not exist\n", progname, node);
+			fprintf(stderr, "%s: mount point %s does not exist\n", progname, node);
 			break;
 		default:
-			printf("%s: %s\n", progname, strerror(errno));
+			fprintf(stderr, "%s: %s\n", progname, strerror(errno));
 	}
 }
 
@@ -268,11 +315,6 @@ int main(int argc, char *argv[])
 	progname = argv[0];
 	if ((p = strrchr(progname, '/')) != NULL)
 		progname = p+1;
-
-	if (getuid() != 0) {
-		printf("%s: only root can do that.\n", progname);
-		exit(1);
-	}
 
 	if(!strncmp(progname, "umount", strlen("umount"))) {
 		if(argc < 2) {
@@ -358,6 +400,11 @@ int main(int argc, char *argv[])
 	
 	parse_opts(mount_opts, &flags, &extra_opts);
 
+	if (getuid() != 0 && !(flags & MS_USERS) && !(flags & MS_USER)) {
+		fprintf(stderr, "%s: permission denied.\n", progname);
+		exit(1);
+	}
+
 	if (!strcmp(progname, "mount.nfs4") || nfs_mount_vers == 4) {
 		nfs_mount_vers = 4;
 		mnt_err = nfs4mount(spec, mount_point, &flags, &extra_opts, &mount_opts, 0);
@@ -370,16 +417,19 @@ int main(int argc, char *argv[])
 	}
 
 	if (!mnt_err && !fake) {
-		mnt_err = do_mount_syscall(spec, mount_point, nfs_mount_vers == 4 ? "nfs4" : "nfs", flags, mount_opts);
+		if(!(flags & MS_REMOUNT)) {
+			mnt_err = do_mount_syscall(spec, mount_point,
+					nfs_mount_vers == 4 ? "nfs4" : "nfs", flags, mount_opts);
 		
-		if(mnt_err) {
-			mount_error(mount_point);
-			exit(-1);
+			if(mnt_err) {
+				mount_error(mount_point);
+				exit(-1);
+			}
 		}
-
-		if(!nomtab)
+		if(!nomtab) {
 			add_mtab(spec, mount_point, nfs_mount_vers == 4 ? "nfs4" : "nfs",
 				 flags, extra_opts, 0, 0);
+		}
 	}
 
 	return 0;

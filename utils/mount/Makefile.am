@@ -14,6 +14,7 @@ MAINTAINERCLEANFILES = Makefile.in
 
 install-exec-hook:
 	(cd $(DESTDIR)$(sbindir) && \
+	  chmod +s $(sbin_PROGRAMS) && \
 	  ln -sf $(sbin_PROGRAMS) mount.nfs4 && \
 	  ln -sf $(sbin_PROGRAMS) umount.nfs && \
 	  ln -sf $(sbin_PROGRAMS) umount.nfs4)

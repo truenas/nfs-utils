@@ -9,8 +9,6 @@ DEBTMP	:= $(shell pwd)/debian/tmp
 build: build-stamp
 build-stamp:
 	dh_testdir
-	-test -r /usr/share/misc/config.sub && cp -f /usr/share/misc/config.sub config.sub
-	-test -r /usr/share/misc/config.guess && cp -f /usr/share/misc/config.guess config.guess
 	./configure \
 		--mandir='$${prefix}/share/man' \
 		--enable-secure-statd

@@ -1,3 +1,15 @@
+nfs-utils (1:1.0.9-2) unstable; urgency=low
+
+  * Merge changes from 1.0.9-1 and 1.0.9pre1-4:
+    * Disable mount.nfs once again; it's not ready for regular use according
+      to upstream.
+    * Revert mount options patch to mount.nfs; it's irrelevant as long as we
+      don't install the binary.
+  * Install the new rpcdebug program.
+  * Remove the {mount,umount}.nfs manpages.
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Sun,  9 Jul 2006 00:16:54 +0200
+
 nfs-utils (1:1.0.9-1) unstable; urgency=high
 
   * Updated co-mantainer mail address.
@@ -20,6 +32,15 @@ nfs-utils (1:1.0.9-1) unstable; urgency=high
     - assorted other fixes
 
  -- Anibal Monsalve Salazar <anibal@debian.org>  Sat, 08 Jul 2006 14:26:40 +1000
+
+nfs-utils (1:1.0.8+1.0.9pre1-4) unstable; urgency=low
+
+  * Back out having separate mount.nfs; this is in line with upstream, who
+    wants to delay this to 1.0.10. 
+    * No longer install {mount,umount}.{nfs,nfs4} to /sbin.
+    * Revert patch applied in -3.
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Sat,  8 Jul 2006 16:43:38 +0200
 
 nfs-utils (1:1.0.8+1.0.9pre1-3) unstable; urgency=high
 

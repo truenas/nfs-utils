@@ -1,15 +1,12 @@
 debian/tmp/usr/sbin/rpc.lockd sbin/
 debian/tmp/usr/sbin/rpc.statd sbin/
 debian/tmp/usr/sbin/showmount sbin/
-debian/tmp/usr/sbin/mount.nfs sbin/
-debian/tmp/usr/sbin/mount.nfs4 sbin/
-debian/tmp/usr/sbin/umount.nfs sbin/
-debian/tmp/usr/sbin/umount.nfs4 sbin/
 debian/tmp/usr/sbin/nfsstat
 debian/tmp/usr/sbin/rpc.gssd
 debian/tmp/usr/sbin/rpc.idmapd
 debian/tmp/usr/sbin/gss_clnt_send_err
 debian/tmp/usr/sbin/gss_destroy_creds
+debian/tmp/usr/sbin/rpcdebug
 debian/idmapd.conf usr/share/nfs-common/conffiles/
 debian/idmapd.conf.md5sum usr/share/nfs-common/conffiles/
 debian/nfs-common.default usr/share/nfs-common/conffiles/

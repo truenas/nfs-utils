@@ -11,8 +11,7 @@ build-stamp:
 	dh_testdir
 	./configure \
 		--mandir='$${prefix}/share/man' \
-		--enable-secure-statd \
-		--enable-mount
+		--enable-secure-statd 
 	$(MAKE)
 	touch build-stamp
 

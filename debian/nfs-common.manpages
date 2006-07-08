@@ -6,5 +6,4 @@ debian/tmp/usr/share/man/man8/statd.8
 debian/tmp/usr/share/man/man8/nfsstat*
 debian/tmp/usr/share/man/man8/showmount*
 debian/tmp/usr/share/man/man8/idmapd*
-debian/tmp/usr/share/man/man8/mount.nfs.8
-debian/tmp/usr/share/man/man8/umount.nfs.8
+debian/tmp/usr/share/man/man8/rpcdebug.8

@@ -1,11 +1,25 @@
-nfs-utils (1:1.0.8+1.0.9pre1-4) unstable; urgency=low
+nfs-utils (1:1.0.9-1) unstable; urgency=high
 
-  * Back out having separate mount.nfs; this is in line with upstream, who
-    wants to delay this to 1.0.10. 
-    * No longer install {mount,umount}.{nfs,nfs4} to /sbin.
-    * Revert patch applied in -3.
+  * Updated co-mantainer mail address.
+  * New upstream release.
+    - Added 'mount.nfs' utility which can be used as a mount helper
+      to mount nfs filesystems. It does not yet support 'user' mounts.
+    - Makefile/autoconf tidyups
+    - No compiles with no warnings
+    - deleted debian/* at request of debian maintainer
+    - deleted assorted other unused files
+    - mountd can be run multi-threaded for configurations with many hundreds
+      of clients (mountd -t 20).  Default is single-threaded
+    - Support for selection NFS version to be exported, and protocol to
+      use.  This requires kernel patches that should be in linux 2.6.19.
+    - Use 65534 rather than -2 for default anon.  This makes no difference in many
+      cases, but is important in some.
+    - New utility 'rpcdebug' for controlled kernel 'debug' options for nfs and nfsd.
+    - nfsstat reports NFSv4 operation statistics that should be available in
+      linux 2.6.18.
+    - assorted other fixes
 
- -- Steinar H. Gunderson <sesse@debian.org>  Sat,  8 Jul 2006 16:43:38 +0200
+ -- Anibal Monsalve Salazar <anibal@debian.org>  Sat, 08 Jul 2006 14:26:40 +1000
 
 nfs-utils (1:1.0.8+1.0.9pre1-3) unstable; urgency=high
 

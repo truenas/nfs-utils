@@ -1,3 +1,12 @@
+nfs-utils (1:1.0.8+1.0.9pre1-4) unstable; urgency=low
+
+  * Back out having separate mount.nfs; this is in line with upstream, who
+    wants to delay this to 1.0.10. 
+    * No longer install {mount,umount}.{nfs,nfs4} to /sbin.
+    * Revert patch applied in -3.
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Sat,  8 Jul 2006 16:43:38 +0200
+
 nfs-utils (1:1.0.8+1.0.9pre1-3) unstable; urgency=high
 
   * Add patch from upstream to check for common mount options like "user"

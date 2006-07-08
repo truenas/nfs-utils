@@ -23,7 +23,6 @@
 #include <mntent.h>
 #include <sys/mount.h>
 #include <ctype.h>
-#include <pwd.h>
 
 #include "xcommon.h"
 #include "fstab.h"
@@ -155,42 +154,6 @@ static void complain(int err, const char *dev) {
     default:
       nfs_error (_("umount: %s: %s"), dev, strerror (err)); break;
   }
-}
-
-/*
- * Look for an option in a comma-separated list
- */
-static int
-contains(const char *list, const char *s) {
-	int n = strlen(s);
-
-	while (*list) {
-		if (strncmp(list, s, n) == 0 &&
-		  (list[n] == 0 || list[n] == ','))
-			return 1;
-		while (*list && *list++ != ',') ;
-	}
-	return 0;
-}
-
-/*
- * If list contains "user=peter" and we ask for "user=", return "peter"
- */
-static char *
-get_value(const char *list, const char *s) {
-	const char *t;
-	int n = strlen(s);
-
-	while (*list) {
-		if (strncmp(list, s, n) == 0) {
-			s = t = list+n;
-			while (*s && *s != ',')
-				s++;
-			return xstrndup(t, s-t);
-		}
-		while (*list && *list++ != ',') ;
-	}
-	return 0;
 }
 
 int add_mtab2(const char *spec, const char *node, const char *type,
@@ -344,7 +307,7 @@ int _nfsumount(const char *spec, const char *opts)
 		goto out_bad;
 	return nfs_call_umount(&mnt_server, &dirname);
  out_bad:
-	fprintf(stderr, "%s: %s: not found or not mounted\n", progname, spec);
+	printf("%s: %s: not found or not mounted\n", progname, spec);
 	return 0;
 }
 
@@ -413,21 +376,6 @@ int nfsumount(int argc, char *argv[])
 		printf(_("Could not find %s in mtab\n"), spec);
 
 	if(mc) {
-		if(contains(mc->m.mnt_opts, "user") && getuid() != 0) {
-			struct passwd *pw = getpwuid(getuid());
-			if(!pw || strcmp(pw->pw_name, get_value(mc->m.mnt_opts, "user="))) {
-				fprintf(stderr, "%s: permission denied to unmount %s\n",
-						progname, spec);
-				exit(1);
-			}
-		} else {
-			if(!contains(mc->m.mnt_opts, "users") && getuid() != 0) {
-				fprintf(stderr, "%s: only root can unmount %s from %s\n",
-						progname, mc->m.mnt_fsname, mc->m.mnt_dir);
-				exit(1);
-			}
-		}
-
 		ret = _nfsumount(mc->m.mnt_fsname, mc->m.mnt_opts);
 		if(ret)
 			ret = add_mtab2(mc->m.mnt_fsname, mc->m.mnt_dir,

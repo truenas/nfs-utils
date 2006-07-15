@@ -29,8 +29,8 @@ double quotes. You can also specify spaces or other unusual character in
 the export name using a backslash followed by the character code as three
 octal digits.
 .PP
-To apply changes to this file, run exportfs -ra or (on Debian)
-/etc/init.d/nfs-kernel-server reload.
+To apply changes to this file, run exportfs -ra or /etc/init.d/nfs-kernel-server
+reload (the latter being a distribution-specific extension).
 .PP
 .SS Machine Name Formats
 NFS clients may be specified in a number of ways:

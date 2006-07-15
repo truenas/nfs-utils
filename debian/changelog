@@ -1,3 +1,13 @@
+nfs-utils (1:1.0.9-4) unstable; urgency=low
+
+  * Remove versioned dependency on coreutils, as we don't use it indirectly,
+    only via ucf (so the dependency should be there). This makes the package
+    somewhat easier to backport to sarge.
+  * Remove the word "Debian" from our patch against the exports(5) man page,
+    as Debian is not the only distribution using these packages.
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Sun, 16 Jul 2006 01:59:13 +0200
+
 nfs-utils (1:1.0.9-3) unstable; urgency=low
 
   * Don't automatically assume that the kernel is modular if /sbin/modprobe

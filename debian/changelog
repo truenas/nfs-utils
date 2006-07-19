@@ -1,3 +1,18 @@
+nfs-utils (1:1.0.9-5) unstable; urgency=low
+
+  * Put rpc.svcgssd back into place; removing it was obviously not what
+    upstream intended to do after all. (Closes: #378686)
+    * Add rpc.svcgssd to nfs-kernel-server.install.
+    * Add the svcgssd(8) man page, as well as the rpc.svcgssd(8) symlink.
+    * Add NEED_SVCGSSD and RPCSECGSSDOPTS options to nfs-kernel-server.default.
+    * Start and rpc.svcgssd in the nfs-kernel-server init script. Currently,
+      no autodetection is done; you'll need to enable it manually. (We can't
+      start it regardless, since it bombs out if there is no adequate nfs/*
+      entry in the keytab.)
+  * Remove obsolete RPCGSSDOPTS option from the nfs-kernel-server init script.
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Wed, 19 Jul 2006 14:06:33 +0200
+
 nfs-utils (1:1.0.9-4) unstable; urgency=low
 
   * Remove versioned dependency on coreutils, as we don't use it indirectly,

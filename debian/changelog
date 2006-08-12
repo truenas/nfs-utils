@@ -1,3 +1,13 @@
+nfs-utils (1:1.0.9-7) unstable; urgency=low
+
+  * New sourceful upload to force rebuild against librpcsecgss3, to get all
+    architectures in sync and make sure rpc.gssd actually has a proper library
+    to link against.
+  * Build-depend against librpcsecgss-dev (>= 0.14-2), since that's when
+    the package name bump happened.
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Sat, 12 Aug 2006 19:55:35 +0200
+
 nfs-utils (1:1.0.9-6) unstable; urgency=low
 
   * Enable idmapd by default if we find an /etc/exports file, as NFSv4 exports

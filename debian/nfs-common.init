@@ -19,9 +19,7 @@ DEFAULTFILE=/etc/default/nfs-common
 PREFIX=
 NEED_LOCKD=
 NEED_IDMAPD=
-IDMAPD_PIDFILE=/var/run/rpc.idmapd.pid
 NEED_GSSD=
-GSSD_PIDFILE=/var/run/rpc.gssd.pid
 PIPEFS_MOUNTPOINT=/var/lib/nfs/rpc_pipefs
 RPCGSSDOPTS=
 if [ -f $DEFAULTFILE ]; then
@@ -170,7 +168,6 @@ case "$1" in
 		then
 	            log_progress_msg "idmapd"
 		    start-stop-daemon --start --oknodo --quiet \
-			    --make-pidfile --pidfile $IDMAPD_PIDFILE \
 			    --exec /usr/sbin/rpc.idmapd
 	            if [ $? != 0 ]; then
         	        log_end_msg $?
@@ -182,7 +179,6 @@ case "$1" in
 		    do_modprobe rpcsec_gss_krb5
 	            log_progress_msg "gssd"
 		    start-stop-daemon --start --oknodo --quiet \
-			    --make-pidfile --pidfile $GSSD_PIDFILE \
 			    --exec /usr/sbin/rpc.gssd -- $RPCGSSDOPTS
 	            if [ $? != 0 ]; then
         	        log_end_msg $?
@@ -206,7 +202,6 @@ case "$1" in
                 log_end_msg $?
                 exit $?
             fi
-	    rm -f $GSSD_PIDFILE
 	fi
 	if [ "$NEED_IDMAPD" = yes ]
 	then
@@ -217,7 +212,6 @@ case "$1" in
                 log_end_msg $?
                 exit $?
             fi
-	    rm -f $IDMAPD_PIDFILE
 	fi
 	if [ "$NEED_LOCKD" = yes ]
 	then
@@ -251,7 +245,7 @@ case "$1" in
 
 	if [ "$NEED_GSSD" = yes ]
 	then
-            if [ ! -f "$GSSD_PIDFILE" ] || ! pidof rpc.gssd >/dev/null
+            if ! pidof rpc.gssd >/dev/null
 	    then
 		echo "rpc.statd running, but rpc.gssd halted"
 		exit 3
@@ -269,7 +263,7 @@ case "$1" in
 	    
 	if [ "$NEED_IDMAPD" = yes ]
 	then
-            if [ ! -f "$IDMAPD_PIDFILE" ] || ! pidof rpc.idmapd >/dev/null
+            if ! pidof rpc.idmapd >/dev/null
 	    then
 		echo "rpc.statd running, but rpc.idmapd halted"
 		exit 3

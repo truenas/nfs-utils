@@ -1,3 +1,12 @@
+nfs-utils (1:1.0.9-8) unstable; urgency=medium
+
+  * In the init scripts, don't attempt to use pid files; the daemons don't
+    leave them, and --make-pidfile gives wrong pid files since all the daemons
+    fork by themselves. Thus, multiple invocations of "start" could leave
+    multiple daemons lying around, which could cause all sorts of problems.
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Thu, 17 Aug 2006 17:24:11 +0200
+
 nfs-utils (1:1.0.9-7) unstable; urgency=low
 
   * New sourceful upload to force rebuild against librpcsecgss3, to get all

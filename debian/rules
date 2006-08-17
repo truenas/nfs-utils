@@ -9,7 +9,7 @@ DEBTMP	:= $(shell pwd)/debian/tmp
 build: build-stamp
 build-stamp:
 	dh_testdir
-	./configure \
+	CFLAGS="-g -Wall" ./configure \
 		--mandir='$${prefix}/share/man' \
 		--enable-secure-statd 
 	$(MAKE)

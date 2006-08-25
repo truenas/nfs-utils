@@ -1,3 +1,10 @@
+nfs-utils (1:1.0.9-9) unstable; urgency=medium
+
+  * Patched svc_socket.c to define __bzero only on ia64.
+    Closes: #384552.
+ 
+ -- Anibal Monsalve Salazar <anibal@debian.org>  Fri, 25 Aug 2006 11:45:07 +1000
+
 nfs-utils (1:1.0.9-8) unstable; urgency=medium
 
   * In the init scripts, don't attempt to use pid files; the daemons don't

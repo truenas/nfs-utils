@@ -1,3 +1,16 @@
+nfs-utils (1:1.0.9-11) unstable; urgency=low
+
+  * In the exports man page, document that there might be sensitive non-root
+    gids as well as uids, for instance gid staff. (Closes: #385377)
+  * Remove unnecessary dependency on sysvinit, in line with the Ubuntu
+    packages.
+  * Change the versioned build-dependency on librpcsecgss-dev (>= 0.14-2)
+    to a build-conflict on 0.14-1, as that is the only version, and it's
+    easier for backports and other distributions without the new version of
+    librpcsecgss.
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Thu, 31 Aug 2006 01:53:45 +0200
+
 nfs-utils (1:1.0.9-10) unstable; urgency=low
 
   * The -n option (short option for --no-tcp) to rpc.mountd was set

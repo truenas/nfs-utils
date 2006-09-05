@@ -1,3 +1,9 @@
+nfs-utils (1:1.0.9-12) unstable; urgency=low
+
+  * Really remove dependency on sysvinit.
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Tue,  5 Sep 2006 13:59:29 +0200
+
 nfs-utils (1:1.0.9-11) unstable; urgency=low
 
   * In the exports man page, document that there might be sensitive non-root

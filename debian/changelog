@@ -1,3 +1,18 @@
+nfs-utils (1:1.0.10-1) unstable; urgency=low
+
+  * New upstream release.
+    * Fixes issues with missing write_oid() function. (Closes: #386117)
+  * Drop versioned dependency on libnfsidmap1, now that libnfsidmap-dev has
+    fixed shlibs. This makes it possible to build against libnfsidmap2.
+    (Closes: #386116)
+  * Update README.Debian.nfsv4.
+    * Remove the part about a patched mount; the NFSv4 patch has been enabled
+      in mount for some time.
+    * Note that the special export structure might go away in the future.
+    * Note that you will need idmapd and possibly gssd/svcgssd enabled.
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Wed,  6 Sep 2006 00:30:32 +0200
+
 nfs-utils (1:1.0.9-12) unstable; urgency=low
 
   * Really remove dependency on sysvinit.

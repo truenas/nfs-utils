@@ -8,10 +8,7 @@ to experiment, make sure you have:
    want to use CITI's patch set from http://www.citi.umich.edu/projects/nfsv4/linux/ .
  - a recent enough version of nfs-utils on both client and server (you probably
    have on at least one of them, since you're reading this file!).
- - a patched mount, which will hopefully enter the archive soon at the time of
-   writing -- otherwise, you'll have to enable the patch in the Debian package
-   yourself and rebuild it. (It is not enabled by default, since the current version
-   of the patch breaks mounting against NFSv2-only servers, such as nfs-user-server.)
+ - enabled idmapd on both sides (see /etc/default/nfs-common).
 
 The export structure might be a bit confusing if you're already familiar with
 NFSv2 or NFSv3. The biggest difference is that you will need to export an explicit
@@ -37,15 +34,21 @@ server to be bind mounts, ie.:
 or in /etc/fstab:
 
   /srv/music /nfs4/music none bind 0 0
-  
+
+Note that this special export structure might be handled transparently by
+rpc.mountd at some time in the future, in which case you will probably get the
+traditional (NFSv3-style) behaviour if and only if you have no share with
+fsid=0.
+
 If you do not wish to use host-based authentication, you can specify "gss/krb5"
 instead of a hostname to get Kerberos-based authentication instead. For this, 
 you will need an "nfs/hostname@REALM" entry in /etc/krb5.keytab, as well as
-rpc.gssd running on both the client and the server (enable it manually in
-/etc/default/nfs-common if the autodetection fails).
+rpc.gssd running on both client and rpc.svcgssd on the server (enable them
+manually in /etc/default/nfs-common and /etc/default/nfs-kernel-server if the
+autodetection fails).
 
 If you use "gss/krb5i", you will also get integrity (ie. authentication), and
 with "gss/krb5p", you'll also get privacy (ie.  encryption). Make sure your
 kernel supports this; not all kernels do.
 
- -- Steinar H. Gunderson <sesse@debian.org>, Wed, 05 Apr 2006 18:09:47 +0200
+ -- Steinar H. Gunderson <sesse@debian.org>, Wed, 06 Sep 2006 00:32:38 +0200

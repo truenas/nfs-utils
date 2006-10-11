@@ -1,3 +1,26 @@
+nfs-utils (1:1.0.10-2) unstable; urgency=low
+
+  * Remove leftover log file from the .diff.gz.
+  * Build package with -O2; it got lost somewhere along the way.
+  * Replace - by \- in man pages (exports, nfsstat, showmount) where
+    appropriate.
+  * Add Required-Stop to the nfs-common and nfs-kernel-server init script
+    blocks to match the Required-Start directives.
+  * Finally remove DH_VERBOSE=1 from debian/rules.
+  * Add a reference to Trond Myklebust's client patch sets in
+    README.Debian.nfsv4.
+  * Handle issues with the nfs entries missing in /etc/services. (Closes:
+    #392276).
+    * Depend on netbase (>= 4.24), to make sure we have a version that has the
+      entries in the first place.
+    * Document that the entries might be missing still in README.Debian.nfsv4
+      (in case the user refused to replace a modified version of
+      /etc/services), and that they might need re-adding.
+    * Make the init script check that the lines are there before starting
+      rpc.gssd, and refer to the README otherwise.
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Wed, 11 Oct 2006 15:15:49 +0200
+
 nfs-utils (1:1.0.10-1) unstable; urgency=low
 
   * New upstream release.

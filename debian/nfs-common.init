@@ -3,6 +3,7 @@
 ### BEGIN INIT INFO
 # Provides:          nfs-common
 # Required-Start:    $time
+# Required-Stop:     $time
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
 # Short-Description: NFS support files common to client and server
@@ -178,6 +179,14 @@ case "$1" in
 		then
 		    do_modprobe rpcsec_gss_krb5
 	            log_progress_msg "gssd"
+
+	            # we need this available; better to fail now than
+		    # mysteriously on the first mount
+		    if ! grep -q -E '^nfs[	 ]' /etc/services; then
+		    	log_action_end_msg 1 "broken /etc/services, please see /usr/share/doc/nfs-common/README.Debian.nfsv4"
+			exit 1
+		    fi
+
 		    start-stop-daemon --start --oknodo --quiet \
 			    --exec /usr/sbin/rpc.gssd -- $RPCGSSDOPTS
 	            if [ $? != 0 ]; then

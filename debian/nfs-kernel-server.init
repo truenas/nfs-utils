@@ -3,6 +3,7 @@
 ### BEGIN INIT INFO
 # Provides:          nfs-kernel-server
 # Required-Start:    $portmap $time
+# Required-Stop:     $portmap $time
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
 # Short-Description: Kernel NFS server support

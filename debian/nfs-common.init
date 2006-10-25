@@ -112,7 +112,10 @@ esac
 [ -x /usr/sbin/rpc.gssd     ] || [ "$NEED_GSSD"   = no ] || exit 0
 
 do_modprobe() {
-    modprobe -q "$1" || true
+    if [ -x /sbin/modprobe -a -f /proc/modules ]
+    then
+        modprobe -q "$1" || true
+    fi
 }
 
 do_mount() {

@@ -1,3 +1,14 @@
+nfs-utils (1:1.0.10-3) unstable; urgency=low
+
+  * Copy the do_modprobe() definition from nfs-kernel-server.init to
+    nfs-common.init, fixing spurious warnings when running a non-modular
+    kernel. (Closes: #394810)
+  * Wrap README.Debian.nfsv4 at 80 columns. (Closes: #394916)
+  * In README.Debian.nfsv4, added a note about /etc/hosts entries containing
+    non-global IP addresses.
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Wed, 25 Oct 2006 11:50:52 +0200
+
 nfs-utils (1:1.0.10-2) unstable; urgency=low
 
   * Remove leftover log file from the .diff.gz.

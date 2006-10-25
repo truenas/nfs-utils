@@ -4,9 +4,10 @@ NFSv4 in Debian
 NFSv4 support in Debian is rather new, and not fully supported yet. If you want
 to experiment, make sure you have:
 
- - a recent 2.6 kernel on both client and server; newer is better. You might even
-   want to use CITI's patch set from http://www.citi.umich.edu/projects/nfsv4/linux/ 
-   on the server, and/or Trond Myklebust's patch set from http://client.linux-nfs.org/ .
+ - a recent 2.6 kernel on both client and server; newer is better. You might
+   even want to use CITI's patch set from
+   http://www.citi.umich.edu/projects/nfsv4/linux/ on the server, and/or Trond
+   Myklebust's patch set from http://client.linux-nfs.org/ .
  - a recent enough version of nfs-utils on both client and server (you probably
    have on at least one of them, since you're reading this file!).
  - enabled idmapd on both sides (see /etc/default/nfs-common).
@@ -19,13 +20,13 @@ to experiment, make sure you have:
    nfs		2049/udp			# Network File System
 
 The export structure might be a bit confusing if you're already familiar with
-NFSv2 or NFSv3. The biggest difference is that you will need to export an explicit
-root of your pseudofilesystem, like this /etc/exports fragment:
+NFSv2 or NFSv3. The biggest difference is that you will need to export an
+explicit root of your pseudofilesystem, like this /etc/exports fragment:
 
   /nfs4                   hostname(rw,sync,fsid=0,crossmnt)
 
-(It doesn't need to be named "nfs4".) Then you can mount other volumes under that,
-like:
+(It doesn't need to be named "nfs4".) Then you can mount other volumes under
+that, like:
 
   /nfs4/music             hostname(rw,sync)
   /nfs4/movies            hostname(rw,sync)
@@ -34,8 +35,8 @@ Then your client can mount shares like this:
 
   mount -t nfs4 server:/music /mnt/music
 
-Since you might not have everything under one root, you might want /nfs4/* on the
-server to be bind mounts, ie.:
+Since you might not have everything under one root, you might want /nfs4/* on
+the server to be bind mounts, ie.:
 
   mount --bind /srv/music /nfs4/music
 
@@ -58,5 +59,11 @@ autodetection fails).
 If you use "gss/krb5i", you will also get integrity (ie. authentication), and
 with "gss/krb5p", you'll also get privacy (ie. encryption). Make sure your
 kernel supports this; not all kernels do.
+
+If you receive messages on the server complaining about "client ID already in
+use" when mounting from more than one client, check your /etc/hosts; if your
+hostname resolves to a non-global IP (like 127.0.0.1 or 127.0.1.1, or if you
+are behind NAT) this will cause such problems currently, and you will need to
+change or remove it for NFSv4 mounts to work correctly.
 
  -- Steinar H. Gunderson <sesse@debian.org>, Wed, 11 Oct 2006 15:18:03 +0200

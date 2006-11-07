@@ -54,16 +54,18 @@ instead of a hostname to get Kerberos-based authentication instead. For this,
 you will need an "nfs/hostname@REALM" entry in /etc/krb5.keytab, as well as
 rpc.gssd running on both client and rpc.svcgssd on the server (enable them
 manually in /etc/default/nfs-common and /etc/default/nfs-kernel-server if the
-autodetection fails).
+autodetection fails). On the client, you will need to add "-o sec=krb5" to
+the mount call.
 
-If you use "gss/krb5i", you will also get integrity (ie. authentication), and
-with "gss/krb5p", you'll also get privacy (ie. encryption). Make sure your
-kernel supports this; not all kernels do.
+If you use "gss/krb5i" (and correspondingly "-o sec=krb5i" on the client), you
+will also get integrity (ie. authentication), and with "gss/krb5p", you'll also
+get privacy (ie. encryption). Make sure your kernel supports this; not all
+kernels do.
 
 If you receive messages on the server complaining about "client ID already in
-use" when mounting from more than one client, check your /etc/hosts; if your
-hostname resolves to a non-global IP (like 127.0.0.1 or 127.0.1.1, or if you
-are behind NAT) this will cause such problems currently, and you will need to
-change or remove it for NFSv4 mounts to work correctly.
+use" when mounting from more than one client, check that you have at least
+mount version 2.12r-14. Also, connecting from behind different NATs could cause
+this kind of issue currently, as two or more clients would believe they had the
+same IP.
 
  -- Steinar H. Gunderson <sesse@debian.org>, Wed, 11 Oct 2006 15:18:03 +0200

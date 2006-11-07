@@ -124,7 +124,7 @@ default.  In all subsequence releases,
 .I sync
 is the default, and
 .I async
-must be explicit requested if needed.
+must be explicitly requested if needed.
 To help make system adminstrators aware of this change, 'exportfs'
 will issue a warning if neither
 .I sync

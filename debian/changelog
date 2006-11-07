@@ -1,3 +1,15 @@
+nfs-utils (1:1.0.10-4) unstable; urgency=low
+
+  * README.Debian.nfsv4 updates.
+    * Document how to mount using GSS; previously, we only documented server
+      setup.
+    * Change the section about setclientid in the light of the new util-linux
+      version.
+  * Fix a grammatical error in the exports(5) man page; patch from Joey
+    Schultze. (Closes: #396344)
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Tue,  7 Nov 2006 02:57:21 +0100
+
 nfs-utils (1:1.0.10-3) unstable; urgency=low
 
   * Copy the do_modprobe() definition from nfs-kernel-server.init to

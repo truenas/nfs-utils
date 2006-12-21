@@ -1,3 +1,17 @@
+nfs-utils (1:1.0.10-5) unstable; urgency=medium
+
+  * The NFS kernel server does not support uid mappings, activated with flags
+    such as "map_daemon" in exports. There is already code that parses these
+    flags, and gives an error at mount time if an unsupported flag (ie. any
+    but the default) is given. However, at some point the kernel changed the
+    export interface, and the new code forgot to include the relevant check.
+    Thus, simply copy the check from the old to the new code, which makes
+    sure mountd behaves the same in this aspect regardless of kernel version,
+    and makes sure the admin does not inadvertedly use map_daemon and expect
+    it to work. (Closes: #403232)
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Thu, 21 Dec 2006 12:13:10 +0100
+
 nfs-utils (1:1.0.10-4) unstable; urgency=low
 
   * README.Debian.nfsv4 updates.

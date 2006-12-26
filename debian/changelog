@@ -1,3 +1,12 @@
+nfs-utils (1:1.0.10-6~quilt.1) experimental; urgency=low
+
+  * 07-exports-default-options.patch: Support default options in exports(5),
+    like "/srv/www -rw,sync host1 host2 host3(ro)" (syntax borrowed from
+    OpenBSD). Also updates the exports(5) man page to explain the new syntax.
+    (Closes: #273188)
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Tue, 26 Dec 2006 23:43:51 +0100
+
 nfs-utils (1:1.0.10-6~quilt.0) experimental; urgency=low
 
   * Switch to quilt for patch management.

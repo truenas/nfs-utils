@@ -4,3 +4,4 @@
 04-document-sensitive-uids.patch
 05-refuse-non-ident-maptypes.patch
 06-fix-no-tcp-short-option.patch
+07-exports-default-options.patch

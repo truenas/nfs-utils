@@ -381,12 +381,6 @@ void cache_export(nfs_export *exp)
 {
 	FILE *f;
 
-	if (exp->m_export.e_maptype != CLE_MAP_IDENT) {
-		xlog(L_ERROR, "%s: unsupported mapping; kernel supports only 'identity' (default)",
-		    exp->m_export.m_path);
-		return;
-	}
-
 	f = fopen("/proc/net/rpc/auth.unix.ip/channel", "w");
 	if (!f)
 		return;

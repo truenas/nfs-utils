@@ -1,5 +1,6 @@
-#!/usr/bin/make -f
-# Sample debian/rules that uses debhelper. GNU copyright 1997 by Joey Hess.
+#! /usr/bin/make -f
+
+include /usr/share/quilt/quilt.make
 
 DEB_BUILD_GNU_TYPE	:= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
 DEB_HOST_GNU_TYPE	:= $(shell dpkg-architecture -qDEB_HOST_GNU_TYPE)
@@ -10,23 +11,21 @@ DEB_HOST_ARCH_OS	:= $(shell dpkg-architecture -qDEB_HOST_ARCH_OS)
 DEBTMP	:= $(shell pwd)/debian/tmp
 
 build: build-stamp
-build-stamp:
+build-stamp: patch
 	dh_testdir
-ifeq ($(DEB_HOST_ARCH),ia64)
-	patch -p1 < debian/bzero.patch
-endif
 	CFLAGS="-g -O2 -Wall" ./configure \
 		--mandir='$${prefix}/share/man' \
 		--enable-secure-statd 
 	$(MAKE)
 	touch build-stamp
 
-clean:
+clean: unpatch
 	dh_testdir
 	dh_testroot
 	rm -f build-stamp
 	rm -rf $(DEBTMP)
 	-$(MAKE) distclean
+	$(RM) utils/rquotad/rquota.h utils/rquotad/rquota_xdr.c
 	dh_clean
 
 binary-indep: build
@@ -41,8 +40,8 @@ binary-arch: build
 	
 	# Fix up the manpages
 	for f in lockd statd showmount; do \
-	  perl -pi -e "s#/usr(/sbin/(rpc\\.)?$$f)#\$$1#g" \
-	    debian/tmp/usr/share/man/man8/$$f.8; \
+		perl -pi -e "s#/usr(/sbin/(rpc\\.)?$$f)#\$$1#g" \
+			debian/tmp/usr/share/man/man8/$$f.8; \
 	done;
 	
 	dh_installdocs -A

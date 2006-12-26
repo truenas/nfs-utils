@@ -1,3 +1,39 @@
+nfs-utils (1:1.0.10-6~quilt.0) experimental; urgency=low
+
+  * Switch to quilt for patch management.
+    * Build-depend on quilt.
+    * Include /usr/share/quilt/quilt.make in debian/rules.
+    * Make the build target depend on "patch", and the clean target depend on
+      "unpatch".
+    * Replace debian/bzero.patch with debian/patches/01-bzero.patch (which
+      fixes the same issue but matches what we sent upstream), included
+      unconditionally. Also remove the debian/rules snippet to patch it.
+    * Split monolithic .diff.gz into diffs in debian/patches:
+      * 02-document-debian-init-scripts.patch: Make exports(5) man page
+        document that "/etc/init.d/nfs-kernel-server reload" works on Debian
+        and derivative distributions.
+      * 03-minor-manpage-fixes.patch: Misc. manpage fixes already sent
+        upstream, mostly with regard to - vs. \-. Will be included in 1.0.11.
+      * 04-document-sensitive-uids.patch: Document sensitive non-root uids and
+        gids. Will be included in 1.0.11.
+      * 05-refuse-non-ident-maptypes.patch: Give an error on non-ident map
+        types such as map_daemon. Pending inclusion upstream.
+      * 06-fix-no-tcp-short-option.patch: Fix the short option (-n) for
+        --no-tcp. Will be included in 1.0.11.
+  * Remove utils/rquotad/rquota.h and utils/rquotad/rquota_xdr.c on
+    debian/rules clean, to make sure they don't appear in the diff.
+  * Remove the nhfsstone package, as it is not fit for main; once upstream
+    removes it too (will happen in 1.0.11), this will fix #398058.
+    * Remove debian/nhfsstone.*.
+    * Remove nhfsstone section from debian/control.
+  * Remove the debhelper template copyright, as newer dh_make gives a
+    copyright exception.
+  * Change "#!/usr/bin/make -f" in debian/rules to "#! /usr/bin/make -f", for
+    good measure.
+  * Make indentation in debian/rules consistent. 
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Tue, 26 Dec 2006 21:03:50 +0100
+
 nfs-utils (1:1.0.10-5) unstable; urgency=medium
 
   * The NFS kernel server does not support uid mappings, activated with flags

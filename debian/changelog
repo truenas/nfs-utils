@@ -1,3 +1,11 @@
+nfs-utils (1:1.0.10-6~quilt.2) experimental; urgency=low
+
+  * 08-dont-build-getkversion.patch: Don't build getkversion, since it fails
+    when trying to build against newer kernel headers; it's not really used in
+    the package anyhow. Adapted from an Ubuntu patch by Tollef Fog Heen.
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Tue,  2 Jan 2007 14:47:36 +0100
+
 nfs-utils (1:1.0.10-6~quilt.1) experimental; urgency=low
 
   * 07-exports-default-options.patch: Support default options in exports(5),

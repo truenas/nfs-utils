@@ -1,0 +1,54 @@
+diff -u nfs-utils-1.0.10/debian/changelog nfs-utils-1.0.10/debian/changelog
+--- nfs-utils-1.0.10.orig/configure.in
++++ nfs-utils-1.0.10/configure.in
+@@ -317,7 +317,6 @@
+ 	support/nfs/Makefile
+ 	tools/Makefile
+ 	tools/getiversion/Makefile
+-	tools/getkversion/Makefile
+ 	tools/locktest/Makefile
+ 	tools/nlmtest/Makefile
+ 	tools/rpcdebug/Makefile
+only in patch2:
+unchanged:
+--- nfs-utils-1.0.10.orig/tools/Makefile.am
++++ nfs-utils-1.0.10/tools/Makefile.am
+@@ -1,5 +1,5 @@
+ ## Process this file with automake to produce Makefile.in
+ 
+-SUBDIRS = getiversion getkversion locktest rpcdebug rpcgen nlmtest
++SUBDIRS = getiversion locktest rpcdebug rpcgen nlmtest
+ 
+ MAINTAINERCLEANFILES = Makefile.in
+only in patch2:
+unchanged:
+--- nfs-utils-1.0.10.orig/tools/Makefile.in
++++ nfs-utils-1.0.10/tools/Makefile.in
+@@ -207,7 +207,7 @@
+ statedir = @statedir@
+ sysconfdir = @sysconfdir@
+ target_alias = @target_alias@
+-SUBDIRS = getiversion getkversion locktest rpcdebug rpcgen nlmtest
++SUBDIRS = getiversion locktest rpcdebug rpcgen nlmtest
+ MAINTAINERCLEANFILES = Makefile.in
+ all: all-recursive
+ 
+--- nfs-utils-1.0.10.orig/configure
++++ nfs-utils-1.0.10/configure
+@@ -30603,7 +30672,7 @@
+ ACLOCAL_AMFLAGS="-I $ac_macro_dir \$(ACLOCAL_FLAGS)"
+ 
+ 
+-ac_config_files="$ac_config_files Makefile linux-nfs/Makefile support/Makefile support/export/Makefile support/include/nfs/Makefile support/include/rpcsvc/Makefile support/include/sys/fs/Makefile support/include/sys/Makefile support/include/Makefile support/misc/Makefile support/nfs/Makefile tools/Makefile tools/getiversion/Makefile tools/getkversion/Makefile tools/locktest/Makefile tools/nlmtest/Makefile tools/rpcdebug/Makefile tools/rpcgen/Makefile utils/Makefile utils/exportfs/Makefile utils/gssd/Makefile utils/idmapd/Makefile utils/lockd/Makefile utils/mount/Makefile utils/mountd/Makefile utils/nfsd/Makefile utils/nfsstat/Makefile utils/nhfsstone/Makefile utils/rquotad/Makefile utils/showmount/Makefile utils/statd/Makefile"
++ac_config_files="$ac_config_files Makefile linux-nfs/Makefile support/Makefile support/export/Makefile support/include/nfs/Makefile support/include/rpcsvc/Makefile support/include/sys/fs/Makefile support/include/sys/Makefile support/include/Makefile support/misc/Makefile support/nfs/Makefile tools/Makefile tools/getiversion/Makefile tools/locktest/Makefile tools/nlmtest/Makefile tools/rpcdebug/Makefile tools/rpcgen/Makefile utils/Makefile utils/exportfs/Makefile utils/gssd/Makefile utils/idmapd/Makefile utils/lockd/Makefile utils/mount/Makefile utils/mountd/Makefile utils/nfsd/Makefile utils/nfsstat/Makefile utils/nhfsstone/Makefile utils/rquotad/Makefile utils/showmount/Makefile utils/statd/Makefile"
+ 
+ cat >confcache <<\_ACEOF
+ # This file is a shell script that caches the results of configure
+@@ -31225,7 +31294,6 @@
+     "support/nfs/Makefile") CONFIG_FILES="$CONFIG_FILES support/nfs/Makefile" ;;
+     "tools/Makefile") CONFIG_FILES="$CONFIG_FILES tools/Makefile" ;;
+     "tools/getiversion/Makefile") CONFIG_FILES="$CONFIG_FILES tools/getiversion/Makefile" ;;
+-    "tools/getkversion/Makefile") CONFIG_FILES="$CONFIG_FILES tools/getkversion/Makefile" ;;
+     "tools/locktest/Makefile") CONFIG_FILES="$CONFIG_FILES tools/locktest/Makefile" ;;
+     "tools/nlmtest/Makefile") CONFIG_FILES="$CONFIG_FILES tools/nlmtest/Makefile" ;;
+     "tools/rpcdebug/Makefile") CONFIG_FILES="$CONFIG_FILES tools/rpcdebug/Makefile" ;;

@@ -1,3 +1,10 @@
+nfs-utils (1:1.0.10-6~quilt.6) experimental; urgency=low
+
+  * Make build depend on "patch build-stamp", not "build-stamp patch", which
+    would build without _any_ patches -- ouch.
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Thu,  4 Jan 2007 15:56:42 +0100
+
 nfs-utils (1:1.0.10-6~quilt.5) experimental; urgency=low
 
   * Make quilt build-dependency versioned to (>= 0.40), as per lintian

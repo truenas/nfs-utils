@@ -5,7 +5,7 @@ include /usr/share/quilt/quilt.make
 # Temporary root
 DEBTMP := $(CURDIR)/debian/tmp
 
-build: build-stamp patch
+build: patch build-stamp
 build-stamp:
 	dh_testdir
 	CFLAGS="-g -O2 -Wall" ./configure \

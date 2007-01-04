@@ -1,0 +1,13 @@
+Index: nfs-utils-1.0.10/utils/gssd/gssd.c
+===================================================================
+--- nfs-utils-1.0.10.orig/utils/gssd/gssd.c
++++ nfs-utils-1.0.10/utils/gssd/gssd.c
+@@ -118,7 +118,7 @@ main(int argc, char *argv[])
+ 				break;
+ 			case 'd':
+ 				strncpy(ccachedir, optarg, sizeof(ccachedir));
+-				if (ccachedir[sizeof(ccachedir-1)] != '\0')
++				if (ccachedir[sizeof(ccachedir)-1] != '\0')
+ 					errx(1, "ccachedir path name too long");
+ 				break;
+ 			default:

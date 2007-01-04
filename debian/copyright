@@ -1,6 +1,13 @@
 This package was debianized by Chip Salzenberg <chip@debian.org> on Fri,  3 Dec 1999 20:00:00 -0800
 
-It was downloaded from http://sourceforge.net/projects/nfs/
+This is a git snapshot, downloaded January 5th, 2007 using
+the following commands:
+
+  cg-clone git://git.linux-nfs.org/pub/linux/nfs-utils/ nfs-utils-1.0.11\~git-20060105/
+  cd nfs-utils-1.0.11\~git-20060105/ && sh ./autogen.sh
+  tar --exclude=.git -zcf nfs-utils_1.0.11~git-20060105.orig.tar.gz nfs-utils-1.0.11\~git-20060105
+
+Regular releases are avilable from http://sourceforge.net/projects/nfs/.
 
 View individual source files for respective authors.
 

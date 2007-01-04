@@ -1,8 +1,8 @@
-Index: nfs-utils-1.0.10/utils/mountd/cache.c
+Index: nfs-utils-1.0.11~git-20060105/utils/mountd/cache.c
 ===================================================================
---- nfs-utils-1.0.10.orig/utils/mountd/cache.c
-+++ nfs-utils-1.0.10/utils/mountd/cache.c
-@@ -381,6 +381,12 @@ void cache_export(nfs_export *exp)
+--- nfs-utils-1.0.11~git-20060105.orig/utils/mountd/cache.c
++++ nfs-utils-1.0.11~git-20060105/utils/mountd/cache.c
+@@ -375,6 +375,12 @@ void cache_export(nfs_export *exp)
  {
  	FILE *f;
  

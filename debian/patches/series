@@ -6,3 +6,4 @@
 06-fix-no-tcp-short-option.patch
 07-exports-default-options.patch
 08-dont-build-getkversion.patch
+09-manpage-paths-fixup.patch 

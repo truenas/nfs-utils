@@ -3,10 +3,10 @@
 include /usr/share/quilt/quilt.make
 
 # Temporary root
-DEBTMP	:= $(shell pwd)/debian/tmp
+DEBTMP := $(CURDIR)/debian/tmp
 
-build: build-stamp
-build-stamp: patch
+build: build-stamp patch
+build-stamp:
 	dh_testdir
 	CFLAGS="-g -O2 -Wall" ./configure \
 		--mandir='$${prefix}/share/man' \
@@ -32,13 +32,6 @@ binary-arch: build
 	mkdir $(DEBTMP)
 	$(MAKE) DESTDIR='$(DEBTMP)' install
 	dh_install
-	
-	# Fix up the manpages
-	for f in lockd statd showmount; do \
-		perl -pi -e "s#/usr(/sbin/(rpc\\.)?$$f)#\$$1#g" \
-			debian/tmp/usr/share/man/man8/$$f.8; \
-	done;
-	
 	dh_installdocs -A
 	dh_installdocs -pnfs-common debian/README.Debian.nfsv4
 	install -m 0755 debian/nfs-common.init debian/nfs-common/etc/init.d/nfs-common

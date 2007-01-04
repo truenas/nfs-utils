@@ -1,7 +1,8 @@
-diff -u nfs-utils-1.0.10/debian/changelog nfs-utils-1.0.10/debian/changelog
+Index: nfs-utils-1.0.10/configure.in
+===================================================================
 --- nfs-utils-1.0.10.orig/configure.in
 +++ nfs-utils-1.0.10/configure.in
-@@ -317,7 +317,6 @@
+@@ -317,7 +317,6 @@ AC_CONFIG_FILES([
  	support/nfs/Makefile
  	tools/Makefile
  	tools/getiversion/Makefile
@@ -9,8 +10,8 @@ diff -u nfs-utils-1.0.10/debian/changelog nfs-utils-1.0.10/debian/changelog
  	tools/locktest/Makefile
  	tools/nlmtest/Makefile
  	tools/rpcdebug/Makefile
-only in patch2:
-unchanged:
+Index: nfs-utils-1.0.10/tools/Makefile.am
+===================================================================
 --- nfs-utils-1.0.10.orig/tools/Makefile.am
 +++ nfs-utils-1.0.10/tools/Makefile.am
 @@ -1,5 +1,5 @@
@@ -20,11 +21,11 @@ unchanged:
 +SUBDIRS = getiversion locktest rpcdebug rpcgen nlmtest
  
  MAINTAINERCLEANFILES = Makefile.in
-only in patch2:
-unchanged:
+Index: nfs-utils-1.0.10/tools/Makefile.in
+===================================================================
 --- nfs-utils-1.0.10.orig/tools/Makefile.in
 +++ nfs-utils-1.0.10/tools/Makefile.in
-@@ -207,7 +207,7 @@
+@@ -207,7 +207,7 @@ statduser = @statduser@
  statedir = @statedir@
  sysconfdir = @sysconfdir@
  target_alias = @target_alias@
@@ -33,9 +34,11 @@ unchanged:
  MAINTAINERCLEANFILES = Makefile.in
  all: all-recursive
  
+Index: nfs-utils-1.0.10/configure
+===================================================================
 --- nfs-utils-1.0.10.orig/configure
 +++ nfs-utils-1.0.10/configure
-@@ -30603,7 +30672,7 @@
+@@ -30603,7 +30603,7 @@ AM_CFLAGS="$my_am_cflags"
  ACLOCAL_AMFLAGS="-I $ac_macro_dir \$(ACLOCAL_FLAGS)"
  
  
@@ -44,7 +47,7 @@ unchanged:
  
  cat >confcache <<\_ACEOF
  # This file is a shell script that caches the results of configure
-@@ -31225,7 +31294,6 @@
+@@ -31225,7 +31225,6 @@ do
      "support/nfs/Makefile") CONFIG_FILES="$CONFIG_FILES support/nfs/Makefile" ;;
      "tools/Makefile") CONFIG_FILES="$CONFIG_FILES tools/Makefile" ;;
      "tools/getiversion/Makefile") CONFIG_FILES="$CONFIG_FILES tools/getiversion/Makefile" ;;

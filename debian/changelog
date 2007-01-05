@@ -1,3 +1,10 @@
+nfs-utils (1:1.0.11~git-20060105-2) experimental; urgency=low
+
+  * 08-dont-build-getkversion.patch: We missed tools/Makefile.in on last
+    refresh, so it ended up in the .diff.gz. Fix.
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Fri,  5 Jan 2007 13:38:07 +0100
+
 nfs-utils (1:1.0.11~git-20060105-1) experimental; urgency=low
 
   * New upstream release.

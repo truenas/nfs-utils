@@ -207,7 +207,7 @@ statduser = @statduser@
 statedir = @statedir@
 sysconfdir = @sysconfdir@
 target_alias = @target_alias@
-SUBDIRS = getiversion locktest rpcdebug rpcgen nlmtest
+SUBDIRS = getiversion getkversion locktest rpcdebug rpcgen nlmtest
 MAINTAINERCLEANFILES = Makefile.in
 all: all-recursive
 

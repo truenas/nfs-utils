@@ -42,3 +42,16 @@ Index: nfs-utils-1.0.11~git-20060105/configure
      "tools/locktest/Makefile") CONFIG_FILES="$CONFIG_FILES tools/locktest/Makefile" ;;
      "tools/nlmtest/Makefile") CONFIG_FILES="$CONFIG_FILES tools/nlmtest/Makefile" ;;
      "tools/rpcdebug/Makefile") CONFIG_FILES="$CONFIG_FILES tools/rpcdebug/Makefile" ;;
+Index: nfs-utils-1.0.11~git-20060105/tools/Makefile.in
+===================================================================
+--- nfs-utils-1.0.11~git-20060105.orig/tools/Makefile.in
++++ nfs-utils-1.0.11~git-20060105/tools/Makefile.in
+@@ -207,7 +207,7 @@ statduser = @statduser@
+ statedir = @statedir@
+ sysconfdir = @sysconfdir@
+ target_alias = @target_alias@
+-SUBDIRS = getiversion getkversion locktest rpcdebug rpcgen nlmtest
++SUBDIRS = getiversion locktest rpcdebug rpcgen nlmtest
+ MAINTAINERCLEANFILES = Makefile.in
+ all: all-recursive
+ 

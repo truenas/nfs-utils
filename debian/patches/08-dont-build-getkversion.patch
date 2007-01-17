@@ -1,7 +1,7 @@
-Index: nfs-utils-1.0.11~git-20060105/configure.in
+Index: nfs-utils-1.0.11~git-20060117/configure.in
 ===================================================================
---- nfs-utils-1.0.11~git-20060105.orig/configure.in
-+++ nfs-utils-1.0.11~git-20060105/configure.in
+--- nfs-utils-1.0.11~git-20060117.orig/configure.in
++++ nfs-utils-1.0.11~git-20060117/configure.in
 @@ -319,7 +319,6 @@ AC_CONFIG_FILES([
  	support/nfs/Makefile
  	tools/Makefile
@@ -10,10 +10,10 @@ Index: nfs-utils-1.0.11~git-20060105/configure.in
  	tools/locktest/Makefile
  	tools/nlmtest/Makefile
  	tools/rpcdebug/Makefile
-Index: nfs-utils-1.0.11~git-20060105/tools/Makefile.am
+Index: nfs-utils-1.0.11~git-20060117/tools/Makefile.am
 ===================================================================
---- nfs-utils-1.0.11~git-20060105.orig/tools/Makefile.am
-+++ nfs-utils-1.0.11~git-20060105/tools/Makefile.am
+--- nfs-utils-1.0.11~git-20060117.orig/tools/Makefile.am
++++ nfs-utils-1.0.11~git-20060117/tools/Makefile.am
 @@ -1,5 +1,5 @@
  ## Process this file with automake to produce Makefile.in
  
@@ -21,11 +21,11 @@ Index: nfs-utils-1.0.11~git-20060105/tools/Makefile.am
 +SUBDIRS = getiversion locktest rpcdebug rpcgen nlmtest
  
  MAINTAINERCLEANFILES = Makefile.in
-Index: nfs-utils-1.0.11~git-20060105/configure
+Index: nfs-utils-1.0.11~git-20060117/configure
 ===================================================================
---- nfs-utils-1.0.11~git-20060105.orig/configure
-+++ nfs-utils-1.0.11~git-20060105/configure
-@@ -28736,7 +28736,7 @@ AM_CFLAGS="$my_am_cflags"
+--- nfs-utils-1.0.11~git-20060117.orig/configure
++++ nfs-utils-1.0.11~git-20060117/configure
+@@ -28722,7 +28722,7 @@ AM_CFLAGS="$my_am_cflags"
  ACLOCAL_AMFLAGS="-I $ac_macro_dir \$(ACLOCAL_FLAGS)"
  
  
@@ -34,7 +34,7 @@ Index: nfs-utils-1.0.11~git-20060105/configure
  
  cat >confcache <<\_ACEOF
  # This file is a shell script that caches the results of configure
-@@ -29371,7 +29371,6 @@ do
+@@ -29357,7 +29357,6 @@ do
      "support/nfs/Makefile") CONFIG_FILES="$CONFIG_FILES support/nfs/Makefile" ;;
      "tools/Makefile") CONFIG_FILES="$CONFIG_FILES tools/Makefile" ;;
      "tools/getiversion/Makefile") CONFIG_FILES="$CONFIG_FILES tools/getiversion/Makefile" ;;
@@ -42,11 +42,11 @@ Index: nfs-utils-1.0.11~git-20060105/configure
      "tools/locktest/Makefile") CONFIG_FILES="$CONFIG_FILES tools/locktest/Makefile" ;;
      "tools/nlmtest/Makefile") CONFIG_FILES="$CONFIG_FILES tools/nlmtest/Makefile" ;;
      "tools/rpcdebug/Makefile") CONFIG_FILES="$CONFIG_FILES tools/rpcdebug/Makefile" ;;
-Index: nfs-utils-1.0.11~git-20060105/tools/Makefile.in
+Index: nfs-utils-1.0.11~git-20060117/tools/Makefile.in
 ===================================================================
---- nfs-utils-1.0.11~git-20060105.orig/tools/Makefile.in
-+++ nfs-utils-1.0.11~git-20060105/tools/Makefile.in
-@@ -207,7 +207,7 @@ statduser = @statduser@
+--- nfs-utils-1.0.11~git-20060117.orig/tools/Makefile.in
++++ nfs-utils-1.0.11~git-20060117/tools/Makefile.in
+@@ -204,7 +204,7 @@ statduser = @statduser@
  statedir = @statedir@
  sysconfdir = @sysconfdir@
  target_alias = @target_alias@

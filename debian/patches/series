@@ -5,3 +5,4 @@
 08-dont-build-getkversion.patch
 09-manpage-paths-fixup.patch 
 10-ccachedir-off-by-one.patch
+11-root-on-krb5-mounts.patch

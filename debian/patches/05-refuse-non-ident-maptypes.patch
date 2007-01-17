@@ -1,9 +1,9 @@
-Index: nfs-utils-1.0.11~git-20060105/utils/mountd/cache.c
+Index: nfs-utils-1.0.11~git-20060117/utils/mountd/cache.c
 ===================================================================
---- nfs-utils-1.0.11~git-20060105.orig/utils/mountd/cache.c
-+++ nfs-utils-1.0.11~git-20060105/utils/mountd/cache.c
-@@ -375,6 +375,12 @@ void cache_export(nfs_export *exp)
- {
+--- nfs-utils-1.0.11~git-20060117.orig/utils/mountd/cache.c
++++ nfs-utils-1.0.11~git-20060117/utils/mountd/cache.c
+@@ -377,6 +377,12 @@ int cache_export(nfs_export *exp)
+ 	int err;
  	FILE *f;
  
 +	if (exp->m_export.e_maptype != CLE_MAP_IDENT) {
@@ -14,4 +14,4 @@ Index: nfs-utils-1.0.11~git-20060105/utils/mountd/cache.c
 +
  	f = fopen("/proc/net/rpc/auth.unix.ip/channel", "w");
  	if (!f)
- 		return;
+ 		return -1;

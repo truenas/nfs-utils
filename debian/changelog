@@ -1,3 +1,19 @@
+nfs-utils (1:1.0.11~git-20060117-1) experimental; urgency=low
+
+  * New upstream snapshot; only minor changes.
+    * Update debian/copyright with the new version number and date.
+    * Fix a typo in debian/copyright; we need () around the autogen.sh line.
+    * Remove an extraneous slash that git thinks shouldn't be there.
+  * Update patches for new upstream release:
+    * 05-refuse-non-ident-maptypes.patch: Hunk offset and fuzz, refreshed.
+    * 08-dont-build-getkversion.patch: Hunk offset, refreshed.
+  * debian/patches/11-root-on-krb5-mounts.patch: New patch (imported and
+    refreshed), from Antti Tapaninen (via Timo Aaltonen); changes root to map
+    to root/host@REALM instead of nfs/host@REALM on krb5-enabled mounts. Fixes
+    issues where root would get mapped to nobody. (Closes: #407264)
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Wed, 17 Jan 2007 15:10:42 +0100
+
 nfs-utils (1:1.0.11~git-20060105-2) experimental; urgency=low
 
   * 08-dont-build-getkversion.patch: We missed tools/Makefile.in on last

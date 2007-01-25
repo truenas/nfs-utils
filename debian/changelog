@@ -1,3 +1,10 @@
+nfs-utils (1:1.0.11~git-20060117-2) experimental; urgency=low
+
+  * Give --with-tcp-wrappers to configure; for some reason it is no longer the
+    default. (Closes: #408365)
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Thu, 25 Jan 2007 11:38:01 +0100
+
 nfs-utils (1:1.0.11~git-20060117-1) experimental; urgency=low
 
   * New upstream snapshot; only minor changes.

@@ -1,3 +1,26 @@
+nfs-utils (1:1.0.11~git-20070212-1) experimental; urgency=low
+
+  * New upstream snapshot.
+    * Update debian/copyright with the new version number and date.
+    * Add an extra backslash to debian/copyright.
+    * Add libblkid-dev as a build-dependency, as it's not required by
+      idmapd.
+  * Update patches for new upstream release:
+    * 01-bzero.patch: Now in upstream, removed.
+    * 02-document-debian-init-scripts.patch: Hunk offset, refreshed.
+    * 05-refuse-non-ident-maptypes.patch: Now in upstream, removed.
+    * 07-exports-default-options.patch: Now in upstream, removed.
+    * 08-dont-build-getkversion.patch: Obsoleted by upstream (getkversion
+      has been removed entirely), removed.
+    * 09-manpage-paths-fixup.patch: Obsoleted by upstream (paths no longer
+      used in the man pages), removed.
+    * 10-ccachedir-off-by-one.patch: Now in upstream, removed.
+    * 11-root-on-krb5-mounts.patch: Hunk offset, refreshed.
+  * Drop our custom clean hack in debian/rules, as distclean should now
+    remove generated files properly.
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Mon, 12 Feb 2007 21:19:54 +0100
+
 nfs-utils (1:1.0.11~git-20060117-2) experimental; urgency=low
 
   * Give --with-tcp-wrappers to configure; for some reason it is no longer the

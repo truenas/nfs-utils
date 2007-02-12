@@ -21,7 +21,6 @@ clean: unpatch
 	rm -f build-stamp
 	rm -rf $(DEBTMP)
 	-$(MAKE) distclean
-	$(RM) utils/rquotad/rquota.h utils/rquotad/rquota_xdr.c
 	dh_clean
 
 binary-indep: build

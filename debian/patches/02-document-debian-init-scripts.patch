@@ -1,8 +1,8 @@
-Index: nfs-utils-1.0.10/utils/exportfs/exports.man
+Index: nfs-utils-1.0.11~git-20070205/utils/exportfs/exports.man
 ===================================================================
---- nfs-utils-1.0.10.orig/utils/exportfs/exports.man
-+++ nfs-utils-1.0.10/utils/exportfs/exports.man
-@@ -29,6 +29,9 @@ double quotes. You can also specify spac
+--- nfs-utils-1.0.11~git-20070205.orig/utils/exportfs/exports.man
++++ nfs-utils-1.0.11~git-20070205/utils/exportfs/exports.man
+@@ -34,6 +34,9 @@ double quotes. You can also specify spac
  the export name using a backslash followed by the character code as three
  octal digits.
  .PP

@@ -1,7 +1,7 @@
-Index: nfs-utils-1.0.11~git-20060117/utils/gssd/krb5_util.c
+Index: nfs-utils-1.0.11~git-20070212/utils/gssd/krb5_util.c
 ===================================================================
---- nfs-utils-1.0.11~git-20060117.orig/utils/gssd/krb5_util.c
-+++ nfs-utils-1.0.11~git-20060117/utils/gssd/krb5_util.c
+--- nfs-utils-1.0.11~git-20070212.orig/utils/gssd/krb5_util.c
++++ nfs-utils-1.0.11~git-20070212/utils/gssd/krb5_util.c
 @@ -120,6 +120,9 @@
  #include "gss_oids.h"
  #include "krb5_util.h"
@@ -12,7 +12,7 @@ Index: nfs-utils-1.0.11~git-20060117/utils/gssd/krb5_util.c
  /* Global list of principals/cache file names for machine credentials */
  struct gssd_k5_kt_princ *gssd_k5_kt_princ_list = NULL;
  
-@@ -496,13 +499,13 @@ gssd_process_krb5_keytab(krb5_context co
+@@ -490,13 +493,13 @@ gssd_process_krb5_keytab(krb5_context co
  		printerr(2, "Processing keytab entry for principal '%s'\n",
  			 pname);
  #ifdef HAVE_KRB5
@@ -32,7 +32,7 @@ Index: nfs-utils-1.0.11~git-20060117/utils/gssd/krb5_util.c
  			      
  #endif
  		     (!gssd_have_realm_ple((void *)&kte.principal->realm)) ) {
-@@ -714,7 +717,7 @@ gssd_refresh_krb5_machine_creds(void)
+@@ -708,7 +711,7 @@ gssd_refresh_krb5_machine_creds(void)
  			printerr(0, "Do you have a valid keytab entry for "
  				    "%s/<your.host>@<YOUR.REALM> in "
  				    "keytab file %s ?\n",

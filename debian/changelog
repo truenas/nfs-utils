@@ -1,3 +1,14 @@
+nfs-utils (1:1.0.12-2) unstable; urgency=medium
+
+  * Drop 11-root-on-krb5-mounts.patch, as it causes problems with backward
+    compatibility. (Closes: #407264, but also probably reopens it at the same
+    time...).
+  * Add an explicit versioned dependency on libblkid1, since the version in
+    sarge lacks the blkid_probe_all_new symbol and the shlibs does not add
+    the versioned dependency by itself. (Closes: #413057)
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Fri,  2 Mar 2007 19:54:06 +0100
+
 nfs-utils (1:1.0.12-1) unstable; urgency=high
 
   * New upstream release.

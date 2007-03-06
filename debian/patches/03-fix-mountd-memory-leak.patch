@@ -1,0 +1,12 @@
+Index: nfs-utils-1.0.12/support/export/client.c
+===================================================================
+--- nfs-utils-1.0.12.orig/support/export/client.c
++++ nfs-utils-1.0.12/support/export/client.c
+@@ -329,6 +329,7 @@ add_name(char *old, char *add)
+ 		strcat(new, ",");
+ 		strcat(new, cp);
+ 	}
++	free(old);
+ 	return new;
+ }
+ 

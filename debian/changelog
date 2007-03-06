@@ -1,3 +1,11 @@
+nfs-utils (1:1.0.12-3) unstable; urgency=low
+
+  * 03-fix-mountd-memory-leak.patch: New patch which fixes a tiny memory leak
+    in mountd. There are huge memory leaks left, but they are in libblkid (see
+    #413661) so there's nothing we can do about them at this point.
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Tue,  6 Mar 2007 16:10:43 +0100
+
 nfs-utils (1:1.0.12-2) unstable; urgency=medium
 
   * Drop 11-root-on-krb5-mounts.patch, as it causes problems with backward

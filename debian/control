@@ -10,7 +10,7 @@ Standards-Version: 3.7.2
 Package: nfs-kernel-server
 Priority: optional
 Architecture: any
-Depends: nfs-common (>= 1:1.0.8-1), ucf, lsb-base (>= 1.3-9ubuntu3), ${shlibs:Depends}, libblkid1 (>= 1.39+1.40-WIP-2006.11.14+dfsg-1)
+Depends: nfs-common (>= 1:1.0.8-1), ucf, lsb-base (>= 1.3-9ubuntu3), ${shlibs:Depends}, libblkid1 (>= 1.39+1.40-WIP-2006.11.14+dfsg-2)
 Provides: knfs, nfs-server
 Conflicts: knfs, nfs-server
 Replaces: knfs, nfs-server

@@ -1,3 +1,12 @@
+nfs-utils (1:1.0.12-4) unstable; urgency=high
+
+  * Bump the versioned dependency on libblkid1 to require at least version
+    1.39+1.40-WIP-2006.11.14+dfsg-2, which ensures that we get a version
+    that doesn't make mountd leak memory on every mount.
+    (Closes: #413429)
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Wed,  7 Mar 2007 11:46:25 +0100
+
 nfs-utils (1:1.0.12-3) unstable; urgency=low
 
   * 03-fix-mountd-memory-leak.patch: New patch which fixes a tiny memory leak

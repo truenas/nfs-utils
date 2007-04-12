@@ -18,7 +18,6 @@ DESC="NFS common utilities"
 # Read config
 DEFAULTFILE=/etc/default/nfs-common
 PREFIX=
-NEED_LOCKD=
 NEED_IDMAPD=
 NEED_GSSD=
 PIPEFS_MOUNTPOINT=/var/lib/nfs/rpc_pipefs
@@ -28,28 +27,6 @@ if [ -f $DEFAULTFILE ]; then
 fi
 
 . /lib/lsb/init-functions
-
-# Determine whether lockd daemon is required.
-case "$NEED_LOCKD" in
-yes|no)	;;
-*)  case `uname -r` in
-    '' | [01].* | 2.[0123].* )
-	# Older kernels may or may not need a lockd daemon.
-	# We must assume they do, unless we can prove otherwise.
-	# (A false positive here results only in a harmless message.)
-	NEED_LOCKD=yes
-	if test -f /proc/ksyms
-	then
-	    grep -q lockdctl /proc/ksyms || NEED_LOCKD=no
-	fi
-	;;
-
-    *)  # Modern kernels (>= 2.4) start a lockd thread automatically.
-	NEED_LOCKD=no
-	;;
-    esac
-    ;;
-esac
 
 #
 # Parse the fstab file, and determine whether we need idmapd and gssd. (The
@@ -107,7 +84,6 @@ esac
 
 # Exit if required binaries are missing.
 [ -x $PREFIX/sbin/rpc.statd ] || exit 0
-[ -x $PREFIX/sbin/rpc.lockd ] || [ "$NEED_LOCKD"  = no ] || exit 0
 [ -x /usr/sbin/rpc.idmapd   ] || [ "$NEED_IDMAPD" = no ] || exit 0
 [ -x /usr/sbin/rpc.gssd     ] || [ "$NEED_GSSD"   = no ] || exit 0
 
@@ -152,16 +128,6 @@ case "$1" in
 	    exit $?
 	fi
 
-	if [ "$NEED_LOCKD" = yes ]
-	then
-	    log_progress_msg "lockd"
-	    start-stop-daemon --start --oknodo --quiet \
-		--exec $PREFIX/sbin/rpc.lockd
-	    if [ $? != 0 ]; then
-	        log_end_msg $?
-	        exit $?
-            fi
-	fi
 	if [ "$NEED_IDMAPD" = yes ] || [ "$NEED_GSSD" = yes ]
 	then
 	    do_modprobe nfs
@@ -225,18 +191,6 @@ case "$1" in
                 exit $?
             fi
 	fi
-	if [ "$NEED_LOCKD" = yes ]
-	then
-	    log_progress_msg "lockd"
-	    start-stop-daemon --stop --oknodo --quiet \
-		--name rpc.lockd
-	    if [ $? != 0 ]; then
-                log_end_msg $?
-                exit $?
-            fi
-	else
-	    pkill -KILL -u root -x lockd || true
-	fi
 	log_progress_msg "statd"
 	start-stop-daemon --stop --oknodo --quiet \
 	    --name rpc.statd
@@ -264,15 +218,6 @@ case "$1" in
 	    fi
 	fi
 
-	if [ "$NEED_LOCKD" = yes ]
-	then
-	    if ! pidof rpc.lockd >/dev/null
-	    then
-		echo "rpc.statd running, but rpc.lockd halted"
-		exit 3
-	    fi
-	fi
-	    
 	if [ "$NEED_IDMAPD" = yes ]
 	then
             if ! pidof rpc.idmapd >/dev/null

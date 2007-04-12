@@ -1,3 +1,17 @@
+nfs-utils (1:1.1.0~rc1-1) unstable; urgency=low
+
+  * New upstream release.
+    * Remove 03-fix-mountd-memory-leak.patch, which is now included in
+      upstream.
+    * rpc.lockd is gone, remove all references to it from debian/:
+      * Remove rpc.lockd from nfs-common.install.
+      * Remove NEED_LOCKD variable in nfs-common.default.
+      * Remove lockd handling from nfs-common.init.
+      * Remove lockd(8) manpage from nfs-common.manpages.
+      * Remove manpage link from nfs-common.links.
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Thu, 12 Apr 2007 16:11:07 +0200
+
 nfs-utils (1:1.0.12-4) unstable; urgency=high
 
   * Bump the versioned dependency on libblkid1 to require at least version

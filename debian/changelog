@@ -1,3 +1,18 @@
+nfs-utils (1:1.1.0-1) unstable; urgency=low
+
+  * 01-fix-hostent-memory-leak.diff: New patch, fixes a memory leak related to
+    DNS lookups; thanks to Rik Theys for detailed bug report and scrutiny.
+    (Closes: #423108)
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Fri, 11 May 2007 12:13:25 +0200
+
+nfs-utils (1:1.1.0-0) unstable; urgency=low
+
+  * New upstream release.
+  * debian/control: added libkeyutils-dev as build-dependency.
+
+ -- Anibal Monsalve Salazar <anibal@debian.org>  Fri, 11 May 2007 17:14:11 +1000
+
 nfs-utils (1:1.1.0~rc2-1) unstable; urgency=low
 
   * New upstream release.

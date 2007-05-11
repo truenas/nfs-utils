@@ -3,7 +3,7 @@ Priority: standard
 Section: net
 Maintainer: Anibal Monsalve Salazar <anibal@debian.org>
 Uploaders: Steinar H. Gunderson <sesse@debian.org>, Daniel Baumann <daniel@debian.org>
-Build-Depends: debhelper (>= 5), libwrap0-dev, libevent-dev, libnfsidmap-dev, libkrb5-dev, libgssapi-dev (>= 0.11), librpcsecgss-dev, libblkid-dev, pkg-config, quilt (>= 0.40)
+Build-Depends: debhelper (>= 5), libwrap0-dev, libevent-dev, libnfsidmap-dev, libkrb5-dev, libgssapi-dev (>= 0.11), librpcsecgss-dev, libblkid-dev, libkeyutils-dev, pkg-config, quilt (>= 0.40)
 Build-Conflicts: librpcsecgss-dev (= 0.14-1)
 Standards-Version: 3.7.2
 

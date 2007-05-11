@@ -1,3 +1,11 @@
+nfs-utils (1:1.1.0-2) unstable; urgency=low
+
+  * Make sure rpcsec_gss_krb5 is loaded if needed in nfs-kernel-server. It
+    used not to be when NEED_SVCGSSD=true and NEED_GSSD=false. Per bug report
+    from Ubuntu. (LP: #104923)
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Fri, 11 May 2007 16:51:31 +0200
+
 nfs-utils (1:1.1.0-1) unstable; urgency=low
 
   * 01-fix-hostent-memory-leak.diff: New patch, fixes a memory leak related to

@@ -36,21 +36,23 @@ fi
 AUTO_NEED_IDMAPD=no
 AUTO_NEED_GSSD=no
 
-exec 9<&0 </etc/fstab
+if [ -f /etc/fstab ]; then
+    exec 9<&0 </etc/fstab
 
-while read DEV MTPT FSTYPE OPTS REST
-do
-    if [ "$FSTYPE" = "nfs4" ]; then
-        AUTO_NEED_IDMAPD=yes
-    fi
-    case "$OPTS" in
-        sec=krb5|*,sec=krb5|sec=krb5,*|*,sec=krb5i,*|sec=krb5i|*,sec=krb5i|sec=krb5i,*|*,sec=krb5i,*|sec=krb5p|*,sec=krb5p|sec=krb5p,*|*,sec=krb5p,*)
-	    AUTO_NEED_GSSD=yes
-	;;
-    esac
-done
+    while read DEV MTPT FSTYPE OPTS REST
+    do
+        if [ "$FSTYPE" = "nfs4" ]; then
+            AUTO_NEED_IDMAPD=yes
+        fi
+        case "$OPTS" in
+            sec=krb5|*,sec=krb5|sec=krb5,*|*,sec=krb5i,*|sec=krb5i|*,sec=krb5i|sec=krb5i,*|*,sec=krb5i,*|sec=krb5p|*,sec=krb5p|sec=krb5p,*|*,sec=krb5p,*)
+    	    AUTO_NEED_GSSD=yes
+            ;;
+        esac
+    done
 
-exec 0<&9 9<&-
+    exec 0<&9 9<&-
+fi
 
 #
 # We also need idmapd if we run an NFSv4 server. It's fairly difficult

@@ -1,3 +1,10 @@
+nfs-utils (1:1.1.0-3) unstable; urgency=low
+
+  * Fixed "nfs-common - fails to install without /etc/fstab".
+    Closes: #426508.
+
+ -- Anibal Monsalve Salazar <anibal@debian.org>  Tue, 29 May 2007 20:38:36 +1000
+
 nfs-utils (1:1.1.0-2) unstable; urgency=low
 
   * Make sure rpcsec_gss_krb5 is loaded if needed in nfs-kernel-server. It

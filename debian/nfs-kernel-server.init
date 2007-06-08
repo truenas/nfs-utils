@@ -167,7 +167,7 @@ case "$1" in
 	fi
 	log_end_msg 0
 
-	if mountpoint -q /proc/nfs/nfsd
+	if mountpoint -q $PROCNFSD_MOUNTPOINT
 	then
 	    $PREFIX/sbin/exportfs -f
 	fi

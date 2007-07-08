@@ -1,3 +1,12 @@
+nfs-utils (1:1.1.0-5) unstable; urgency=low
+
+  * Install the sm-notify binary, as rpc.statd seems to want to run it at
+    boot.
+  * 03-sm-notify-in-sbin.patch: New patch, tell rpc.statd that we put
+    sm-notify in /sbin instead of /usr/sbin.
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Sun, 08 Jul 2007 21:15:59 +0200
+
 nfs-utils (1:1.1.0-4) unstable; urgency=low
 
   * Change the obsolete /proc/nfs/nfsd path in the init script so it matches

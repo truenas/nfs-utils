@@ -11,8 +11,7 @@ build-stamp:
 	CFLAGS="-g -O2 -Wall" ./configure \
 		--mandir='$${prefix}/share/man' \
 		--enable-secure-statd \
-		--with-tcp-wrappers \
-		--enable-mount
+		--with-tcp-wrappers
 	$(MAKE)
 	touch build-stamp
 

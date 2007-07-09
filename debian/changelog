@@ -1,3 +1,10 @@
+nfs-utils (1:1.1.0-6) unstable; urgency=low
+
+  * Enable {mount,umount}.{nfs,nfs4}, in line with util-linux 2.13 no longer
+    supporting NFS mounts.
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Mon, 09 Jul 2007 12:54:09 +0200
+
 nfs-utils (1:1.1.0-5) unstable; urgency=low
 
   * Install the sm-notify binary, as rpc.statd seems to want to run it at

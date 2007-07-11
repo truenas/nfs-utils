@@ -20,5 +20,7 @@ case "$1" in
 	rm -f /var/lib/nfs/state    \
 	      /var/lib/nfs/sm/*     \
 	      /var/lib/nfs/sm.bak/*
+	    
+	dpkg-statoverride --remove /sbin/mount.nfs
 	;;
 esac

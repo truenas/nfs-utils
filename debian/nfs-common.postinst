@@ -27,6 +27,10 @@ case "$1" in
 	        chown statd /var/lib/nfs/state
             fi
 	fi
+
+	if ! dpkg-statoverride --list /sbin/mount.nfs >/dev/null 2>&1; then
+	    dpkg-statoverride --update --add root root 4755 /sbin/mount.nfs
+	fi
     ;;
 esac
 

@@ -1,3 +1,10 @@
+nfs-utils (1:1.1.0-7) unstable; urgency=low
+
+  * Add postinst fragment to make /sbin/mount setuid root, which should fix
+    problems with non-root mounting. (Closes: #432581)
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Thu, 12 Jul 2007 01:40:18 +0200
+
 nfs-utils (1:1.1.0-6) unstable; urgency=low
 
   * Enable {mount,umount}.{nfs,nfs4}, in line with util-linux 2.13 no longer

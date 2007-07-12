@@ -1,3 +1,13 @@
+nfs-utils (1:1.1.0-8) unstable; urgency=low
+
+  * Move nfs-common from 21 to 20 in the startup sequence, to make sure it's
+    started before nfs-kernel-server (since it's nfs-common that loads the
+    right kernel modules). Leave the shutdown sequence alone; no changes
+    should be needed to it. Also update the LSB dependency information to make
+    nfs-kernel-server depend on nfs-common. (Closes: #432818)
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Thu, 12 Jul 2007 13:43:49 +0200
+
 nfs-utils (1:1.1.0-7) unstable; urgency=low
 
   * Add postinst fragment to make /sbin/mount setuid root, which should fix

@@ -1,0 +1,20 @@
+mount.c seems to assume that nfsumount() uses standard C true/false
+return values, and inverts them for the exit status (where 0 is
+traditionally considered success). However, nfsumount() consistently
+seems to use 0 for success, and thus a success gets returned as exit
+status 1 and a failure as exit status 0. This confuses at least
+the GNOME drive manager applet, and probably others as well.
+
+Index: nfs-utils-1.1.0/utils/mount/mount.c
+===================================================================
+--- nfs-utils-1.1.0.orig/utils/mount/mount.c
++++ nfs-utils-1.1.0/utils/mount/mount.c
+@@ -371,7 +371,7 @@ int main(int argc, char *argv[])
+ 			umount_usage();
+ 			exit(1);
+ 		}
+-		exit(nfsumount(argc, argv) ? 0 : 1);
++		exit(nfsumount(argc, argv));
+ 	}
+ 
+ 	if(argv[1] && argv[1][0] == '-') {

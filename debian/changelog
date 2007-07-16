@@ -1,3 +1,22 @@
+nfs-utils (1:1.1.0-10) unstable; urgency=high
+
+  * Start nfs-common in the /etc/rcS start-up sequence, making sure statd is
+    run before mountnfs runs, and finally obsoleting the hacks in mountnfs to
+    start nfs-common directly in some cases. S44 is used, which is right
+    between portmap (S43) and mountnfs (S45). As per discussion with Petter
+    Reinholdtsen on IRC. (Closes: #432511, #432750, #433119, #433133)
+    * Change the update-rc.d line in nfs-common.postinst to include the S
+      runlevel.
+    * Change the version check for the "update-rc.d -f nfs-common remove" line
+      to this version (1:1.1.0-10), so all older installations are properly
+      updated.
+  * In the LSB header for nfs-common.init, add $portmap to Required-Start.
+    Also add the S run level to Default-Start, to match the above change.
+  * Include {mount,umount}.nfs man pages in the nfs-common package -- thanks
+    to Neil Brown for spotting this. 
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Mon, 16 Jul 2007 18:04:52 +0200
+
 nfs-utils (1:1.1.0-9) unstable; urgency=low
 
   * 04-umount-exit-status.patch: New patch, fixes the exit status from umount

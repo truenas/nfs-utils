@@ -1,3 +1,15 @@
+nfs-utils (1:1.1.0-11) unstable; urgency=low
+
+  * Include the nfs man page, which was also forgotten. The new nfs man page
+    fixes a few documentation bugs over the old one from util-linux:
+    * TCP is now the default if supported. (Closes: #414160)
+    * The default NFS version is now 3. (Closes: #289436)
+  * Add a replaces on pre-2.13 mount, since nfs(5) used to be there.
+  * 05-ignore-quota-option.patch: Properly ignore quota options in fstab.
+    (Closes: #329417)
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Wed, 18 Jul 2007 19:04:44 +0200
+
 nfs-utils (1:1.1.0-10) unstable; urgency=high
 
   * Start nfs-common in the /etc/rcS start-up sequence, making sure statd is

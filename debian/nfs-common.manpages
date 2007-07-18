@@ -1,4 +1,5 @@
 debian/tmp/usr/share/man/man5/idmapd.conf*
+debian/tmp/usr/share/man/man5/nfs.5
 debian/tmp/usr/share/man/man8/gssd.8
 debian/tmp/usr/share/man/man8/idmapd.8
 debian/tmp/usr/share/man/man8/statd.8

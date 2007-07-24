@@ -1,3 +1,20 @@
+nfs-utils (1:1.1.0-12) unstable; urgency=low
+
+  * Yet another round of fixing the boot issues, mostly in nfs-common.init:
+    * Be a bit smarter about setting AUTO_NEED_IDMAPD; check not only that
+      /etc/exports exists, but also that it contains things that look like
+      uncommented exports.
+    * Don't exit 0 immediately if statd, idmapd (if enabled) or gssd (if
+      enabled) can't be found, as we might need statd to get /usr up even if we
+      can't get to idmapd and gssd. (The AUTO_NEED_IDMAPD fix above should fix
+      the default situation, but it's good to take a bit of extra care.)
+      Instead, start statd regardless, and just skip idmapd and gssd starting
+      (set NEED_{IDMAPD,GSSD}=no) if it can't be found.
+    * Let nfs-common depend on initscripts (>= 2.86.ds1-38.1) to make sure we
+      have a version with the proper mountnfs logic.
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Wed, 25 Jul 2007 01:27:48 +0200
+
 nfs-utils (1:1.1.0-11) unstable; urgency=low
 
   * Include the nfs man page, which was also forgotten. The new nfs man page

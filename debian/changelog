@@ -1,3 +1,12 @@
+nfs-utils (1:1.1.0-13) unstable; urgency=low
+
+  * 06-gssd-manpage-typo.patch: New patch from A Costa, fixes a typo in the
+    gssd man page. (Closes: #434665) 
+  * Sort debian/patches/series, so the patches are applied in the expected
+    order. This also fixes a hunk offset when applying the patches.
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Wed, 25 Jul 2007 20:53:05 +0200
+
 nfs-utils (1:1.1.0-12) unstable; urgency=low
 
   * Yet another round of fixing the boot issues, mostly in nfs-common.init:

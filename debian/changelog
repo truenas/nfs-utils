@@ -1,3 +1,11 @@
+nfs-utils (1:1.1.0-14) unstable; urgency=low
+
+  * Install mount.nfs setuid directly instead of doing dpkg-statoverride in
+    the postinst. Clear the dpkg-statoverride status in the postinst script 
+    on upgrades from earlier versions for cleanness. (Closes: #435258)
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Sun, 05 Aug 2007 20:06:53 +0200
+
 nfs-utils (1:1.1.0-13) unstable; urgency=low
 
   * 06-gssd-manpage-typo.patch: New patch from A Costa, fixes a typo in the

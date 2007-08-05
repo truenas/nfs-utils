@@ -30,9 +30,11 @@ case "$1" in
 	        chown statd /var/lib/nfs/state
             fi
 	fi
-
-	if ! dpkg-statoverride --list /sbin/mount.nfs >/dev/null 2>&1; then
-	    dpkg-statoverride --update --add root root 4755 /sbin/mount.nfs
+	
+	if [ "$2" != "" ] || dpkg --compare-versions "$2" lt 1:1.1.0-14; then
+	    if dpkg-statoverride --list /sbin/mount.nfs >/dev/null 2>&1; then
+	        dpkg-statoverride --remove /sbin/mount.nfs
+	    fi
 	fi
     ;;
 esac

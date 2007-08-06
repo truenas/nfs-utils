@@ -1,3 +1,13 @@
+nfs-utils (1:1.1.1~git-20070706-1) unstable; urgency=low
+
+  * New upstream release.
+    * Fixes the "bg" mount option. (Closes: #301955)
+    * Update debian/copyright to tell that we're on git snapshots again.
+    * Remove 01-fix-hostent-memory-leak.diff and 04-umount-exit-status.patch,
+      as they are included in upstream now.
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Mon, 06 Aug 2007 20:01:49 +0200
+
 nfs-utils (1:1.1.0-14) unstable; urgency=low
 
   * Install mount.nfs setuid directly instead of doing dpkg-statoverride in

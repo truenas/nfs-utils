@@ -1,3 +1,10 @@
+nfs-utils (1:1.1.1~git-20070706-2) unstable; urgency=low
+
+  * If there is no override present when running the post-removal script, do
+    not return exit status code 2. Closes: #436411.
+  
+ -- Anibal Monsalve Salazar <anibal@debian.org>  Tue, 07 Aug 2007 17:34:47 +1000
+
 nfs-utils (1:1.1.1~git-20070706-1) unstable; urgency=low
 
   * New upstream release.

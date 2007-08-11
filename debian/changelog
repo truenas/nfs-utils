@@ -1,3 +1,12 @@
+nfs-utils (1:1.1.1~git-20070709-2) unstable; urgency=low
+
+  * 07-daemonize-instead-of-fork.patch: New patch from upstream, uses
+    daemon() instead of fork() and exit() for background mounts. Should
+    properly detach from the terminal and thus keep the kernel from SIGHUPing
+    mount during boot. (Closes: #144185, #156664)
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Sat, 11 Aug 2007 09:27:53 +0200
+
 nfs-utils (1:1.1.1~git-20070709-1) unstable; urgency=low
 
   * New upstream release.

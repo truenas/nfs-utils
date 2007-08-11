@@ -1,4 +1,5 @@
 02-document-debian-init-scripts.patch
 03-sm-notify-in-sbin.patch
 05-ignore-quota-option.patch
-06-gssd-manpage-typo.patch 
+06-gssd-manpage-typo.patch
+07-daemonize-instead-of-fork.patch

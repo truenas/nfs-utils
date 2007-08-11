@@ -20,7 +20,7 @@ clean: unpatch
 	dh_testroot
 	rm -f build-stamp
 	rm -rf $(DEBTMP)
-	-$(MAKE) distclean
+	[ ! -f Makefile ] || $(MAKE) distclean
 	dh_clean
 
 binary-indep: build

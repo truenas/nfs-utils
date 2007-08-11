@@ -1,3 +1,12 @@
+nfs-utils (1:1.1.1~git-20070709-3) unstable; urgency=low
+
+  * If there is no override present when running the post-removal script, do
+    not return exit status code 2. Closes: #436411.
+  * Fixed the following lintian message:
+    - W: nfs-utils source: debian-rules-ignores-make-clean-error line 23
+
+ -- Anibal Monsalve Salazar <anibal@debian.org>  Sat, 11 Aug 2007 20:17:26 +1000
+
 nfs-utils (1:1.1.1~git-20070709-2) unstable; urgency=low
 
   * 07-daemonize-instead-of-fork.patch: New patch from upstream, uses
@@ -6,6 +15,13 @@ nfs-utils (1:1.1.1~git-20070709-2) unstable; urgency=low
     mount during boot. (Closes: #144185, #156664)
 
  -- Steinar H. Gunderson <sesse@debian.org>  Sat, 11 Aug 2007 09:27:53 +0200
+
+nfs-utils (1:1.1.1~git-20070706-2) unstable; urgency=low
+
+  * If there is no override present when running the post-removal script, do
+    not return exit status code 2. Closes: #436411.
+
+ -- Anibal Monsalve Salazar <anibal@debian.org>  Tue, 07 Aug 2007 17:34:47 +1000
 
 nfs-utils (1:1.1.1~git-20070709-1) unstable; urgency=low
 

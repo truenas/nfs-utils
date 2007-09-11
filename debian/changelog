@@ -1,3 +1,12 @@
+nfs-utils (1:1.1.1~git-20070709-4) unstable; urgency=low
+
+  * Replaced libgssapi-dev as build-dependency by libgssglue-dev.
+    - Added 08-libgssglue-changes.patch.
+  * Defined major and minor macros. Closes: #442122.
+    - Added 09-define-major-minor.patch.
+
+ -- Anibal Monsalve Salazar <anibal@debian.org>  Tue, 11 Sep 2007 20:12:50 +1000
+
 nfs-utils (1:1.1.1~git-20070709-3) unstable; urgency=low
 
   * If there is no override present when running the post-removal script, do

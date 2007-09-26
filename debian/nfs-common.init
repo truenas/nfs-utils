@@ -63,7 +63,7 @@ fi
 # condition in nfs-kernel-server's init script does, which has a value in
 # itself.
 #
-if [ -f /etc/exports ] && grep -q '^ .*/' /etc/exports; then
+if [ -f /etc/exports ] && grep -q '^[[:space:]]*[^#]*/' /etc/exports; then
     AUTO_NEED_IDMAPD=yes
 fi
 

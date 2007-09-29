@@ -1,3 +1,13 @@
+nfs-utils (1:1.1.1~git-20070929-1) unstable; urgency=low
+
+  * New git snapshot.
+    * Update debian/copyright with new version information.
+    * 07-daemonize-instead-of-fork.patch: Now in upstream, removed.
+    * 08-libgssglue-changes.patch: Now in upstream, removed.
+    * 09-define-major-minor.patch: Now in upstream, removed.
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Sat, 29 Sep 2007 15:03:21 +0200
+
 nfs-utils (1:1.1.1~git-20070709-5) unstable; urgency=low
 
   * Fix totally broken export-detecting regex in the init script; patch by

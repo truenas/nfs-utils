@@ -1,3 +1,9 @@
+nfs-utils (1:1.1.1-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Anibal Monsalve Salazar <anibal@debian.org>  Fri, 19 Oct 2007 17:36:22 +1000
+
 nfs-utils (1:1.1.1~git-20070929-1) unstable; urgency=low
 
   * New git snapshot.

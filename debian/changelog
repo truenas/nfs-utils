@@ -1,3 +1,10 @@
+nfs-utils (1:1.1.1-2) unstable; urgency=low
+
+  * 07-amd64-logging-segfault.patch: New patch from Steve Langasek, fixes
+    segfault in logging code on amd64. (Closes: #447407, #447451)
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Sun, 21 Oct 2007 12:52:01 +0200
+
 nfs-utils (1:1.1.1-1) unstable; urgency=low
 
   * New upstream release.

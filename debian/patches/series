@@ -2,3 +2,4 @@
 03-sm-notify-in-sbin.patch
 05-ignore-quota-option.patch
 06-gssd-manpage-typo.patch
+07-amd64-logging-segfault.patch

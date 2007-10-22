@@ -2,12 +2,17 @@
 
 include /usr/share/quilt/quilt.make
 
+DEB_HOST_ARCH := $(shell dpkg-architecture -qDEB_HOST_ARCH)
+
 # Temporary root
 DEBTMP := $(CURDIR)/debian/tmp
 
 build: patch build-stamp
 build-stamp:
 	dh_testdir
+ifeq ($(DEB_HOST_ARCH),arm)
+	patch -p0 -i debian/major.patch
+endif
 	CFLAGS="-g -O2 -Wall" ./configure \
 		--mandir='$${prefix}/share/man' \
 		--enable-secure-statd \

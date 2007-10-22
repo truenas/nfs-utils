@@ -1,0 +1,19 @@
+--- utils/mountd/cache.c	2007-10-19 13:07:28.000000000 +1000
++++ utils/mountd/cache.c	2007-10-22 19:24:07.274232106 +1000
+@@ -36,6 +36,16 @@
+ #include "blkid/blkid.h"
+ #endif
+ 
++#ifdef major               /* Might be defined in sys/types.h.  */
++#define HAVE_MAJOR
++#endif
++
++#ifndef HAVE_MAJOR
++#define major(dev)         (((dev) >> 8) & 0xff)
++#define minor(dev)         ((dev) & 0xff)
++#define makedev(maj, min)  (((maj) << 8) | (min))
++#endif
++#undef HAVE_MAJOR
+ 
+ enum nfsd_fsid {
+ 	FSID_DEV = 0,

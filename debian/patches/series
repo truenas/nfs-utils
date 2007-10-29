@@ -1,3 +1,4 @@
+08-clarify-unexport.patch
 02-document-debian-init-scripts.patch
 03-sm-notify-in-sbin.patch
 05-ignore-quota-option.patch

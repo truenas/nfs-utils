@@ -27,6 +27,7 @@ DEFAULTFILE=/etc/default/nfs-kernel-server
 RPCNFSDCOUNT=8
 RPCNFSDPRIORITY=0
 RPCMOUNTDOPTS=
+NEED_MOUNTD=yes
 NEED_SVCGSSD=no
 RPCSVCGSSDOPTS=
 PROCNFSD_MOUNTPOINT=/proc/fs/nfsd
@@ -114,12 +115,14 @@ case "$1" in
 			fi
 		fi
 
-		log_progress_msg "mountd"
-		start-stop-daemon --start --oknodo --quiet \
-		    --exec $PREFIX/sbin/rpc.mountd -- $RPCMOUNTDOPTS
-		if [ $? != 0 ]; then
-			log_end_msg $?
-			exit $?
+		if [ "$NEED_MOUNTD" != "no" ]; then
+			log_progress_msg "mountd"
+			start-stop-daemon --start --oknodo --quiet \
+			    --exec $PREFIX/sbin/rpc.mountd -- $RPCMOUNTDOPTS
+			if [ $? != 0 ]; then
+				log_end_msg $?
+				exit $?
+			fi
 		fi
 
 		log_end_msg 0
@@ -130,15 +133,17 @@ case "$1" in
 
   stop)
 	log_daemon_msg "Stopping $DESC"
-	
-	log_progress_msg "mountd"
-	start-stop-daemon --stop --oknodo --quiet \
-	    --name rpc.mountd --user 0
-	if [ $? != 0 ]; then
-		log_end_msg $?
-		exit $?
+
+	if [ "$NEED_MOUNTD" != "no" ]; then
+		log_progress_msg "mountd"
+		start-stop-daemon --stop --oknodo --quiet \
+		    --name rpc.mountd --user 0
+		if [ $? != 0 ]; then
+			log_end_msg $?
+			exit $?
+		fi
 	fi
-	        
+
 	if [ "$NEED_SVCGSSD" = "yes" ]; then
 		log_progress_msg "svcgssd"
 		start-stop-daemon --stop --oknodo --quiet \

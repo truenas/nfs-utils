@@ -18,6 +18,7 @@ DESC="NFS common utilities"
 # Read config
 DEFAULTFILE=/etc/default/nfs-common
 PREFIX=
+NEED_STATD=yes
 NEED_IDMAPD=
 NEED_GSSD=
 PIPEFS_MOUNTPOINT=/var/lib/nfs/rpc_pipefs
@@ -27,6 +28,9 @@ if [ -f $DEFAULTFILE ]; then
 fi
 
 . /lib/lsb/init-functions
+
+# Exit if required binaries are missing.
+[ -x $PREFIX/sbin/rpc.statd ] || exit 0
 
 #
 # Parse the fstab file, and determine whether we need idmapd and gssd. (The
@@ -66,7 +70,6 @@ fi
 if [ -f /etc/exports ] && grep -q '^[[:space:]]*[^#]*/' /etc/exports; then
     AUTO_NEED_IDMAPD=yes
 fi
-
 
 case "$NEED_IDMAPD" in
     yes|no)	
@@ -117,12 +120,14 @@ case "$1" in
   start)
 	log_daemon_msg "Starting $DESC"
 
-	log_progress_msg "statd"
-	start-stop-daemon --start --oknodo --quiet \
-	    --exec $PREFIX/sbin/rpc.statd -- $STATDOPTS
-	if [ $? != 0 ]; then
-	    log_end_msg $?
-	    exit $?
+	if [ "$NEED_STATD" = yes ]; then
+	    log_progress_msg "statd"
+	    start-stop-daemon --start --oknodo --quiet \
+	        --exec $PREFIX/sbin/rpc.statd -- $STATDOPTS
+	    if [ $? != 0 ]; then
+	        log_end_msg $?
+	        exit $?
+	    fi
 	fi
 
 	# Don't start idmapd and gssd if we don't have them (say, if /usr is not
@@ -193,29 +198,35 @@ case "$1" in
                 exit $?
             fi
 	fi
-	log_progress_msg "statd"
-	start-stop-daemon --stop --oknodo --quiet \
-	    --name rpc.statd
-	if [ $? != 0 ]; then
-            log_end_msg $?
-            exit $?
-        fi
+	if ["$NEED_STATD" = yes ]
+	then
+	    log_progress_msg "statd"
+	    start-stop-daemon --stop --oknodo --quiet \
+	        --name rpc.statd
+	    if [ $? != 0 ]; then
+                log_end_msg $?
+                exit $?
+            fi
+	fi
 	do_umount $PIPEFS_MOUNTPOINT 2>/dev/null || true
 	log_end_msg 0
 	;;
 
   status)
-	if ! pidof rpc.statd >/dev/null
+	if [ "$NEED_STATD" = yes ]
 	then
-	    echo "rpc.statd not running"
-	    exit 3
+	    if ! pidof rpc.statd >/dev/null
+	    then
+	        echo "rpc.statd not running"
+	        exit 3
+	    fi
 	fi
 
 	if [ "$NEED_GSSD" = yes ]
 	then
             if ! pidof rpc.gssd >/dev/null
 	    then
-		echo "rpc.statd running, but rpc.gssd halted"
+		echo "rpc.gssd not running"
 		exit 3
 	    fi
 	fi
@@ -224,12 +235,12 @@ case "$1" in
 	then
             if ! pidof rpc.idmapd >/dev/null
 	    then
-		echo "rpc.statd running, but rpc.idmapd halted"
+		echo "rpc.idmapd not running"
 		exit 3
 	    fi
 	fi
 
-	echo "rpc.statd running"
+	echo "all daemons running"
 	exit 0
 	;;
 

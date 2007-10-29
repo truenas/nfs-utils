@@ -1,3 +1,16 @@
+nfs-utils (1:1.1.1-4) unstable; urgency=low
+
+  * Remove broken hack introduced in 1.1.1-3.
+  * Fix init script to work if the package has been removed but not purged;
+    patch adapted from Morita Sho. (Closes: #448251)
+  * Patch init script to allow not running rpc.statd or rpc.mountd (via
+    settings in /etc/default/), since they are not needed for an NFSv4-only
+    setup; patch adapted from David Härdeman. (Closes: #448234)
+  * Clarify language in the exportfs man page; patch adapted from 
+    David Liontooth. (Closes: #443591)
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Mon, 29 Oct 2007 18:33:15 +0100
+
 nfs-utils (1:1.1.1-3) unstable; urgency=low
 
   * Fixed "FTBFS: error: called object 'major' is not a function" by

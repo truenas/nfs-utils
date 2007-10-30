@@ -198,7 +198,7 @@ case "$1" in
                 exit $?
             fi
 	fi
-	if ["$NEED_STATD" = yes ]
+	if [ "$NEED_STATD" = yes ]
 	then
 	    log_progress_msg "statd"
 	    start-stop-daemon --stop --oknodo --quiet \

@@ -1,3 +1,10 @@
+nfs-utils (1:1.1.1-5) unstable; urgency=low
+
+  * Fixed syntax error in nfs-common. Closes: #448538, #448607.
+    Patch by Alban Browaeys <prahal@yahoo.com>
+
+ -- Anibal Monsalve Salazar <anibal@debian.org>  Tue, 30 Oct 2007 22:41:12 +1100
+
 nfs-utils (1:1.1.1-4) unstable; urgency=low
 
   * Remove broken hack introduced in 1.1.1-3.

@@ -124,9 +124,10 @@ case "$1" in
 	    log_progress_msg "statd"
 	    start-stop-daemon --start --oknodo --quiet \
 	        --exec $PREFIX/sbin/rpc.statd -- $STATDOPTS
-	    if [ $? != 0 ]; then
-	        log_end_msg $?
-	        exit $?
+	    RET=$?
+	    if [ $RET != 0 ]; then
+	        log_end_msg $RET
+	        exit $RET
 	    fi
 	fi
 
@@ -146,9 +147,10 @@ case "$1" in
 	            log_progress_msg "idmapd"
 		    start-stop-daemon --start --oknodo --quiet \
 			    --exec /usr/sbin/rpc.idmapd
-	            if [ $? != 0 ]; then
-        	        log_end_msg $?
-        	        exit $?
+		    RET=$?
+	            if [ $RET != 0 ]; then
+        	        log_end_msg $RET
+        	        exit $RET
                     fi
 		fi
 		if [ "$NEED_GSSD" = yes ]
@@ -165,9 +167,10 @@ case "$1" in
 
 		    start-stop-daemon --start --oknodo --quiet \
 			    --exec /usr/sbin/rpc.gssd -- $RPCGSSDOPTS
-	            if [ $? != 0 ]; then
-        	        log_end_msg $?
-        	        exit $?
+		    RET=$?
+	            if [ $RET != 0 ]; then
+        	        log_end_msg $RET
+        	        exit $RET
                     fi
 		fi
 	    fi
@@ -183,9 +186,10 @@ case "$1" in
 	    log_progress_msg "gssd"
 	    start-stop-daemon --stop --oknodo --quiet \
 		    --name rpc.gssd
-	    if [ $? != 0 ]; then
-                log_end_msg $?
-                exit $?
+	    RET=$?
+	    if [ $RET != 0 ]; then
+                log_end_msg $RET
+                exit $RET
             fi
 	fi
 	if [ "$NEED_IDMAPD" = yes ]
@@ -193,9 +197,10 @@ case "$1" in
 	    log_progress_msg "idmapd"
 	    start-stop-daemon --stop --oknodo --quiet \
 		--name rpc.idmapd
-	    if [ $? != 0 ]; then
-                log_end_msg $?
-                exit $?
+            RET=$?
+	    if [ $RET != 0 ]; then
+                log_end_msg $RET
+                exit $RET
             fi
 	fi
 	if [ "$NEED_STATD" = yes ]
@@ -203,9 +208,10 @@ case "$1" in
 	    log_progress_msg "statd"
 	    start-stop-daemon --stop --oknodo --quiet \
 	        --name rpc.statd
-	    if [ $? != 0 ]; then
-                log_end_msg $?
-                exit $?
+	    RET=$?
+	    if [ $RET != 0 ]; then
+                log_end_msg $RET
+                exit $RET
             fi
 	fi
 	do_umount $PIPEFS_MOUNTPOINT 2>/dev/null || true

@@ -1,3 +1,10 @@
+nfs-utils (1:1.1.1-7) unstable; urgency=low
+
+  * More init script breakage: Fix default value of NEED_STATD.
+    (Closes: #448688)
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Wed, 31 Oct 2007 09:15:53 +0100
+
 nfs-utils (1:1.1.1-6) unstable; urgency=low
 
   * Fix typo in init script. (Closes: #448538, #448607, #448564)

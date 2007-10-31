@@ -18,7 +18,7 @@ DESC="NFS common utilities"
 # Read config
 DEFAULTFILE=/etc/default/nfs-common
 PREFIX=
-NEED_STATD=yes
+NEED_STATD=
 NEED_IDMAPD=
 NEED_GSSD=
 PIPEFS_MOUNTPOINT=/var/lib/nfs/rpc_pipefs
@@ -49,6 +49,7 @@ if [ -f /etc/fstab ]; then
             AUTO_NEED_IDMAPD=yes
         fi
         case "$OPTS" in
+
             sec=krb5|*,sec=krb5|sec=krb5,*|*,sec=krb5i,*|sec=krb5i|*,sec=krb5i|sec=krb5i,*|*,sec=krb5i,*|sec=krb5p|*,sec=krb5p|sec=krb5p,*|*,sec=krb5p,*)
     	    AUTO_NEED_GSSD=yes
             ;;
@@ -70,6 +71,14 @@ fi
 if [ -f /etc/exports ] && grep -q '^[[:space:]]*[^#]*/' /etc/exports; then
     AUTO_NEED_IDMAPD=yes
 fi
+
+case "$NEED_STATD" in
+    yes|no)
+        ;;
+    *)
+        NEED_STATD=yes
+        ;;
+esac
 
 case "$NEED_IDMAPD" in
     yes|no)	

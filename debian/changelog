@@ -1,3 +1,13 @@
+nfs-utils (1:1.1.1-8) unstable; urgency=low
+
+  * When starting idmapd or gssd, load the sunrpc module instead of the
+    nfs/nfs4 modules; if the machine is server-only, it might not have
+    nfs/nfs4 (which are client-side modules) available.
+    (Closes: #449137)
+  * Revert NEED_MOUNTD patch; mountd is always needed, also for NFSv4.
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Sun, 04 Nov 2007 13:05:57 +0000
+
 nfs-utils (1:1.1.1-7) unstable; urgency=low
 
   * More init script breakage: Fix default value of NEED_STATD.

@@ -4,10 +4,6 @@ RPCNFSDCOUNT=8
 # Runtime priority of server (see nice(1))
 RPCNFSDPRIORITY=0
 
-# Do you want to start the mountd daemon? It is not required for NFSv4.
-# Valid alternatives are "yes" and "no"; the default is "yes".
-NEED_MOUNTD=
-
 # Options for rpc.mountd.
 # If you have a port-based firewall, you might want to set up
 # a fixed port here using the --port option. For more information, 

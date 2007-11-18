@@ -148,6 +148,7 @@ case "$1" in
 	if [ "$NEED_IDMAPD" = yes ] || [ "$NEED_GSSD" = yes ]
 	then
 	    do_modprobe sunrpc
+	    do_modprobe nfs
 	    if do_mount rpc_pipefs $PIPEFS_MOUNTPOINT
 	    then
 	    	if [ "$NEED_IDMAPD" = yes ]

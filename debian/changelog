@@ -1,3 +1,11 @@
+nfs-utils (1:1.1.1-9) unstable; urgency=high
+
+  * Re-add modprobing of the "nfs" module (leaving the sunrpc module, so as
+    not to break what the previous change fixed), as mount is not capable of
+    auto-loading it on demand. (Closes: #451782)
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Sun, 18 Nov 2007 19:14:48 +0100
+
 nfs-utils (1:1.1.1-8) unstable; urgency=low
 
   * When starting idmapd or gssd, load the sunrpc module instead of the

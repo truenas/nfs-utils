@@ -1,3 +1,10 @@
+nfs-utils (1:1.1.1-10) unstable; urgency=low
+
+  * 09-fix-nfsstat-option.patch: New patch, fixes so nfsstat help and man
+    pages say --mounts instead of the wrong --mounted. (Closes: #451965)
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Sat, 24 Nov 2007 18:16:51 +0100
+
 nfs-utils (1:1.1.1-9) unstable; urgency=high
 
   * Re-add modprobing of the "nfs" module (leaving the sunrpc module, so as

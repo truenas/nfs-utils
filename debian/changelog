@@ -1,3 +1,13 @@
+nfs-utils (1:1.1.1-11) unstable; urgency=low
+
+  * 10-no-flush-blkid-cache.diff: New patch from Theodore Ts'o, removes
+    unneccessary flushing of the blkid cache, leading to lots of spurious
+    DM_* ioctls. (Closes: #431940)
+  * Sorted the list of patches in debian/patches/, and refreshed all patches
+    to fix hunk offsets.
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Tue, 18 Dec 2007 00:06:10 +0100
+
 nfs-utils (1:1.1.1-10) unstable; urgency=low
 
   * 09-fix-nfsstat-option.patch: New patch, fixes so nfsstat help and man

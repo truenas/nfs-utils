@@ -1,7 +1,8 @@
-09-fix-nfsstat-option.patch
-08-clarify-unexport.patch
 02-document-debian-init-scripts.patch
 03-sm-notify-in-sbin.patch
 05-ignore-quota-option.patch
 06-gssd-manpage-typo.patch
 07-amd64-logging-segfault.patch
+08-clarify-unexport.patch
+09-fix-nfsstat-option.patch
+10-no-flush-blkid-cache.diff

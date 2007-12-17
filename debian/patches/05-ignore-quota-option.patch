@@ -5,11 +5,11 @@ them properly, matching the man page. There are a few aliases (like
 usrjquota) that are parsed by quota, but as these are not documented
 nor seem to be widely used, they are not included.
 
-Index: nfs-utils-1.1.0/utils/mount/mount.c
+Index: nfs-utils-1.1.1/utils/mount/mount.c
 ===================================================================
---- nfs-utils-1.1.0.orig/utils/mount/mount.c
-+++ nfs-utils-1.1.0/utils/mount/mount.c
-@@ -132,6 +132,10 @@ static const struct opt_map opt_map[] = 
+--- nfs-utils-1.1.1.orig/utils/mount/mount.c
++++ nfs-utils-1.1.1/utils/mount/mount.c
+@@ -130,6 +130,10 @@ static const struct opt_map opt_map[] = 
    { "diratime", 0, 1, MS_NODIRATIME },  /* Update dir access times */
    { "nodiratime", 0, 0, MS_NODIRATIME },/* Do not update dir access times */
  #endif

@@ -1,3 +1,13 @@
+nfs-utils (1:1.1.1-12) unstable; urgency=medium
+
+  * Comment in dh_strip again, which probably was commented out during a
+    debugging session at some point.
+  * Don't exclude mount.nfs from dh_fixperms; make it suid root manually after
+    dh_fixperms instead. Makes it world and group readable as it should be.
+    (Closes: #458239)
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Sat, 29 Dec 2007 23:25:36 +0100
+
 nfs-utils (1:1.1.1-11) unstable; urgency=low
 
   * 10-no-flush-blkid-cache.diff: New patch from Theodore Ts'o, removes

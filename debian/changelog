@@ -1,3 +1,12 @@
+nfs-utils (1:1.1.1-13) unstable; urgency=low
+
+  * Adjust nfs-kernel-server.init dependencies; patch from Petter
+    Reinholdtsen. (Closes: #464048)
+    * Depend on $remote_fs being started (and stop before it).
+    * Stop before nfs-common is stopped.
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Mon, 04 Feb 2008 22:58:30 +0100
+
 nfs-utils (1:1.1.1-12) unstable; urgency=medium
 
   * Comment in dh_strip again, which probably was commented out during a

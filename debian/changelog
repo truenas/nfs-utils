@@ -1,3 +1,23 @@
+nfs-utils (1:1.1.1-14) unstable; urgency=low
+
+  * Another init dependency patch from Petter Reinholdtsen, this time for
+    nfs-common. (Closes: #468663)
+    * Stop before portmap stops.
+    * Start after local filesystems and network (normally $portmap should take
+      care of this, but it might not be installed for some reason).
+  * 10-no-flush-blkid-cache.patch: Rename from 10-no-flush-blkid-cache.diff,
+    for consistency.
+  * 11-honor-credential-cache-dir.patch: New patch from Vince Busam, honor -d
+    flag to rpc.gssd instead of always using /tmp for the credentials cache.
+    (Closes: #465796)
+  * 12-fix-nfsmount-segfault.patch: New patch from Jindrich Makovicka, fix so
+    the two tests for mount version are in sync, fixing a segfault in nfsmount.
+    (Closes: #466019)
+  * Remove outdated information about git snapshots from debian/copyright.
+    (Closes: #468773)
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Mon, 03 Mar 2008 17:16:33 +0100
+
 nfs-utils (1:1.1.1-13) unstable; urgency=low
 
   * Adjust nfs-kernel-server.init dependencies; patch from Petter

@@ -1,3 +1,24 @@
+nfs-utils (1:1.1.2-1) unstable; urgency=low
+
+  * New upstream release
+  * Move homepage to control header
+  * Standards-Versio bumped to 3.7.3
+  * Added dwbian/watch
+  * Binary pakckages depend on ${misc:Depends}
+  * Build-depends on libldap2-dev
+    - /usr/bin/ld couldn't find -lldap
+  * The following patches were merged:
+    - 05-ignore-quota-option.patch
+    - 06-gssd-manpage-typo.patch
+    - 07-amd64-logging-segfault.patch
+    - 08-clarify-unexport.patch
+    - 09-fix-nfsstat-option.patch
+    - 10-no-flush-blkid-cache.patch
+    - 11-honor-credential-cache-dir.patch
+    - 12-fix-nfsmount-segfault.patch
+
+ -- Anibal Monsalve Salazar <anibal@debian.org>  Wed, 26 Mar 2008 18:40:09 +1100
+
 nfs-utils (1:1.1.1-14) unstable; urgency=low
 
   * Another init dependency patch from Petter Reinholdtsen, this time for

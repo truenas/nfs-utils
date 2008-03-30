@@ -10,7 +10,7 @@ Homepage: http://nfs.sourceforge.net/
 Package: nfs-kernel-server
 Priority: optional
 Architecture: any
-Depends: nfs-common (>= 1:1.0.8-1), ucf, lsb-base (>= 1.3-9ubuntu3), ${shlibs:Depends}, ${misc:Depends}, libblkid1 (>= 1.39+1.40-WIP-2006.11.14+dfsg-2)
+Depends: nfs-common (>= 1:1.0.8-1), ucf, lsb-base (>= 1.3-9ubuntu3), ${shlibs:Depends}, libblkid1 (>= 1.39+1.40-WIP-2006.11.14+dfsg-2)
 Provides: knfs, nfs-server
 Conflicts: knfs, nfs-server
 Replaces: knfs, nfs-server
@@ -31,7 +31,7 @@ Description: support for NFS kernel server
 
 Package: nfs-common
 Architecture: any
-Depends: portmap | rpcbind, adduser, ucf, lsb-base (>= 1.3-9ubuntu3), netbase (>= 4.24), initscripts (>= 2.86.ds1-38.1), ${shlibs:Depends}, ${misc:Depends}
+Depends: portmap | rpcbind, adduser, ucf, lsb-base (>= 1.3-9ubuntu3), netbase (>= 4.24), initscripts (>= 2.86.ds1-38.1), ${shlibs:Depends}
 Provides: nfs-client
 Conflicts: nfs-client
 Replaces: nfs-client, nfs-kernel-server (<< 1:1.0.7-5), mount (<< 2.13~)

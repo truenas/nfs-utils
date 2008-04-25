@@ -1,0 +1,43 @@
+Index: nfs-utils-1.1.2/utils/mount/fstab.c
+===================================================================
+--- nfs-utils-1.1.2.orig/utils/mount/fstab.c
++++ nfs-utils-1.1.2/utils/mount/fstab.c
+@@ -52,7 +52,7 @@ mtab_does_not_exist(void) {
+ 	return var_mtab_does_not_exist;
+ }
+ 
+-static int
++int
+ mtab_is_a_symlink(void) {
+         get_mtab_info();
+         return var_mtab_is_a_symlink;
+Index: nfs-utils-1.1.2/utils/mount/fstab.h
+===================================================================
+--- nfs-utils-1.1.2.orig/utils/mount/fstab.h
++++ nfs-utils-1.1.2/utils/mount/fstab.h
+@@ -7,6 +7,7 @@
+ #define _PATH_FSTAB "/etc/fstab"
+ #endif
+ 
++int mtab_is_a_symlink(void);
+ int mtab_is_writable(void);
+ int mtab_does_not_exist(void);
+ 
+Index: nfs-utils-1.1.2/utils/mount/mount.c
+===================================================================
+--- nfs-utils-1.1.2.orig/utils/mount/mount.c
++++ nfs-utils-1.1.2/utils/mount/mount.c
+@@ -257,6 +257,13 @@ static int add_mtab(char *spec, char *mo
+ 		return EX_SUCCESS;
+ 	}
+ 
++	/* Avoid writing if the mtab is a symlink to /proc/mounts, since
++	   that would create a file /proc/mounts in case the proc filesystem
++	   is not mounted, and the fchmod below would also fail. */
++	if (mtab_is_a_symlink()) {
++		return EX_SUCCESS;
++	}
++
+ 	lock_mtab();
+ 
+ 	mtab = nfs_setmntent(MOUNTED, "a+");

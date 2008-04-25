@@ -1,3 +1,14 @@
+nfs-utils (1:1.1.2-3) unstable; urgency=low
+
+  * 02-fix-retry-option.patch: New patch from upstream, fixes interpretation
+    of the retry= option. (Closes: #476094)
+  * 03-handle-mtab-symlink.patch: New patch from Joey Hess, makes mount.nfs
+    handle symlinked /etc/mtab the way umount.nfs and util-linux handle it.
+    (Closes: #476577)
+  * Fix "pakage" typo in debian/copyright.
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Fri, 25 Apr 2008 18:26:12 +0200
+
 nfs-utils (1:1.1.2-2) unstable; urgency=low
 
   * Remove ${misc:Depends} from binary variables -- it is not used, and not

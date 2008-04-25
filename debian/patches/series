@@ -1,1 +1,3 @@
 01-sm-notify-in-sbin.patch
+02-fix-retry-option.patch
+03-handle-mtab-symlink.patch

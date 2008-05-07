@@ -1,3 +1,12 @@
+nfs-utils (1:1.1.2-4) unstable; urgency=low
+
+  * 04-eacces-is-a-permanent-error.patch: New patch mirroring upstream git;
+    makes the text-based mounting interface (used with kernel >= 2.6.23) 
+    treat "access denied" as a permanent instead of a temporary error.
+    (Closes: #476128)
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Wed, 07 May 2008 20:49:14 +0200
+
 nfs-utils (1:1.1.2-3) unstable; urgency=low
 
   * 02-fix-retry-option.patch: New patch from upstream, fixes interpretation

@@ -1,3 +1,20 @@
+nfs-utils (1:1.1.2-5) unstable; urgency=high
+
+  * 05-default-use-old-mount-interface.patch: New patch, disables the
+    text-mounting interface by default. It seems to be a bit shaky still,
+    causes problems for several users (some of which are only fixable with a
+    kernel update). It will be turned back on again after lenny's release, but
+    for now we're reverting to the safe option.
+    (Closes: #473171, #478824, #475274, #478831)
+  * 06-dont-check-exec-bit.patch: New patch, removes check for executable bit
+    on mount points. (Closes: #478499)
+  * 07-remove-duplicate-exports-paragraphs.patch: New patch from Antonio
+    Ospite, removes some duplicate paragraphs in the exports man page.
+    (Closes: #488009)
+  * Add "no_subtree_check" option to packaged /etc/exports. (Closes: #485658)
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Fri, 11 Jul 2008 18:45:45 +0200
+
 nfs-utils (1:1.1.2-4) unstable; urgency=low
 
   * 04-eacces-is-a-permanent-error.patch: New patch mirroring upstream git;

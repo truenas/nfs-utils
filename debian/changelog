@@ -1,3 +1,18 @@
+nfs-utils (1:1.1.2-6) unstable; urgency=high
+
+  * Load nfsd.ko before starting idmapd, to hopefully fix NFSv4 export issues.
+    (Closes: #490181)
+  * Bump to Standards-Version 3.8.0.1.
+    * Added README.source with basic information on use of quilt.
+    * Added (adapted from the example in Policy) debian/rules code to 
+      parse DEB_BUILD_OPTIONS and support noopt and parallel= targets.
+      (nostrip is already handled by debhelper.)
+  * Remove DEB_HOST_ARCH setting from debian/rules, as it was not used
+    anywhere.
+  * Refresh 04-eacces-is-a-permanent-error.patch to get rid of the offset.
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Mon, 14 Jul 2008 11:20:59 +0200
+
 nfs-utils (1:1.1.2-5) unstable; urgency=high
 
   * 05-default-use-old-mount-interface.patch: New patch, disables the

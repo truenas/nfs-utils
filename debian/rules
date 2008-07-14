@@ -2,7 +2,18 @@
 
 include /usr/share/quilt/quilt.make
 
-DEB_HOST_ARCH := $(shell dpkg-architecture -qDEB_HOST_ARCH)
+# Parsing of DEB_BUILD_OPTIONS flags.
+# Note that nostrip is handled automatically by debhelper.
+CFLAGS := -g -Wall
+ifneq (,$(filter noopt,$(DEB_BUILD_OPTIONS)))
+    CFLAGS += -O0
+else
+    CFLAGS += -O2
+endif
+ifneq (,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
+    NUMJOBS = $(patsubst parallel=%,%,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
+    MAKEFLAGS += -j$(NUMJOBS)
+endif
 
 # Temporary root
 DEBTMP := $(CURDIR)/debian/tmp
@@ -10,11 +21,11 @@ DEBTMP := $(CURDIR)/debian/tmp
 build: patch build-stamp
 build-stamp:
 	dh_testdir
-	CFLAGS="-g -O2 -Wall" ./configure \
+	CFLAGS="$(CFLAGS)" ./configure \
 		--mandir='$${prefix}/share/man' \
 		--enable-secure-statd \
 		--with-tcp-wrappers
-	$(MAKE)
+	$(MAKE) $(MAKEFLAGS)
 	touch build-stamp
 
 clean: unpatch

@@ -1,0 +1,29 @@
+nfs-utils for Debian
+====================
+
+nfs-utils for Debian is packaged using quilt. To get started:
+
+  sudo aptitude install quilt
+  export QUILT_PATCHES=debian/patches/
+
+To get the complete source as built, use the "patch" target in debian/rules or,
+equivalently:
+
+  quilt push -a
+
+To make a new modification, first apply all patches as described above, and
+then
+
+  quilt new 99-my-local-patch.patch
+  quilt edit foo/bar.c
+  quilt edit baz/quux.c
+  quilt refresh
+
+To get the tree back in pristine form, use the "unpatch" target in debian/rules
+or, equivalently:
+
+  quilt pop -a
+
+Happy hacking!
+
+ -- Steinar H. Gunderson <sesse@debian.org>, Mon, 14 Jul 2008 11:20:34 +0200

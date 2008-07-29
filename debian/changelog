@@ -1,3 +1,12 @@
+nfs-utils (1:1.1.3-1) unstable; urgency=low
+
+  * New upstream release
+  * The following patches were merged:
+    02-fix-retry-option.patch
+    04-eacces-is-a-permanent-error.patch
+
+ -- Anibal Monsalve Salazar <anibal@debian.org>  Tue, 29 Jul 2008 18:08:42 +1000
+
 nfs-utils (1:1.1.2-6) unstable; urgency=high
 
   * Load nfsd.ko before starting idmapd, to hopefully fix NFSv4 export issues.

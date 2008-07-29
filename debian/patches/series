@@ -1,7 +1,5 @@
 01-sm-notify-in-sbin.patch
-02-fix-retry-option.patch
 03-handle-mtab-symlink.patch
-04-eacces-is-a-permanent-error.patch
 05-default-use-old-mount-interface.patch
 06-dont-check-exec-bit.patch
 07-remove-duplicate-exports-paragraphs.patch

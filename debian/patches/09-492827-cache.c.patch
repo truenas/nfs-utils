@@ -1,0 +1,17 @@
+http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=492827
+Patch by Neil Brown
+
+diff --git a/utils/mountd/cache.c b/utils/mountd/cache.c
+index f555dcc..48d737b 100644
+--- a/utils/mountd/cache.c
++++ b/utils/mountd/cache.c
+@@ -158,7 +158,8 @@ void auth_unix_gid(FILE *f)
+ 		qword_printint(f, ngroups);
+ 		for (i=0; i<ngroups; i++)
+ 			qword_printint(f, groups[i]);
+-	}
++	} else
++		qword_printint(f, 0);
+ 	qword_eol(f);
+ 	if (groups != glist)
+ 		free(groups);

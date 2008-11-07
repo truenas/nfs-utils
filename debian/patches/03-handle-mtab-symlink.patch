@@ -1,8 +1,8 @@
-Index: nfs-utils-1.1.2/utils/mount/fstab.c
+Index: nfs-utils-1.1.4/utils/mount/fstab.c
 ===================================================================
---- nfs-utils-1.1.2.orig/utils/mount/fstab.c
-+++ nfs-utils-1.1.2/utils/mount/fstab.c
-@@ -52,7 +52,7 @@ mtab_does_not_exist(void) {
+--- nfs-utils-1.1.4.orig/utils/mount/fstab.c
++++ nfs-utils-1.1.4/utils/mount/fstab.c
+@@ -57,7 +57,7 @@ mtab_does_not_exist(void) {
  	return var_mtab_does_not_exist;
  }
  
@@ -11,10 +11,10 @@ Index: nfs-utils-1.1.2/utils/mount/fstab.c
  mtab_is_a_symlink(void) {
          get_mtab_info();
          return var_mtab_is_a_symlink;
-Index: nfs-utils-1.1.2/utils/mount/fstab.h
+Index: nfs-utils-1.1.4/utils/mount/fstab.h
 ===================================================================
---- nfs-utils-1.1.2.orig/utils/mount/fstab.h
-+++ nfs-utils-1.1.2/utils/mount/fstab.h
+--- nfs-utils-1.1.4.orig/utils/mount/fstab.h
++++ nfs-utils-1.1.4/utils/mount/fstab.h
 @@ -7,6 +7,7 @@
  #define _PATH_FSTAB "/etc/fstab"
  #endif
@@ -22,14 +22,14 @@ Index: nfs-utils-1.1.2/utils/mount/fstab.h
 +int mtab_is_a_symlink(void);
  int mtab_is_writable(void);
  int mtab_does_not_exist(void);
- 
-Index: nfs-utils-1.1.2/utils/mount/mount.c
+ void reset_mtab_info(void);
+Index: nfs-utils-1.1.4/utils/mount/mount.c
 ===================================================================
---- nfs-utils-1.1.2.orig/utils/mount/mount.c
-+++ nfs-utils-1.1.2/utils/mount/mount.c
-@@ -257,6 +257,13 @@ static int add_mtab(char *spec, char *mo
- 		return EX_SUCCESS;
- 	}
+--- nfs-utils-1.1.4.orig/utils/mount/mount.c
++++ nfs-utils-1.1.4/utils/mount/mount.c
+@@ -230,6 +230,13 @@ create_mtab (void) {
+ 	int flags;
+ 	mntFILE *mfp;
  
 +	/* Avoid writing if the mtab is a symlink to /proc/mounts, since
 +	   that would create a file /proc/mounts in case the proc filesystem
@@ -40,4 +40,4 @@ Index: nfs-utils-1.1.2/utils/mount/mount.c
 +
  	lock_mtab();
  
- 	mtab = nfs_setmntent(MOUNTED, "a+");
+ 	mfp = nfs_setmntent (MOUNTED, "a+");

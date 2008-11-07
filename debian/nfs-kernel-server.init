@@ -72,9 +72,10 @@ case "$1" in
 		do_mount nfsd $PROCNFSD_MOUNTPOINT || NEED_SVCGSSD=no
 		log_begin_msg "Exporting directories for $DESC..."
 		$PREFIX/sbin/exportfs -r
-		if [ $? != 0 ]; then
-			log_end_msg $?
-			exit $?
+		RET=$?
+		if [ $RET != 0 ]; then
+			log_end_msg $RET
+			exit $RET
 		fi
 		log_end_msg 0
 
@@ -83,9 +84,10 @@ case "$1" in
 		start-stop-daemon --start --oknodo --quiet \
 		    --nicelevel $RPCNFSDPRIORITY \
 		    --exec $PREFIX/sbin/rpc.nfsd -- $RPCNFSDCOUNT
-		if [ $? != 0 ]; then
-			log_end_msg $?
-			exit $?
+		RET=$?
+		if [ $RET != 0 ]; then
+			log_end_msg $RET
+			exit $RET
 		fi
 
 		# make sure 127.0.0.1 is a valid source for requests
@@ -108,18 +110,20 @@ case "$1" in
 			log_progress_msg "svcgssd"
 			start-stop-daemon --start --oknodo --quiet \
 			    --exec $PREFIX/sbin/rpc.svcgssd -- $RPCSVCGSSDOPTS
-			if [ $? != 0 ]; then
-				log_end_msg $?
-				exit $?
+			RET=$?
+			if [ $RET != 0 ]; then
+				log_end_msg $RET
+				exit $RET
 			fi
 		fi
 
 		log_progress_msg "mountd"
 		start-stop-daemon --start --oknodo --quiet \
 		    --exec $PREFIX/sbin/rpc.mountd -- $RPCMOUNTDOPTS
-		if [ $? != 0 ]; then
-			log_end_msg $?
-			exit $?
+		RET=$?
+		if [ $RET != 0 ]; then
+			log_end_msg $RET
+			exit $RET
 		fi
 
 		log_end_msg 0
@@ -134,36 +138,40 @@ case "$1" in
 	log_progress_msg "mountd"
 	start-stop-daemon --stop --oknodo --quiet \
 	    --name rpc.mountd --user 0
-	if [ $? != 0 ]; then
-		log_end_msg $?
-		exit $?
+	RET=$?
+	if [ $RET != 0 ]; then
+		log_end_msg $RET
+		exit $RET
 	fi
 
 	if [ "$NEED_SVCGSSD" = "yes" ]; then
 		log_progress_msg "svcgssd"
 		start-stop-daemon --stop --oknodo --quiet \
 		    --name rpc.svcgssd --user 0
-		if [ $? != 0 ]; then
-			log_end_msg $?
-			exit $?
+		RET=$?
+		if [ $RET != 0 ]; then
+			log_end_msg $RET
+			exit $RET
 		fi
 	fi
 
 	log_progress_msg "nfsd"
 	start-stop-daemon --stop --oknodo --quiet \
 	    --name nfsd --user 0 --signal 2
-	if [ $? != 0 ]; then
-		log_end_msg $?
-		exit $?
+	RET=$?
+	if [ $RET != 0 ]; then
+		log_end_msg $RET
+		exit $RET
 	fi
 
 	log_end_msg 0
 
 	log_begin_msg "Unexporting directories for $DESC..."
 	$PREFIX/sbin/exportfs -au
-	if [ $? != 0 ]; then
-		log_end_msg $?
-		exit $?
+	RET=$?
+	if [ $RET != 0 ]; then
+		log_end_msg $RET
+		exit $RET
 	fi
 	log_end_msg 0
 
@@ -187,8 +195,9 @@ case "$1" in
   reload | force-reload)
 	log_begin_msg "Re-exporting directories for $DESC..."
 	$PREFIX/sbin/exportfs -r
-	log_end_msg $?
-	exit $?
+	RET=$?
+	log_end_msg $RET
+	exit $RET
 	;;
 
   restart)

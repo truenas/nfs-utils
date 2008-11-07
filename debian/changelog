@@ -1,3 +1,24 @@
+nfs-utils (1:1.1.4-1) unstable; urgency=low
+
+  * New upstream release. Patch status:
+    * 01-sm-notify-in-sbin.patch: Refreshed.
+    * 03-handle-mtab-symlink.patch: Refreshed.
+    * 05-default-use-old-mount-interface.patch: Removed (see below).
+    * 07-remove-duplicate-exports-paragraphs.patch: No change.
+    * 09-492827-cache.c.patch: Integrated by upstream, removed.
+    * 10-493659-nfs.man.patch: No change.
+    * Do not sync() in sm-notify if there are no hosts to be notified.
+      (Closes: #502122)
+  * Removed 05-default-use-old-mount-interface.patch, ie. revert to the new
+    text-based mount interface, as this package is not intended for lenny.
+    Probably reopens several older bugs, but Closes: #480909, #492970.
+  * Fix abuses of $? in nfs-kernel-server.init (they were already OK in
+    nfs-common.init, for some reason). (Closes: #503643)
+  * In /etc/default/nfs-kernel-server.default, add --manage-gids to the default
+    set of mountd options. (Closes: #493059)
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Fri, 07 Nov 2008 14:01:19 +0100
+
 nfs-utils (1:1.1.3-2) unstable; urgency=low
 
   * Add 09-492827-cache.c.patch to fix mac os x 10.5 client hangs when server

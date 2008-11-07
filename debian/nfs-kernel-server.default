@@ -8,7 +8,7 @@ RPCNFSDPRIORITY=0
 # If you have a port-based firewall, you might want to set up
 # a fixed port here using the --port option. For more information, 
 # see rpc.mountd(8) or http://wiki.debian.org/?SecuringNFS
-RPCMOUNTDOPTS=
+RPCMOUNTDOPTS=--manage-gids
 
 # Do you want to start the svcgssd daemon? It is only required for Kerberos
 # exports. Valid alternatives are "yes" and "no"; the default is "no".

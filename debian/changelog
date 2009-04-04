@@ -1,3 +1,11 @@
+nfs-utils (1:1.1.5-2) unstable; urgency=low
+
+  * Standards version is 3.8.1
+  * Set -x in nfs-{common,server}.{pre,post}rm scripts
+  * Add copyright notices
+
+ -- Anibal Monsalve Salazar <anibal@debian.org>  Sat, 04 Apr 2009 15:29:57 +1100
+
 nfs-utils (1:1.1.5-1) experimental; urgency=low
 
   * New upstream release 

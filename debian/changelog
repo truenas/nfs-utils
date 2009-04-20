@@ -1,3 +1,13 @@
+nfs-utils (1:1.1.6-1) unstable; urgency=low
+
+  * New upstream release. Patch status:
+    * 01-sm-notify-in-sbin.patch: Refreshed.
+    * 03-handle-mtab-symlink.patch: No change.
+    * 07-remove-duplicate-exports-paragraphs.patch: No change.
+    * 10-493659-nfs.man.patch: Refreshed.
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Mon, 20 Apr 2009 21:10:47 +0200
+
 nfs-utils (1:1.1.5-2) unstable; urgency=low
 
   * Standards version is 3.8.1

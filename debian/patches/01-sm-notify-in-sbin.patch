@@ -1,8 +1,8 @@
-Index: nfs-utils-1.1.4/utils/statd/statd.c
+Index: nfs-utils-1.1.6/utils/statd/statd.c
 ===================================================================
---- nfs-utils-1.1.4.orig/utils/statd/statd.c
-+++ nfs-utils-1.1.4/utils/statd/statd.c
-@@ -222,7 +222,7 @@ static void run_sm_notify(int outport)
+--- nfs-utils-1.1.6.orig/utils/statd/statd.c
++++ nfs-utils-1.1.6/utils/statd/statd.c
+@@ -233,7 +233,7 @@ static void run_sm_notify(int outport)
  	char *av[6];
  	int ac = 0;
  

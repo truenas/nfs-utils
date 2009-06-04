@@ -1,3 +1,11 @@
+nfs-utils (1:1.2.0-1) unstable; urgency=low
+
+  * New upstream release
+    - Update Sun Microsystems RPC licenses
+  * Update debian/copyright
+
+ -- Anibal Monsalve Salazar <anibal@debian.org>  Thu, 04 Jun 2009 20:01:43 +1000
+
 nfs-utils (1:1.1.6-1) unstable; urgency=low
 
   * New upstream release. Patch status:

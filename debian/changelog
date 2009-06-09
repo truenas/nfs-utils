@@ -1,3 +1,22 @@
+nfs-utils (1:1.2.0-2) unstable; urgency=low
+
+  * Merge from Ubuntu
+  * Rename 101-reduce-verbosity.diff to 11-532048-reduce-verbosity.patch
+  * Fix syslog verbosity with expired kerberos creds; closes: #532048
+    11-532048-reduce-verbosity.patch
+
+ -- Anibal Monsalve Salazar <anibal@debian.org>  Tue, 09 Jun 2009 10:50:33 +1000
+
+nfs-utils (1:1.2.0-1ubuntu1) karmic; urgency=low
+
+  * Merge from Debian unstable, remaining changes:
+    - 101-reduce-verbosity.diff:  Reduce verbosity
+  * Dropped changes:
+    - Adjust initscripts version dependency; the Debian package now depends
+      on a newer version anyway
+
+ -- Steve Langasek <steve.langasek@ubuntu.com>  Sat, 06 Jun 2009 01:19:54 +0000
+
 nfs-utils (1:1.2.0-1) unstable; urgency=low
 
   * New upstream release
@@ -30,6 +49,19 @@ nfs-utils (1:1.1.5-1) experimental; urgency=low
   * Update debian/watch
 
  -- Anibal Monsalve Salazar <anibal@debian.org>  Fri, 06 Mar 2009 13:36:45 +1100
+
+nfs-utils (1:1.1.4-1ubuntu1) jaunty; urgency=low
+
+  * Merge from debian unstable, remaining changes:
+    - Adjust initscripts version dependancy.
+    - 101-reduce-verbosity.diff:  Reduce verbosity
+  * Drop 100-gssd-use-kernel-supported-enctypes.diff on advice from
+    upstream.  "This patch isn't needed.  There is still no code in the kernel to
+    return the enctype information and, as it turns out, the way we're
+    going to get this information from the kernel has changed.  (Which is
+    why this has never gone upstream.)"
+
+ -- Bryce Harrington <bryce@ubuntu.com>  Thu, 04 Dec 2008 14:37:39 -0800
 
 nfs-utils (1:1.1.4-1) unstable; urgency=low
 
@@ -115,6 +147,24 @@ nfs-utils (1:1.1.2-5) unstable; urgency=high
 
  -- Steinar H. Gunderson <sesse@debian.org>  Fri, 11 Jul 2008 18:45:45 +0200
 
+nfs-utils (1:1.1.2-4ubuntu2) jaunty; urgency=low
+
+  * Add patch to reduce verbosity (LP: #293705)
+
+ -- Andrew Pollock <apollock@google.com>  Tue, 04 Nov 2008 09:38:48 -0800
+
+nfs-utils (1:1.1.2-4ubuntu1) intrepid; urgency=low
+
+  * Merge from debian unstable, remaining changes:
+    - Update maintainer to Ubuntu
+    - Adjust initscripts version dependancy.
+    - 100-gssd-use-kernel-supported-enctypes.diff:
+      Allow to use encryption types that the kernel supports, not just 
+      des-cbc-crc. This patch was dropped by mistake when merging. Start the
+      numbering from 100 to more easily distinguish which patches are ours.
+
+ -- Bryce Harrington <bryce@ubuntu.com>  Thu, 19 Jun 2008 20:05:51 -0700
+
 nfs-utils (1:1.1.2-4) unstable; urgency=low
 
   * 04-eacces-is-a-permanent-error.patch: New patch mirroring upstream git;
@@ -134,6 +184,33 @@ nfs-utils (1:1.1.2-3) unstable; urgency=low
   * Fix "pakage" typo in debian/copyright.
 
  -- Steinar H. Gunderson <sesse@debian.org>  Fri, 25 Apr 2008 18:26:12 +0200
+
+nfs-utils (1:1.1.2-2ubuntu2.1) hardy-proposed; urgency=low
+
+  * 101-mount-EACCES-is-forever.diff:
+    Patch from upstream to recognize "permission denied" as a permanent
+    error, instead of retrying the mount until the connection timeout is
+    reached.  LP: #214041.
+
+ -- Steve Langasek <steve.langasek@ubuntu.com>  Wed, 07 May 2008 17:56:04 +0000
+
+nfs-utils (1:1.1.2-2ubuntu2) hardy; urgency=low
+
+  * 100-gssd-use-kernel-supported-enctypes.diff:
+    Allow to use encryption types that the kernel supports, not just 
+    des-cbc-crc. This patch was dropped by mistake when merging. Start the
+    numbering from 100 to more easily distinguish which patches are ours.
+
+ -- Timo Aaltonen <tepsipakki@ubuntu.com>  Wed, 02 Apr 2008 23:10:01 +0300
+
+nfs-utils (1:1.1.2-2ubuntu1) hardy; urgency=low
+
+  * New upstream version (LP: #131789, #208021)
+  * Merge from Debian unstable, remaining changes:
+    - Change the Maintainer address.
+    - Adjust initscripts version dependancy.
+
+ -- Timo Aaltonen <tepsipakki@ubuntu.com>  Tue, 01 Apr 2008 18:02:05 +0300
 
 nfs-utils (1:1.1.2-2) unstable; urgency=low
 
@@ -948,7 +1025,6 @@ nfs-utils (1:1.0.9-1) unstable; urgency=high
     - assorted other fixes
 
  -- Anibal Monsalve Salazar <anibal@debian.org>  Sat, 08 Jul 2006 14:26:40 +1000
-
 
 nfs-utils (1:1.0.8+1.0.9pre1-4) unstable; urgency=low
 

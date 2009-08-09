@@ -1,3 +1,11 @@
+nfs-utils (1:1.2.0-3) unstable; urgency=low
+
+  * Remove myself from Uploaders.
+  * Remove --enable-secure-statd from configure line; it does no longer
+    exist as a configure option.
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Sun, 09 Aug 2009 12:47:00 +0200
+
 nfs-utils (1:1.2.0-2) unstable; urgency=low
 
   * Merge from Ubuntu

@@ -23,7 +23,6 @@ build-stamp:
 	dh_testdir
 	CFLAGS="$(CFLAGS)" ./configure \
 		--mandir='$${prefix}/share/man' \
-		--enable-secure-statd \
 		--with-tcp-wrappers
 	$(MAKE) $(MAKEFLAGS)
 	touch build-stamp

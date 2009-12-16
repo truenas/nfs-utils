@@ -1,3 +1,10 @@
+nfs-utils (1:1.2.0-4.1) unstable; urgency=low
+
+  * Non-maintainer upload.
+  * Fix test for NFS kernel server support in init script; closes: #550153
+
+ -- Ben Hutchings <ben@decadent.org.uk>  Wed, 16 Dec 2009 22:14:01 +0000
+
 nfs-utils (1:1.2.0-4) unstable; urgency=low
 
   * Removing myself from uploaders.

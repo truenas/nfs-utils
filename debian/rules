@@ -1,7 +1,5 @@
 #! /usr/bin/make -f
 
-include /usr/share/quilt/quilt.make
-
 # Parsing of DEB_BUILD_OPTIONS flags.
 # Note that nostrip is handled automatically by debhelper.
 CFLAGS := -g -Wall
@@ -18,7 +16,7 @@ endif
 # Temporary root
 DEBTMP := $(CURDIR)/debian/tmp
 
-build: patch build-stamp
+build: build-stamp
 build-stamp:
 	dh_testdir
 	CFLAGS="$(CFLAGS)" ./configure \
@@ -27,7 +25,7 @@ build-stamp:
 	$(MAKE) $(MAKEFLAGS)
 	touch build-stamp
 
-clean: unpatch
+clean:
 	dh_testdir
 	dh_testroot
 	rm -f build-stamp

@@ -1,5 +1,4 @@
 01-sm-notify-in-sbin.patch
 03-handle-mtab-symlink.patch
 07-remove-duplicate-exports-paragraphs.patch
-10-493659-nfs.man.patch
 11-532048-reduce-verbosity.patch

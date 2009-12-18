@@ -1,3 +1,14 @@
+nfs-utils (1:1.2.1-1) unstable; urgency=low
+
+  * New upstream release 
+  * Update debian/watch
+  * Debian source format is 3.0 (quilt)
+    Don't build depend on quilt
+  * Remove 10-493659-nfs.man.patch (merged)
+  * Build depend on libtirpc-dev
+
+ -- Anibal Monsalve Salazar <anibal@debian.org>  Fri, 18 Dec 2009 13:17:42 +1100
+
 nfs-utils (1:1.2.0-4.1) unstable; urgency=low
 
   * Non-maintainer upload.

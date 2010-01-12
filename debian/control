@@ -2,14 +2,14 @@ Source: nfs-utils
 Priority: standard
 Section: net
 Maintainer: Anibal Monsalve Salazar <anibal@debian.org>
-Build-Depends: debhelper (>= 5), libwrap0-dev, libevent-dev, libnfsidmap-dev, libkrb5-dev, libgssglue-dev, librpcsecgss-dev (>= 0.17), libblkid-dev, libkeyutils-dev, pkg-config, libldap2-dev
-Standards-Version: 3.8.1
+Build-Depends: debhelper (>= 7), libwrap0-dev, libevent-dev, libnfsidmap-dev, libkrb5-dev, libgssglue-dev, librpcsecgss-dev (>= 0.17), libblkid-dev, libkeyutils-dev, pkg-config, libldap2-dev
+Standards-Version: 3.8.3
 Homepage: http://nfs.sourceforge.net/
 
 Package: nfs-kernel-server
 Priority: optional
 Architecture: any
-Depends: nfs-common (>= 1:1.0.8-1), ucf, lsb-base (>= 1.3-9ubuntu3), ${shlibs:Depends}, libblkid1 (>= 1.39+1.40-WIP-2006.11.14+dfsg-2)
+Depends: ${shlibs:Depends}, ${misc:Depends}, nfs-common (>= 1:1.0.8-1), ucf, lsb-base (>= 1.3-9ubuntu3), libblkid1 (>= 1.39+1.40-WIP-2006.11.14+dfsg-2)
 Provides: knfs, nfs-server
 Conflicts: knfs, nfs-server
 Replaces: knfs, nfs-server
@@ -30,7 +30,7 @@ Description: support for NFS kernel server
 
 Package: nfs-common
 Architecture: any
-Depends: portmap | rpcbind, adduser, ucf, lsb-base (>= 1.3-9ubuntu3), netbase (>= 4.24), initscripts (>= 2.86.ds1-38.1), ${shlibs:Depends}
+Depends: ${shlibs:Depends}, ${misc:Depends}, portmap | rpcbind, adduser, ucf, lsb-base (>= 1.3-9ubuntu3), netbase (>= 4.24), initscripts (>= 2.86.ds1-38.1)
 Provides: nfs-client
 Conflicts: nfs-client
 Replaces: nfs-client, nfs-kernel-server (<< 1:1.0.7-5), mount (<< 2.13~)

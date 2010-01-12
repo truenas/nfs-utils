@@ -1,3 +1,16 @@
+nfs-utils (1:1.2.1-2) unstable; urgency=low
+
+  * Go back to read /proc/kallsyms
+    Closes: 561674, 562581
+  * Fix debhelper-but-no-misc-depends
+  * Fix out-of-date-standards-version
+  * Fix copyright-refers-to-symlink-license
+  * Fix maintainer-script-without-set-e
+  * DH compatibility level is 7
+  * Fix dh-clean-k-is-deprecated
+
+ -- Anibal Monsalve Salazar <anibal@debian.org>  Wed, 13 Jan 2010 10:39:08 +1100
+
 nfs-utils (1:1.2.1-1.1) unstable; urgency=low
 
   * Non-maintainer upload.

@@ -64,7 +64,7 @@ case "$1" in
 		do_modprobe nfsd
 
 		# See if our running kernel supports the NFS kernel server
-		if [ -f /proc/kallsyms ] && ! grep -Eqm1 ' nfsd_.* *\[nfsd\]' /proc/kallsyms; then
+		if [ -f /proc/kallsyms ] && ! grep -Eq "[[:space:]]nfsd_open([[:space:]]|$)" /proc/kallsyms; then
 			log_warning_msg "Not starting $DESC: no support in current kernel."
 			exit 0
 		fi

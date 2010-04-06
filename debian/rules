@@ -21,6 +21,7 @@ build-stamp:
 	dh_testdir
 	CFLAGS="$(CFLAGS)" ./configure \
 		--mandir='$${prefix}/share/man' \
+		--enable-nfsv41 \
 		--disable-tirpc \
 		--with-tcp-wrappers
 	$(MAKE) $(MAKEFLAGS)
@@ -50,6 +51,7 @@ binary-arch: build
 	dh_installman
 	dh_link
 	dh_installchangelogs ChangeLog
+	dh_lintian
 	dh_strip
 	dh_compress
 	dh_fixperms

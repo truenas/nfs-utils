@@ -1,8 +1,6 @@
-Index: nfs-utils-1.1.2/utils/exportfs/exports.man
-===================================================================
---- nfs-utils-1.1.2.orig/utils/exportfs/exports.man	2008-03-14 16:46:29.000000000 +0100
-+++ nfs-utils-1.1.2/utils/exportfs/exports.man	2008-07-11 18:57:46.000000000 +0200
-@@ -365,20 +365,6 @@
+--- a/utils/exportfs/exports.man	2010-02-18 23:35:00.000000000 +1100
++++ b/utils/exportfs/exports.man	2010-04-06 16:12:51.000000000 +1000
+@@ -365,20 +365,6 @@ If the client asks for alternative locat
  will be given this list of alternatives. (Note that actual replication
  of the filesystem must be handled elsewhere.)
  

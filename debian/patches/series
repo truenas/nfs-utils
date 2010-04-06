@@ -1,4 +1,6 @@
 01-sm-notify-in-sbin.patch
+02-524255-manpages.patch
 03-handle-mtab-symlink.patch
 07-remove-duplicate-exports-paragraphs.patch
 11-532048-reduce-verbosity.patch
+12-svcgssd-document-n-option.patch

@@ -1,3 +1,28 @@
+nfs-utils (1:1.2.2-1) unstable; urgency=low
+
+  [ Anibal Monsalve Salazar ]
+  * New upstream release 
+    Build depend on libcap-dev
+    Set configure option --enable-nfsv41
+  * X-ref nfsd({7,8})
+    02-524255-manpages.patch by Cyril Brulebois
+    Closes: 524255
+
+  [ Ben Hutchings ]
+  * Change maintainer to Debian kernel team; move Aníbal to uploaders and
+    add myself to uploaders
+  * Check for nfsd in /proc/filesystems rather than looking for signs of it in
+    /proc/kallsyms (Closes: #563104, #572736)
+  * Document the -n option to svcgssd, thanks to Alberto Gonzalez Iniesta
+    (Closes: #451402, #550270)
+  * Replace upstream reference in package descriptions with Homepage fields,
+    and do not refer to the obsolete CVS repository
+  * Update policy version to 3.8.4; no changes required
+  * Override lintian error 'init.d-script-missing-dependency-on-remote_fs';
+    the init script does work without /usr mounted
+
+ -- Anibal Monsalve Salazar <anibal@debian.org>  Tue, 06 Apr 2010 16:11:22 +1000
+
 nfs-utils (1:1.2.1-3) unstable; urgency=low
 
   * Change the reading of /proc/kallsyms

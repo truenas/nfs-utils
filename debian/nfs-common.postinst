@@ -23,15 +23,13 @@ case "$1" in
                 rmdir --ignore-fail-on-non-empty /home/statd
             fi
 	fi
-	if [ "$2" = "" ] || dpkg --compare-versions "$2" lt 1:1.0.7-16; then
-	    chown statd /var/lib/nfs/sm \
+	chown statd /var/lib/nfs/sm \
 		/var/lib/nfs/sm.bak \
 		/var/lib/nfs/rpc_pipefs \
 		/var/lib/nfs
-            if [ -f /var/lib/nfs/state ]; then
+        if [ -f /var/lib/nfs/state ]; then
 	        chown statd /var/lib/nfs/state
-            fi
-	fi
+        fi
 	
 	if [ "$2" != "" ] || dpkg --compare-versions "$2" lt 1:1.1.0-14; then
 	    if dpkg-statoverride --list /sbin/mount.nfs >/dev/null 2>&1; then

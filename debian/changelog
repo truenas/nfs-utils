@@ -1,3 +1,11 @@
+nfs-utils (1:1.2.2-1.1) unstable; urgency=low
+
+  * Non-maintainer upload.
+  * Ensure files under /var/lib/nfs/ are owned by statd user. 
+    Closes: #574510 
+
+ -- Vagrant Cascadian <vagrant@debian.org>  Mon, 12 Jul 2010 20:52:13 +0000
+
 nfs-utils (1:1.2.2-1) unstable; urgency=low
 
   [ Anibal Monsalve Salazar ]

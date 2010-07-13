@@ -1,3 +1,26 @@
+nfs-utils (1:1.0.6-3) unstable; urgency=medium
+
+  * Remove obsolete debconf-related files in debian/rules, because source
+    diffs don't implement removals.  (closes: #239331)
+
+ -- Chip Salzenberg <chip@debian.org>  Wed, 24 Mar 2004 18:09:21 -0500
+
+nfs-utils (1:1.0.6-2) unstable; urgency=medium
+
+  * Upstream CVS sync.
+  * Urgency "medium" to get debconf fix into testing.
+  * Remove debconf warning notes in favor of nfs-kernel-server.NEWS.
+    (closes: #228365)
+  * Make /etc/exports a conffile.  (closes: #224557)
+  * Clean up /var/lib/nfs in postrm.
+  * Test kernel version in init script; all kernels from 2.4 forward
+    have a lockd thread, and don't need rpc.lockd.  Probe older kernels
+    by checking for lockd-related symbols.  When in doubt, go ahead and
+    run rpc.lockd; if it's not needed, it exits.  (closes: #205867)
+  * Don't bother removing nfs-server's init links; it's long dead.
+
+ -- Chip Salzenberg <chip@debian.org>  Thu, 18 Mar 2004 17:06:00 -0500
+
 nfs-utils (1:1.0.6-1) unstable; urgency=low
 
   * New upstream version:

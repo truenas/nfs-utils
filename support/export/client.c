@@ -138,7 +138,9 @@ client_init(nfs_client *clp, const char *hname, struct hostent *hp)
 
 	if (clp->m_type == MCL_SUBNETWORK) {
 		char	*cp = strchr(clp->m_hostname, '/');
+		static char slash32[] = "/32";
 
+		if(!cp) cp = slash32;
 		*cp = '\0';
 		clp->m_addrlist[0].s_addr = inet_addr(clp->m_hostname);
 		if (strchr(cp + 1, '.')) {
@@ -392,6 +394,8 @@ client_check(nfs_client *clp, struct hostent *hp)
 #endif
 	case MCL_ANONYMOUS:
 		return 1;
+	case MCL_GSS:
+		return 0;
 	default:
 		xlog(L_FATAL, "internal: bad client type %d", clp->m_type);
 	}
@@ -425,6 +429,8 @@ client_gettype(char *ident)
 
 	if (ident[0] == '\0' || strcmp(ident, "*")==0)
 		return MCL_ANONYMOUS;
+	if (strncmp(ident, "gss/", 4) == 0)
+		return MCL_GSS;
 	if (ident[0] == '@') {
 #ifndef HAVE_INNETGR
 		xlog(L_WARNING, "netgroup support not compiled in");
@@ -439,5 +445,12 @@ client_gettype(char *ident)
 		if (*sp == '\\' && sp[1])
 			sp++;
 	}
-	return MCL_FQDN;
+	/* check for N.N.N.N */
+	sp = ident;
+	if(!isdigit(*sp) || strtoul(sp, &sp, 10) > 255 || *sp != '.') return MCL_FQDN;
+	sp++; if(!isdigit(*sp) || strtoul(sp, &sp, 10) > 255 || *sp != '.') return MCL_FQDN;
+	sp++; if(!isdigit(*sp) || strtoul(sp, &sp, 10) > 255 || *sp != '.') return MCL_FQDN;
+	sp++; if(!isdigit(*sp) || strtoul(sp, &sp, 10) > 255 || *sp != '\0') return MCL_FQDN;
+	/* we lie here a bit. but technically N.N.N.N == N.N.N.N/32 :) */
+	return MCL_SUBNETWORK;
 }

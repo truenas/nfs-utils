@@ -19,6 +19,7 @@
 #include "misc.h"
 #include "statd.h"
 #include "notlist.h"
+#include "ha-callout.h"
 
 notify_list *		rtnl = NULL;	/* Run-time notify list. */
 
@@ -177,6 +178,8 @@ sm_mon_1_svc(struct mon *argp, struct svc_req *rqstp)
 		goto failure;
 	}
 	free(path);
+	/* PRC: do the HA callout: */
+	ha_callout("add-client", mon_name, my_name, -1);
 	nlist_insert(&rtnl, clnt);
 	close(fd);
 
@@ -207,8 +210,26 @@ sm_unmon_1_svc(struct mon_id *argp, struct svc_req *rqstp)
 	char		*mon_name = argp->mon_name,
 			*my_name  = argp->my_id.my_name;
 	struct my_id	*id = &argp->my_id;
+#ifdef RESTRICTED_STATD
+	struct in_addr	caller;
+#endif
 
 	result.state = MY_STATE;
+
+#ifdef RESTRICTED_STATD
+	/* 1.	Reject anyone not calling from 127.0.0.1.
+	 *	Ignore the my_name specified by the caller, and
+	 *	use "127.0.0.1" instead.
+	 */
+	caller = svc_getcaller(rqstp->rq_xprt)->sin_addr;
+	if (caller.s_addr != htonl(INADDR_LOOPBACK)) {
+		note(N_WARNING,
+			"Call to statd from non-local host %s",
+			inet_ntoa(caller));
+		goto failure;
+	}
+	my_name = "127.0.0.1";
+#endif
 
 	/* Check if we're monitoring anyone. */
 	if (!(clnt = rtnl)) {
@@ -232,6 +253,10 @@ sm_unmon_1_svc(struct mon_id *argp, struct svc_req *rqstp)
 			/* Match! */
 			dprintf(N_DEBUG, "UNMONITORING %s for %s",
 					mon_name, my_name);
+
+			/* PRC: do the HA callout: */
+			ha_callout("del-client", mon_name, my_name, -1);
+
 			nlist_free(&rtnl, clnt);
 			xunlink(SM_DIR, mon_name, 1);
 
@@ -240,6 +265,7 @@ sm_unmon_1_svc(struct mon_id *argp, struct svc_req *rqstp)
 			clnt = NL_NEXT(clnt);
 	}
 
+ failure:
 	note(N_WARNING, "Received erroneous SM_UNMON request from %s for %s",
 		my_name, mon_name);
 	return (&result);
@@ -252,16 +278,33 @@ sm_unmon_all_1_svc(struct my_id *argp, struct svc_req *rqstp)
 	short int       count = 0;
 	static sm_stat  result;
 	notify_list	*clnt;
+	char		*my_name = argp->my_name;
+#ifdef RESTRICTED_STATD
+	struct in_addr	caller;
+
+	/* 1.	Reject anyone not calling from 127.0.0.1.
+	 *	Ignore the my_name specified by the caller, and
+	 *	use "127.0.0.1" instead.
+	 */
+	caller = svc_getcaller(rqstp->rq_xprt)->sin_addr;
+	if (caller.s_addr != htonl(INADDR_LOOPBACK)) {
+		note(N_WARNING,
+			"Call to statd from non-local host %s",
+			inet_ntoa(caller));
+		goto failure;
+	}
+	my_name = "127.0.0.1";
+#endif
 
 	result.state = MY_STATE;
 
 	if (!(clnt = rtnl)) {
 		note(N_WARNING, "Received SM_UNMON_ALL request from %s "
-			"while not monitoring any hosts", argp->my_name);
+			"while not monitoring any hosts", my_name);
 		return (&result);
 	}
 
-	while ((clnt = nlist_gethost(clnt, argp->my_name, 1))) {
+	while ((clnt = nlist_gethost(clnt, my_name, 1))) {
 		if (NL_MY_PROC(clnt) == argp->my_proc &&
 			NL_MY_PROG(clnt) == argp->my_prog &&
 			NL_MY_VERS(clnt) == argp->my_vers) {
@@ -276,6 +319,8 @@ sm_unmon_all_1_svc(struct my_id *argp, struct svc_req *rqstp)
 				sizeof (mon_name) - 1);
 			mon_name[sizeof (mon_name) - 1] = '\0';
 			temp = NL_NEXT(clnt);
+			/* PRC: do the HA callout: */
+			ha_callout("del-client", mon_name, my_name, -1);
 			nlist_free(&rtnl, clnt);
 			xunlink(SM_DIR, mon_name, 1);
 			++count;
@@ -286,8 +331,8 @@ sm_unmon_all_1_svc(struct my_id *argp, struct svc_req *rqstp)
 
 	if (!count) {
 		dprintf(N_DEBUG, "SM_UNMON_ALL request from %s with no "
-			"SM_MON requests from it.", argp->my_name);
+			"SM_MON requests from it.", my_name);
 	}
-
+ failure:
 	return (&result);
 }

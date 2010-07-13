@@ -130,7 +130,8 @@ main(int argc, char **argv)
 		if (!f_export)
 			for (i = optind ; i < argc ; i++)
 				unexportfs(argv[i], f_verbose);
-		rmtab_read();
+		if (!new_cache)
+			rmtab_read();
 	}
 	if (!new_cache) {
 		xtab_mount_read();
@@ -145,10 +146,43 @@ main(int argc, char **argv)
 	return export_errno;
 }
 
+static void
+exports_update_one(nfs_export *exp, int verbose)
+{
+		/* check mountpoint option */
+	if (exp->m_mayexport &&
+	    exp->m_export.e_mountpoint &&
+	    !is_mountpoint(exp->m_export.e_mountpoint[0]?
+			   exp->m_export.e_mountpoint:
+			   exp->m_export.e_path)) {
+		printf("%s not exported as %s not a mountpoint.\n",
+		       exp->m_export.e_path, exp->m_export.e_mountpoint);
+		exp->m_mayexport = 0;
+	}
+	if (exp->m_mayexport && ((exp->m_exported<1) || exp->m_changed)) {
+		if (verbose)
+			printf("%sexporting %s:%s to kernel\n",
+			       exp->m_exported ?"re":"",
+			       exp->m_client->m_hostname,
+			       exp->m_export.e_path);
+		if (!export_export(exp))
+			error(exp, errno);
+	}
+	if (exp->m_exported && ! exp->m_mayexport) {
+		if (verbose)
+			printf("unexporting %s:%s from kernel\n",
+			       exp->m_client->m_hostname,
+			       exp->m_export.e_path);
+		if (!export_unexport(exp))
+			error(exp, errno);
+	}
+}
+
+
 /* we synchronise intention with reality.
  * entries with m_mayexport get exported
  * entries with m_exported but not m_mayexport get unexported
- * looking at m_client->m_type == MCL_FQDN only
+ * looking at m_client->m_type == MCL_FQDN and m_client->m_type == MCL_GSS only
  */
 static void
 exports_update(int verbose)
@@ -156,33 +190,10 @@ exports_update(int verbose)
 	nfs_export 	*exp;
 
 	for (exp = exportlist[MCL_FQDN]; exp; exp=exp->m_next) {
-		/* check mountpoint option */
-		if (exp->m_mayexport && 
-		    exp->m_export.e_mountpoint &&
-		    !is_mountpoint(exp->m_export.e_mountpoint[0]?
-				   exp->m_export.e_mountpoint:
-				   exp->m_export.e_path)) {
-			printf("%s not exported as %s not a mountpoint.\n",
-			       exp->m_export.e_path, exp->m_export.e_mountpoint);
-			exp->m_mayexport = 0;
-		}
-		if (exp->m_mayexport && ((exp->m_exported<1) || exp->m_changed)) {
-			if (verbose)
-				printf("%sexporting %s:%s to kernel\n",
-				       exp->m_exported ?"re":"",
-				       exp->m_client->m_hostname,
-				       exp->m_export.e_path);
-			if (!export_export(exp))
-				error(exp, errno);
-		}
-		if (exp->m_exported && ! exp->m_mayexport) {
-			if (verbose)
-				printf("unexporting %s:%s from kernel\n",
-				       exp->m_client->m_hostname,
-				       exp->m_export.e_path);
-			if (!export_unexport(exp))
-				error(exp, errno);
-		}
+		exports_update_one(exp, verbose);
+	}
+	for (exp = exportlist[MCL_GSS]; exp; exp=exp->m_next) {
+		exports_update_one(exp, verbose);
 	}
 }
 			
@@ -387,6 +398,8 @@ dump(int verbose)
 				c = dumpopt(c, "no_subtree_check");
 			if (ep->e_flags & NFSEXP_NOAUTHNLM)
 				c = dumpopt(c, "insecure_locks");
+			if (ep->e_flags & NFSEXP_NOACL)
+				c = dumpopt(c, "no_acl");
 			if (ep->e_flags & NFSEXP_FSID)
 				c = dumpopt(c, "fsid=%d", ep->e_fsid);
 			if (ep->e_mountpoint)

@@ -205,16 +205,17 @@ int readline(int fd, char **buf, int *lenp)
 	 */
 		char *new;
 		int nl;
-		*lenp += 128;
+		*lenp *= 2;
 		new = realloc(*buf, *lenp);
 		if (new == NULL)
 			return 0;
-		nl = read(fd, *buf +len, *lenp - len);
-		if (nl <= 0 )
+		*buf = new;
+		nl = read(fd, *buf + len, *lenp - len);
+		if (nl <= 0)
 			return 0;
-		new += nl;
+		len += nl;
 	}
-	(*buf)[len-1] = 0;
+	(*buf)[len-1] = '\0';
 	return 1;
 }
 
@@ -246,10 +247,16 @@ cache_flush(int force)
 	int c;
 	char stime[20];
 	char path[200];
+	/* Note: the order of these caches is important.
+	 * The need to be flushed in dependancy order. So
+	 * a cache that references items in another cache,
+	 * as nfsd.fh entries reference items in nfsd.export,
+	 * must be flushed before the cache that it references.
+	 */
 	static char *cachelist[] = {
 		"auth.unix.ip",
-		"nfsd.export",
 		"nfsd.fh",
+		"nfsd.export",
 		NULL
 	};
 	stb.st_mtime = time(0);

@@ -38,6 +38,7 @@
 #include "statd.h"
 #include "notlist.h"
 #include "log.h"
+#include "ha-callout.h"
 
 #define MAXMSGSIZE	(2048 / sizeof(unsigned int))
 
@@ -64,12 +65,29 @@ statd_get_socket(int port)
 
 	memset(&sin, 0, sizeof(sin));
 	sin.sin_family = AF_INET;
-	sin.sin_port = port;
+	sin.sin_addr.s_addr = INADDR_ANY;
+	/*
+	 * If a local hostname is given (-n option to statd), bind to the address
+	 * specified. This is required to support clients that ignore the mon_name in
+	 * the statd protocol but use the source address from the request packet.
+	 */
+	if (MY_NAME) {
+		struct hostent *hp = gethostbyname(MY_NAME);
+		if (hp)
+			sin.sin_addr = *(struct in_addr *) hp->h_addr;
+	}
+	if (port != 0) {
+		sin.sin_port = htons(port);
+		if (bind(sockfd, &sin, sizeof(sin)) == 0)
+			goto out_success;
+		note(N_CRIT, "statd: failed to bind to outgoing port, %d\n"
+				"       falling back on randomly chosen port\n", port);
+	}
 	if (bindresvport(sockfd, &sin) < 0) {
 		dprintf(N_WARNING,
 			"process_hosts: can't bind to reserved port\n");
 	}
-
+out_success:
 	return sockfd;
 }
 
@@ -414,6 +432,8 @@ process_notify_list(void)
 			note(N_ERROR,
 				"Can't notify %s, giving up.",
 					NL_MON_NAME(entry));
+			/* PRC: do the HA callout */
+			ha_callout("del-client", NL_MON_NAME(entry), NL_MY_NAME(entry), -1);
 			xunlink(SM_BAK_DIR, NL_MON_NAME(entry), 0);
 			nlist_free(&notify, entry);
 		}

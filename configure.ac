@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 dnl
-AC_INIT([linux nfs-utils],[1.1.0-rc1],[nfs@lists.sf.net],[nfs-utils])
+AC_INIT([linux nfs-utils],[1.1.0-rc2],[nfs@lists.sf.net],[nfs-utils])
 AC_CANONICAL_BUILD([])
 AC_CANONICAL_HOST([])
 AC_CONFIG_MACRO_DIR(aclocal)
@@ -197,7 +197,7 @@ if test "$enable_nfsv4" = yes; then
       [AC_MSG_ERROR([Unable to locate information required to use librpcsecgss.  If you have pkgconfig installed, you might try setting environment variable PKG_CONFIG_PATH to /usr/local/lib/pkgconfig])
       ]
      )
-    PKG_CHECK_MODULES(GSSAPI, libgssapi >= 0.9)
+    PKG_CHECK_MODULES(GSSAPI, libgssapi >= 0.11)
     fi
 
 fi

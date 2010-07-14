@@ -1,7 +1,7 @@
 Significant changes for nfs-utils 1.1.0 - March/April 2007
 
  - rpc.lockd is gone.  One 3 old kernel releases need it.
- - /sbin/{u,}mount.nfs{,4} is now installed so 'mount' will
+ - /sbin/{u,}mount.nfs{,4} are now installed so 'mount' will
    use these to mount nfs filesystems instead of internal code.
   + mount.nfs will check for 'statd' to be running when mounting
     a filesystem which requires it.  If it is not running it will
@@ -18,7 +18,9 @@ Significant changes for nfs-utils 1.1.0 - March/April 2007
     if you kill and restart it, it will restore that state and
     continue working correctly.
   + statd makes more use of DNS lookup and should handle
-    multi-homed peers better.
+    multi-homed peers better.  In particular, files in
+    /var/lib/nfs/sm/ are named with the Full Qualified Domain Name
+    if available.
  - If you export a directory as 'crossmnt', all filesystems
    mounted beneath are automatically exported with the same
    options (unless explicitly exported with different options).
@@ -26,18 +28,33 @@ Significant changes for nfs-utils 1.1.0 - March/April 2007
    no_subtree_check.
  - By default the system 'rpcgen' is used while building
    nfs-utils rather than the internal one.
+ - Exportfs will warn if you try to export a filesystem that does
+   not support NFS export.
+ - Comprehensive notes on startup dependencies have been added
+   to the README file.
+ - Mount and statd now listen on a non-privileged port by default.
+   For maximum safety an upgrade to portmap is recommended.
+        git://neil.brown.name/portmap
+
+ - This release should work with MIT Kerberos and Heimdal 0.8.1 and later.
 
 
-Further notes on statd:
+ - A new option, -n, was added to rpc.gssd which specifies that
+   accesses by root should not use 'machine credentials' when
+   accessing NFS file systems mounted with Kerberos.  Using this
+   option allows the root user to access the NFS space using any
+   Kerberos principal, rather than always using the machine
+   credentials.  However, its use also requires that root manually
+   authenticate before attempting a mount with Kerberos.
 
- statd should be installed in /usr/sbin, not /sbin.
- If you need to mount /usr via nfs, use 'nolock'
+   When rpc.gssd uses machine credentials, the selection algorithm has
+   been changed.  Instead of simply using the first "nfs/*" key in the
+   keytab, the keytab is now searched for keys in the following
+   defined order:
 
- At boot time, run "/usr/sbin/sm-notify".
- Run "statd" only when starting the NFS server.
- "statd" should be run before starting the NFS server.
- You do not need to start statd at boot time incase an
- NFS filesystem is mounted.  mount.nfs will take care of that.
-
- Make sure /usr/sbin/start-statd will run statd with required
- arguments.
+     root/<fqdn>@REALM
+     nfs/<fqdn>@REALM
+     host/<fqdn>@REALM
+     root/<any-name>@REALM
+     nfs/<any-name>@REALM
+     host/<any-name>@REALM

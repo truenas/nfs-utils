@@ -103,8 +103,11 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
 #include <dirent.h>
+#include <netdb.h>
+#include <ctype.h>
 #include <errno.h>
 #include <time.h>
 #include <gssapi/gssapi.h>
@@ -131,9 +134,7 @@ static int select_krb5_ccache(const struct dirent *d);
 static int gssd_find_existing_krb5_ccache(uid_t uid, struct dirent **d);
 static int gssd_get_single_krb5_cred(krb5_context context,
 		krb5_keytab kt, struct gssd_k5_kt_princ *ple);
-static int gssd_have_realm_ple(void *realm);
-static int gssd_process_krb5_keytab(krb5_context context, krb5_keytab kt,
-		char *kt_name);
+
 
 /*
  * Called from the scandir function to weed out potential krb5
@@ -298,6 +299,7 @@ limit_krb5_enctypes(struct rpc_gss_sec *sec, uid_t uid)
 	if (maj_stat != GSS_S_COMPLETE) {
 		pgsserr("gss_set_allowable_enctypes",
 			maj_stat, min_stat, &krb5oid);
+		gss_release_cred(&min_stat, &credh);
 		return -1;
 	}
 	sec->cred = credh;
@@ -329,6 +331,7 @@ gssd_get_single_krb5_cred(krb5_context context,
 	int code;
 	time_t now = time(0);
 	char *cache_type;
+	char *pname = NULL;
 
 	memset(&my_creds, 0, sizeof(my_creds));
 
@@ -345,6 +348,9 @@ gssd_get_single_krb5_cred(krb5_context context,
 		goto out;
 	}
 
+	if ((krb5_unparse_name(context, ple->princ, &pname)))
+		pname = NULL;
+
 	krb5_get_init_creds_opt_init(&options);
 	krb5_get_init_creds_opt_set_address_list(&options, NULL);
 
@@ -353,21 +359,12 @@ gssd_get_single_krb5_cred(krb5_context context,
 	printerr(0, "WARNING: Using (debug) short machine cred lifetime!\n");
 	krb5_get_init_creds_opt_set_tkt_life(&options, 5*60);
 #endif
-        if ((code = krb5_get_init_creds_keytab(context, &my_creds, ple->princ,
-	                                  kt, 0, NULL, &options))) {
-		char *pname;
-		if ((krb5_unparse_name(context, ple->princ, &pname))) {
-			pname = NULL;
-		}
+	if ((code = krb5_get_init_creds_keytab(context, &my_creds, ple->princ,
+					       kt, 0, NULL, &options))) {
 		printerr(0, "WARNING: %s while getting initial ticket for "
-			    "principal '%s' from keytab '%s'\n",
-			 error_message(code),
+			 "principal '%s' using keytab '%s'\n",
+			 gssd_k5_err_msg(context, code),
 			 pname ? pname : "<unparsable>", kt_name);
-#ifdef HAVE_KRB5
-		if (pname) krb5_free_unparsed_name(context, pname);
-#else
-		if (pname) free(pname);
-#endif
 		goto out;
 	}
 
@@ -384,193 +381,42 @@ gssd_get_single_krb5_cred(krb5_context context,
 		GSSD_DEFAULT_CRED_DIR, GSSD_DEFAULT_CRED_PREFIX,
 		GSSD_DEFAULT_MACHINE_CRED_SUFFIX, ple->realm);
 	ple->endtime = my_creds.times.endtime;
+	if (ple->ccname != NULL)
+		free(ple->ccname);
 	ple->ccname = strdup(cc_name);
 	if (ple->ccname == NULL) {
 		printerr(0, "ERROR: no storage to duplicate credentials "
-			    "cache name\n");
+			    "cache name '%s'\n", cc_name);
 		code = ENOMEM;
 		goto out;
 	}
 	if ((code = krb5_cc_resolve(context, cc_name, &ccache))) {
 		printerr(0, "ERROR: %s while opening credential cache '%s'\n",
-			 error_message(code), cc_name);
+			 gssd_k5_err_msg(context, code), cc_name);
 		goto out;
 	}
 	if ((code = krb5_cc_initialize(context, ccache, ple->princ))) {
 		printerr(0, "ERROR: %s while initializing credential "
-			 "cache '%s'\n", error_message(code), cc_name);
+			 "cache '%s'\n", gssd_k5_err_msg(context, code),
+			 cc_name);
 		goto out;
 	}
 	if ((code = krb5_cc_store_cred(context, ccache, &my_creds))) {
 		printerr(0, "ERROR: %s while storing credentials in '%s'\n",
-			 error_message(code), cc_name);
+			 gssd_k5_err_msg(context, code), cc_name);
 		goto out;
 	}
 
 	code = 0;
-	printerr(1, "Using (machine) credentials cache: '%s'\n", cc_name);
+	printerr(2, "Successfully obtained machine credentials for "
+		 "principal '%s' stored in ccache '%s'\n", pname, cc_name);
   out:
+	if (pname)
+		k5_free_unparsed_name(context, pname);
 	if (ccache)
 		krb5_cc_close(context, ccache);
 	krb5_free_cred_contents(context, &my_creds);
 	return (code);
-}
-
-/*
- * Determine if we already have a ple for the given realm
- *
- * Returns:
- *	0 => no ple found for given realm
- *	1 => found ple for given realm
- */
-static int
-gssd_have_realm_ple(void *r)
-{
-	struct gssd_k5_kt_princ *ple;
-#ifdef HAVE_KRB5
-	krb5_data *realm = (krb5_data *)r;
-#else
-	char *realm = (char *)r;
-#endif
-
-	for (ple = gssd_k5_kt_princ_list; ple; ple = ple->next) {
-#ifdef HAVE_KRB5
-		if ((realm->length == strlen(ple->realm)) &&
-		    (strncmp(realm->data, ple->realm, realm->length) == 0)) {
-#else
-		if (strcmp(realm, ple->realm) == 0) {
-#endif
-		    return 1;
-		}
-	}
-	return 0;
-}
-
-/*
- * Process the given keytab file and create a list of principals we
- * might use as machine credentials.
- *
- * Returns:
- *	0 => Sucess
- *	nonzero => Error
- */
-static int
-gssd_process_krb5_keytab(krb5_context context, krb5_keytab kt, char *kt_name)
-{
-	krb5_kt_cursor cursor;
-	krb5_keytab_entry kte;
-	krb5_error_code code;
-	struct gssd_k5_kt_princ *ple;
-	int retval = -1;
-
-	/*
-	 * Look through each entry in the keytab file and determine
-	 * if we might want to use it as machine credentials.  If so,
-	 * save info in the global principal list (gssd_k5_kt_princ_list).
-	 * Note: (ple == principal list entry)
-	 */
-	if ((code = krb5_kt_start_seq_get(context, kt, &cursor))) {
-		printerr(0, "ERROR: %s while beginning keytab scan "
-			    "for keytab '%s'\n",
-			error_message(code), kt_name);
-		retval = code;
-		goto out;
-	}
-
-	while ((code = krb5_kt_next_entry(context, kt, &kte, &cursor)) == 0) {
-		char *pname;
-		if ((code = krb5_unparse_name(context, kte.principal,
-					      &pname))) {
-			printerr(0, "WARNING: Skipping keytab entry because "
-				    "we failed to unparse principal name: %s\n",
-				 error_message(code));
-			krb5_kt_free_entry(context, &kte);
-			continue;
-		}
-		printerr(2, "Processing keytab entry for principal '%s'\n",
-			 pname);
-		/* Just use the first keytab entry found for each realm */
-	        if ((!gssd_have_realm_ple((void *)&kte.principal->realm)) ) {
-			printerr(2, "We WILL use this entry (%s)\n", pname);
-			ple = malloc(sizeof(struct gssd_k5_kt_princ));
-			if (ple == NULL) {
-				printerr(0, "ERROR: could not allocate storage "
-					    "for principal list entry\n");
-#ifdef HAVE_KRB5
-				krb5_free_unparsed_name(context, pname);
-#else
-				free(pname);
-#endif
-				krb5_kt_free_entry(context, &kte);
-				retval = ENOMEM;
-				goto out;
-			}
-			/* These will be filled in later */
-			ple->next = NULL;
-			ple->ccname = NULL;
-			ple->endtime = 0;
-			if ((ple->realm =
-#ifdef HAVE_KRB5
-				strndup(kte.principal->realm.data,
-					kte.principal->realm.length))
-#else
-				strdup(kte.principal->realm))
-#endif
-					== NULL) {
-				printerr(0, "ERROR: %s while copying realm to "
-					    "principal list entry\n",
-					 "not enough memory");
-#ifdef HAVE_KRB5
-				krb5_free_unparsed_name(context, pname);
-#else
-				free(pname);
-#endif
-				krb5_kt_free_entry(context, &kte);
-				retval = ENOMEM;
-				goto out;
-			}
-			if ((code = krb5_copy_principal(context,
-					kte.principal, &ple->princ))) {
-				printerr(0, "ERROR: %s while copying principal "
-					    "to principal list entry\n",
-					error_message(code));
-#ifdef HAVE_KRB5
-				krb5_free_unparsed_name(context, pname);
-#else
-				free(pname);
-#endif
-				krb5_kt_free_entry(context, &kte);
-				retval = code;
-				goto out;
-			}
-			if (gssd_k5_kt_princ_list == NULL)
-				gssd_k5_kt_princ_list = ple;
-			else {
-				ple->next = gssd_k5_kt_princ_list;
-				gssd_k5_kt_princ_list = ple;
-			}
-		}
-		else {
-			printerr(2, "We will NOT use this entry (%s)\n",
-				pname);
-		}
-#ifdef HAVE_KRB5
-		krb5_free_unparsed_name(context, pname);
-#else
-		free(pname);
-#endif
-		krb5_kt_free_entry(context, &kte);
-	}
-
-	if ((code = krb5_kt_end_seq_get(context, kt, &cursor))) {
-		printerr(0, "WARNING: %s while ending keytab scan for "
-			    "keytab '%s'\n",
-			 error_message(code), kt_name);
-	}
-
-	retval = 0;
-  out:
-	return retval;
 }
 
 /*
@@ -602,6 +448,405 @@ gssd_set_krb5_ccache_name(char *ccname)
 		 ccname);
 	setenv("KRB5CCNAME", ccname, 1);
 #endif
+}
+
+/*
+ * Given a principal, find a matching ple structure
+ */
+static struct gssd_k5_kt_princ *
+find_ple_by_princ(krb5_context context, krb5_principal princ)
+{
+	struct gssd_k5_kt_princ *ple;
+
+	for (ple = gssd_k5_kt_princ_list; ple != NULL; ple = ple->next) {
+		if (krb5_principal_compare(context, ple->princ, princ))
+			return ple;
+	}
+	/* no match found */
+	return NULL;
+}
+
+/*
+ * Create, initialize, and add a new ple structure to the global list
+ */
+static struct gssd_k5_kt_princ *
+new_ple(krb5_context context, krb5_principal princ)
+{
+	struct gssd_k5_kt_princ *ple = NULL, *p;
+	krb5_error_code code;
+	char *default_realm;
+	int is_default_realm = 0;
+
+	ple = malloc(sizeof(struct gssd_k5_kt_princ));
+	if (ple == NULL)
+		goto outerr;
+	memset(ple, 0, sizeof(*ple));
+
+#ifdef HAVE_KRB5
+	ple->realm = strndup(princ->realm.data,
+			     princ->realm.length);
+#else
+	ple->realm = strdup(princ->realm);
+#endif
+	if (ple->realm == NULL)
+		goto outerr;
+	code = krb5_copy_principal(context, princ, &ple->princ);
+	if (code)
+		goto outerr;
+
+	/*
+	 * Add new entry onto the list (if this is the default
+	 * realm, always add to the front of the list)
+	 */
+
+	code = krb5_get_default_realm(context, &default_realm);
+	if (code == 0) {
+		if (strcmp(ple->realm, default_realm) == 0)
+			is_default_realm = 1;
+		k5_free_default_realm(context, default_realm);
+	}
+
+	if (is_default_realm) {
+		ple->next = gssd_k5_kt_princ_list;
+		gssd_k5_kt_princ_list = ple;
+	} else {
+		p = gssd_k5_kt_princ_list;
+		while (p != NULL && p->next != NULL)
+			p = p->next;
+		if (p == NULL)
+			gssd_k5_kt_princ_list = ple;
+		else
+			p->next = ple;
+	}
+
+	return ple;
+outerr:
+	if (ple) {
+		if (ple->realm)
+			free(ple->realm);
+		free(ple);
+	}
+	return NULL;
+}
+
+/*
+ * Given a principal, find an existing ple structure, or create one
+ */
+static struct gssd_k5_kt_princ *
+get_ple_by_princ(krb5_context context, krb5_principal princ)
+{
+	struct gssd_k5_kt_princ *ple;
+
+	/* Need to serialize list if we ever become multi-threaded! */
+
+	ple = find_ple_by_princ(context, princ);
+	if (ple == NULL) {
+		ple = new_ple(context, princ);
+	}
+
+	return ple;
+}
+
+/*
+ * Given a (possibly unqualified) hostname,
+ * return the fully qualified (lower-case!) hostname
+ */
+static int
+get_full_hostname(const char *inhost, char *outhost, int outhostlen)
+{
+	struct addrinfo *addrs = NULL;
+	struct addrinfo hints;
+	int retval;
+	char *c;
+
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_family = PF_UNSPEC;
+	hints.ai_flags = AI_CANONNAME;
+
+	/* Get full target hostname */
+	retval = getaddrinfo(inhost, NULL, &hints, &addrs);
+	if (retval) {
+		printerr(0, "%s while getting full hostname for '%s'\n",
+			 gai_strerror(retval), inhost);
+		goto out;
+	}
+	strncpy(outhost, addrs->ai_canonname, outhostlen);
+	freeaddrinfo(addrs);
+	for (c = outhost; *c != '\0'; c++)
+	    *c = tolower(*c);
+
+	printerr(3, "Full hostname for '%s' is '%s'\n", inhost, outhost);
+	retval = 0;
+out:
+	return retval;
+}
+
+/* 
+ * If principal matches the given realm and service name,
+ * and has *any* instance (hostname), return 1.
+ * Otherwise return 0, indicating no match.
+ */
+static int
+realm_and_service_match(krb5_context context, krb5_principal p,
+			const char *realm, const char *service)
+{
+#ifdef HAVE_KRB5
+	/* Must have two components */
+	if (p->length != 2)
+		return 0;
+	if ((strlen(realm) == p->realm.length)
+	    && (strncmp(realm, p->realm.data, p->realm.length) == 0)
+	    && (strlen(service) == p->data[0].length)
+	    && (strncmp(service, p->data[0].data, p->data[0].length) == 0))
+		return 1;
+#else
+	const char *name, *inst;
+
+	if (p->name.name_string.len != 2)
+		return 0;
+	name = krb5_principal_get_comp_string(context, p, 0);
+	inst = krb5_principal_get_comp_string(context, p, 1);
+	if (name == NULL || inst == NULL)
+		return 0;
+	if ((strcmp(realm, p->realm) == 0)
+	    && (strcmp(service, name) == 0))
+		return 1;
+#endif
+	return 0;
+}
+
+/*
+ * Search the given keytab file looking for an entry with the given
+ * service name and realm, ignoring hostname (instance).
+ *
+ * Returns:
+ *	0 => No error
+ *	non-zero => An error occurred
+ *
+ * If a keytab entry is found, "found" is set to one, and the keytab
+ * entry is returned in "kte".  Otherwise, "found" is zero, and the
+ * value of "kte" is unpredictable.
+ */
+static int
+gssd_search_krb5_keytab(krb5_context context, krb5_keytab kt,
+			const char *realm, const char *service,
+			int *found, krb5_keytab_entry *kte)
+{
+	krb5_kt_cursor cursor;
+	krb5_error_code code;
+	struct gssd_k5_kt_princ *ple;
+	int retval = -1;
+	char kt_name[BUFSIZ];
+	char *pname;
+
+	if (found == NULL) {
+		retval = EINVAL;
+		goto out;
+	}
+	*found = 0;
+
+	/*
+	 * Look through each entry in the keytab file and determine
+	 * if we might want to use it as machine credentials.  If so,
+	 * save info in the global principal list (gssd_k5_kt_princ_list).
+	 */
+	if ((code = krb5_kt_get_name(context, kt, kt_name, BUFSIZ))) {
+		printerr(0, "ERROR: %s attempting to get keytab name\n",
+			 gssd_k5_err_msg(context, code));
+		retval = code;
+		goto out;
+	}
+	if ((code = krb5_kt_start_seq_get(context, kt, &cursor))) {
+		printerr(0, "ERROR: %s while beginning keytab scan "
+			    "for keytab '%s'\n",
+			gssd_k5_err_msg(context, code), kt_name);
+		retval = code;
+		goto out;
+	}
+
+	while ((code = krb5_kt_next_entry(context, kt, kte, &cursor)) == 0) {
+		if ((code = krb5_unparse_name(context, kte->principal,
+					      &pname))) {
+			printerr(0, "WARNING: Skipping keytab entry because "
+				 "we failed to unparse principal name: %s\n",
+				 gssd_k5_err_msg(context, code));
+			k5_free_kt_entry(context, kte);
+			continue;
+		}
+		printerr(4, "Processing keytab entry for principal '%s'\n",
+			 pname);
+		/* Use the first matching keytab entry found */
+	        if ((realm_and_service_match(context, kte->principal, realm,
+					     service))) {
+			printerr(4, "We WILL use this entry (%s)\n", pname);
+			ple = get_ple_by_princ(context, kte->principal);
+			/*
+			 * Return, don't free, keytab entry if
+			 * we were successful!
+			 */
+			if (ple == NULL) {
+				retval = ENOMEM;
+				k5_free_kt_entry(context, kte);
+			} else {
+				retval = 0;
+				*found = 1;
+			}
+			k5_free_unparsed_name(context, pname);
+			break;
+		}
+		else {
+			printerr(4, "We will NOT use this entry (%s)\n",
+				pname);
+		}
+		k5_free_unparsed_name(context, pname);
+		k5_free_kt_entry(context, kte);
+	}
+
+	if ((code = krb5_kt_end_seq_get(context, kt, &cursor))) {
+		printerr(0, "WARNING: %s while ending keytab scan for "
+			    "keytab '%s'\n",
+			 gssd_k5_err_msg(context, code), kt_name);
+	}
+
+	retval = 0;
+  out:
+	return retval;
+}
+
+/*
+ * Find a keytab entry to use for a given target hostname.
+ * Tries to find the most appropriate keytab to use given the
+ * name of the host we are trying to connect with.
+ */
+static int
+find_keytab_entry(krb5_context context, krb5_keytab kt, const char *hostname,
+		  krb5_keytab_entry *kte)
+{
+	krb5_error_code code;
+	const char *svcnames[] = { "root", "nfs", "host", NULL };
+	char **realmnames = NULL;
+	char myhostname[NI_MAXHOST], targethostname[NI_MAXHOST];
+	int i, j, retval;
+	char *default_realm = NULL;
+	char *realm;
+	int tried_all = 0, tried_default = 0;
+	krb5_principal princ;
+
+
+	/* Get full target hostname */
+	retval = get_full_hostname(hostname, targethostname,
+				   sizeof(targethostname));
+	if (retval)
+		goto out;
+
+	/* Get full local hostname */
+	retval = gethostname(myhostname, sizeof(myhostname));
+	if (retval) {
+		printerr(1, "%s while getting local hostname\n",
+			 gssd_k5_err_msg(context, retval));
+		goto out;
+	}
+	retval = get_full_hostname(myhostname, myhostname, sizeof(myhostname));
+	if (retval)
+		goto out;
+
+	code = krb5_get_default_realm(context, &default_realm);
+	if (code) {
+		retval = code;
+		printerr(1, "%s while getting default realm name\n",
+			 gssd_k5_err_msg(context, code));
+		goto out;
+	}
+
+	/*
+	 * Get the realm name(s) for the target hostname.
+	 * In reality, this function currently only returns a
+	 * single realm, but we code with the assumption that
+	 * someday it may actually return a list.
+	 */
+	code = krb5_get_host_realm(context, targethostname, &realmnames);
+	if (code) {
+		printerr(0, "ERROR: %s while getting realm(s) for host '%s'\n",
+			 gssd_k5_err_msg(context, code), targethostname);
+		retval = code;
+		goto out;
+	}
+
+	/*
+	 * Try the "appropriate" realm first, and if nothing found for that
+	 * realm, try the default realm (if it hasn't already been tried).
+	 */
+	i = 0;
+	realm = realmnames[i];
+	while (1) {
+		if (realm == NULL) {
+			tried_all = 1;
+			if (!tried_default)
+				realm = default_realm;
+		}
+		if (tried_all && tried_default)
+			break;
+		if (strcmp(realm, default_realm) == 0)
+			tried_default = 1;
+		for (j = 0; svcnames[j] != NULL; j++) {
+			code = krb5_build_principal_ext(context, &princ,
+							strlen(realm),
+							realm,
+							strlen(svcnames[j]),
+							svcnames[j],
+							strlen(myhostname),
+							myhostname,
+							NULL);
+			if (code) {
+				printerr(1, "%s while building principal for "
+					 "'%s/%s@%s'\n",
+					 gssd_k5_err_msg(context, code),
+					 svcnames[j], myhostname, realm);
+				continue;
+			}
+			code = krb5_kt_get_entry(context, kt, princ, 0, 0, kte);
+			krb5_free_principal(context, princ);
+			if (code) {
+				printerr(3, "%s while getting keytab entry for "
+					 "'%s/%s@%s'\n",
+					 gssd_k5_err_msg(context, code),
+					 svcnames[j], myhostname, realm);
+			} else {
+				printerr(3, "Success getting keytab entry for "
+					 "'%s/%s@%s'\n",
+					 svcnames[j], myhostname, realm);
+				retval = 0;
+				goto out;
+			}
+			retval = code;
+		}
+		/*
+		 * Nothing found with our hostname instance, now look for
+		 * names with any instance (they must have an instance)
+		 */
+		for (j = 0; svcnames[j] != NULL; j++) {
+			int found = 0;
+			code = gssd_search_krb5_keytab(context, kt, realm,
+						       svcnames[j], &found, kte);
+			if (!code && found) {
+				printerr(3, "Success getting keytab entry for "
+					 "%s/*@%s\n", svcnames[j], realm);
+				retval = 0;
+				goto out;
+			}
+		}
+		if (!tried_all) {
+			i++;
+			realm = realmnames[i];
+		}
+	}
+out:
+	if (default_realm)
+		k5_free_default_realm(context, default_realm);
+	if (realmnames)
+		krb5_free_host_realm(context, realmnames);
+	return retval;
 }
 
 /*==========================*/
@@ -653,96 +898,6 @@ gssd_setup_krb5_machine_gss_ccache(char *ccname)
 }
 
 /*
- * The first time through this routine, go through the keytab and
- * determine which keys we will try to use as machine credentials.
- * Every time through this routine, try to obtain credentials using
- * the keytab entries selected the first time through.
- *
- * Returns:
- *	0 => obtained one or more credentials
- *	nonzero => error
- *
- */
-
-int
-gssd_refresh_krb5_machine_creds(void)
-{
-	krb5_context context = NULL;
-	krb5_keytab kt = NULL;;
-	krb5_error_code code;
-	int retval = -1;
-	struct gssd_k5_kt_princ *ple;
-	int gotone = 0;
-	static int processed_keytab = 0;
-
-
-	code = krb5_init_context(&context);
-	if (code) {
-		printerr(0, "ERROR: %s while initializing krb5 in "
-			    "gssd_refresh_krb5_machine_creds\n",
-			 error_message(code));
-		retval = code;
-		goto out;
-	}
-
-	printerr(1, "Using keytab file '%s'\n", keytabfile);
-
-	if ((code = krb5_kt_resolve(context, keytabfile, &kt))) {
-		printerr(0, "ERROR: %s while resolving keytab '%s'\n",
-			 error_message(code), keytabfile);
-		goto out;
-	}
-
-	/* Only go through the keytab file once.  Only print messages once. */
-	if (gssd_k5_kt_princ_list == NULL && !processed_keytab) {
-		processed_keytab = 1;
-		gssd_process_krb5_keytab(context, kt, keytabfile);
-		if (gssd_k5_kt_princ_list == NULL) {
-			printerr(0, "ERROR: No usable keytab entries found in "
-				    "keytab '%s'\n", keytabfile);
-			printerr(0, "Do you have a valid keytab entry for "
-				    "%s/<your.host>@<YOUR.REALM> in "
-				    "keytab file %s ?\n",
-				    GSSD_SERVICE_NAME, keytabfile);
-			printerr(0, "Continuing without (machine) credentials "
-				    "- nfs4 mounts with Kerberos will fail\n");
-		}
-	}
-
-	/*
-	 * If we don't have any keytab entries we liked, then we have a problem
-	 */
-	if (gssd_k5_kt_princ_list == NULL) {
-		retval = ENOENT;
-		goto out;
-	}
-
-	/*
-	 * Now go through the list of saved entries and get initial
-	 * credentials for them (We can't do this while making the
-	 * list because it messes up the keytab iteration cursor
-	 * when we use the keytab to get credentials.)
-	 */
-	for (ple = gssd_k5_kt_princ_list; ple; ple = ple->next) {
-		if ((gssd_get_single_krb5_cred(context, kt, ple)) == 0) {
-			gotone++;
-		}
-	}
-	if (!gotone) {
-		printerr(0, "ERROR: No usable machine credentials obtained\n");
-		goto out;
-	}
-
-	retval = 0;
-  out:
-  	if (kt) krb5_kt_close(context, kt);
-	krb5_free_context(context);
-
-	return retval;
-}
-
-
-/*
  * Return an array of pointers to names of credential cache files
  * which can be used to try to create gss contexts with a server.
  *
@@ -764,18 +919,19 @@ gssd_get_krb5_machine_cred_list(char ***list)
 	retval = -1;
 	*list = (char **) NULL;
 
-	/* Refresh machine credentials */
-	if ((retval = gssd_refresh_krb5_machine_creds())) {
-		goto out;
-	}
-
 	if ((l = (char **) malloc(listsize * sizeof(char *))) == NULL) {
 		retval = ENOMEM;
 		goto out;
 	}
 
+	/* Need to serialize list if we ever become multi-threaded! */
+
 	for (ple = gssd_k5_kt_princ_list; ple; ple = ple->next) {
 		if (ple->ccname) {
+			/* Make sure cred is up-to-date before returning it */
+			retval = gssd_refresh_krb5_machine_credential(NULL, ple);
+			if (retval)
+				continue;
 			if (i + 1 > listsize) {
 				listsize += listinc;
 				l = (char **)
@@ -831,7 +987,7 @@ gssd_destroy_krb5_machine_creds(void)
 	code = krb5_init_context(&context);
 	if (code) {
 		printerr(0, "ERROR: %s while initializing krb5\n",
-			 error_message(code));
+			 gssd_k5_err_msg(NULL, code));
 		goto out;
 	}
 
@@ -841,17 +997,105 @@ gssd_destroy_krb5_machine_creds(void)
 		if ((code = krb5_cc_resolve(context, ple->ccname, &ccache))) {
 			printerr(0, "WARNING: %s while resolving credential "
 				    "cache '%s' for destruction\n",
-				 error_message(code), ple->ccname);
+				 gssd_k5_err_msg(context, code), ple->ccname);
 			continue;
 		}
 
 		if ((code = krb5_cc_destroy(context, ccache))) {
 			printerr(0, "WARNING: %s while destroying credential "
 				    "cache '%s'\n",
-				 error_message(code), ple->ccname);
+				 gssd_k5_err_msg(context, code), ple->ccname);
 		}
 	}
   out:
 	krb5_free_context(context);
 }
 
+/*
+ * Obtain (or refresh if necessary) Kerberos machine credentials
+ */
+int
+gssd_refresh_krb5_machine_credential(char *hostname,
+				     struct gssd_k5_kt_princ *ple)
+{
+	krb5_error_code code = 0;
+	krb5_context context;
+	krb5_keytab kt = NULL;;
+	int retval = 0;
+
+	if (hostname == NULL && ple == NULL)
+		return EINVAL;
+
+	code = krb5_init_context(&context);
+	if (code) {
+		printerr(0, "ERROR: %s: %s while initializing krb5 context\n",
+			 __FUNCTION__, gssd_k5_err_msg(NULL, code));
+		retval = code;
+		goto out;
+	}
+
+	if ((code = krb5_kt_resolve(context, keytabfile, &kt))) {
+		printerr(0, "ERROR: %s: %s while resolving keytab '%s'\n",
+			 __FUNCTION__, gssd_k5_err_msg(context, code),
+			 keytabfile);
+		goto out;
+	}
+
+	if (ple == NULL) {
+		krb5_keytab_entry kte;
+
+		code = find_keytab_entry(context, kt, hostname, &kte);
+		if (code) {
+			printerr(0, "ERROR: %s: no usable keytab entry found "
+				 "in keytab %s for connection with host %s\n",
+				 __FUNCTION__, keytabfile, hostname);
+			retval = code;
+			goto out;
+		}
+
+		ple = get_ple_by_princ(context, kte.principal);
+		k5_free_kt_entry(context, &kte);
+		if (ple == NULL) {
+			char *pname;
+			if ((krb5_unparse_name(context, kte.principal, &pname))) {
+				pname = NULL;
+			}
+			printerr(0, "ERROR: %s: Could not locate or create "
+				 "ple struct for principal %s for connection "
+				 "with host %s\n",
+				 __FUNCTION__, pname ? pname : "<unparsable>",
+				 hostname);
+			if (pname) k5_free_unparsed_name(context, pname);
+			goto out;
+		}
+	}
+	retval = gssd_get_single_krb5_cred(context, kt, ple);
+out:
+	if (kt)
+		krb5_kt_close(context, kt);
+	krb5_free_context(context);
+	return retval;
+}
+
+/*
+ * A common routine for getting the Kerberos error message
+ */
+const char *
+gssd_k5_err_msg(krb5_context context, krb5_error_code code)
+{
+	const char *msg = NULL;
+#if HAVE_KRB5_GET_ERROR_MESSAGE
+	if (context != NULL)
+		msg = krb5_get_error_message(context, code);
+#endif
+	if (msg != NULL)
+		return msg;
+#if HAVE_KRB5
+	return error_message(code);
+#else
+	if (context != NULL)
+		return krb5_get_err_text(context, code);
+	else
+		return error_message(code);
+#endif
+}

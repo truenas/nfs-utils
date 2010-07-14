@@ -40,6 +40,7 @@ sm_mon_1_svc(struct mon *argp, struct svc_req *rqstp)
 			*my_name  = argp->mon_id.my_id.my_name;
 	struct my_id	*id = &argp->mon_id.my_id;
 	char            *path;
+	char		*cp;
 	int             fd;
 	notify_list	*clnt;
 	struct in_addr	my_addr;
@@ -70,7 +71,6 @@ sm_mon_1_svc(struct mon *argp, struct svc_req *rqstp)
 		goto failure;
 	}
 	my_addr.s_addr = htonl(INADDR_LOOPBACK);
-	my_name = "127.0.0.1";
 
 	/* 2.	Reject any registrations for non-lockd services.
 	 *
@@ -127,6 +127,11 @@ sm_mon_1_svc(struct mon *argp, struct svc_req *rqstp)
 		goto failure;
 	}
 
+	/* my_name must not have white space */
+	for (cp=my_name ; *cp ; cp++)
+		if (*cp == ' ' || *cp == '\t' || *cp == '\r' || *cp == '\n')
+			*cp = '_';
+
 	/*
 	 * Hostnames checked OK.
 	 * Now choose a hostname to use for matching.  We cannot
@@ -166,9 +171,7 @@ sm_mon_1_svc(struct mon *argp, struct svc_req *rqstp)
 				mon_name, my_name);
 
 			/* But we'll let you pass anyway. */
-			result.res_stat = STAT_SUCC;
-			result.state = MY_STATE;
-			return (&result);
+			goto success;
 		}
 		clnt = NL_NEXT(clnt);
 	}
@@ -204,7 +207,7 @@ sm_mon_1_svc(struct mon *argp, struct svc_req *rqstp)
 		goto failure;
 	}
 	{
-		char buf[LINELEN + 1 + SM_MAXSTRLEN + 2];
+		char buf[LINELEN + 1 + SM_MAXSTRLEN*2 + 4];
 		char *e;
 		int i;
 		e = buf + sprintf(buf, "%08x %08x %08x %08x ",
@@ -213,7 +216,7 @@ sm_mon_1_svc(struct mon *argp, struct svc_req *rqstp)
 		for (i=0; i<SM_PRIV_SIZE; i++)
 			e += sprintf(e, "%02x", 0xff & (argp->priv[i]));
 		if (e+1-buf != LINELEN) abort();
-		e += sprintf(e, " %s\n", mon_name);
+		e += sprintf(e, " %s %s\n", mon_name, my_name);
 		write(fd, buf, e-buf);
 	}
 
@@ -222,10 +225,20 @@ sm_mon_1_svc(struct mon *argp, struct svc_req *rqstp)
 	ha_callout("add-client", mon_name, my_name, -1);
 	nlist_insert(&rtnl, clnt);
 	close(fd);
-
-	result.res_stat = STAT_SUCC;
-	result.state = MY_STATE;
 	dprintf(N_DEBUG, "MONITORING %s for %s", mon_name, my_name);
+ success:
+	result.res_stat = STAT_SUCC;
+	/* SUN's sm_inter.x says this should be "state number of local site".
+	 * X/Open says '"state" will be contain the state of the remote NSM.'
+	 * href=http://www.opengroup.org/onlinepubs/9629799/SM_MON.htm
+	 * Linux lockd currently (2.6.21 and prior) ignores whatever is
+	 * returned, and given the above contraction, it probably always will..
+	 * So we just return what we always returned.  If possible, we
+	 * have already told lockd about our state number via a sysctl.
+	 * If lockd wants the remote state, it will need to
+	 * use SM_STAT (and prayer).
+	 */
+	result.state = MY_STATE;
 	return (&result);
 
 failure:
@@ -258,6 +271,7 @@ void load_state(void)
 		while (fgets(buf, sizeof(buf), f) != NULL) {
 			int addr, proc, prog, vers;
 			char priv[SM_PRIV_SIZE];
+			char *monname, *myname;
 			char *b;
 			int i;
 			notify_list	*clnt;
@@ -266,7 +280,7 @@ void load_state(void)
 			b = strchr(buf, '\n');
 			if (b) *b = 0;
 			sscanf(buf, "%x %x %x %x ",
-			       &addr, &prog, &vers, &proc);
+			       &addr, &prog, &vers, &proc, myname);
 			b = buf+36;
 			for (i=0; i<SM_PRIV_SIZE; i++) {
 				sscanf(b, "%2x", &p);
@@ -274,7 +288,12 @@ void load_state(void)
 				b += 2;
 			}
 			b++;
-			clnt = nlist_new("127.0.0.1", b, 0);
+			monname = b;
+			while (*b && *b != ' ') b++;
+			if (*b) *b++ = '\0';
+			while (*b == ' ') b++;
+			myname = b;
+			clnt = nlist_new(myname, monname, 0);
 			if (!clnt)
 				break;
 			NL_ADDR(clnt).s_addr = addr;
@@ -309,6 +328,7 @@ sm_unmon_1_svc(struct mon_id *argp, struct svc_req *rqstp)
 	char		*mon_name = argp->mon_name,
 			*my_name  = argp->my_id.my_name;
 	struct my_id	*id = &argp->my_id;
+	char		*cp;
 #ifdef RESTRICTED_STATD
 	struct in_addr	caller;
 #endif
@@ -327,8 +347,12 @@ sm_unmon_1_svc(struct mon_id *argp, struct svc_req *rqstp)
 			inet_ntoa(caller));
 		goto failure;
 	}
-	my_name = "127.0.0.1";
 #endif
+	/* my_name must not have white space */
+	for (cp=my_name ; *cp ; cp++)
+		if (*cp == ' ' || *cp == '\t' || *cp == '\r' || *cp == '\n')
+			*cp = '_';
+
 
 	/* Check if we're monitoring anyone. */
 	if (!(clnt = rtnl)) {
@@ -394,7 +418,6 @@ sm_unmon_all_1_svc(struct my_id *argp, struct svc_req *rqstp)
 			inet_ntoa(caller));
 		goto failure;
 	}
-	my_name = "127.0.0.1";
 #endif
 
 	result.state = MY_STATE;

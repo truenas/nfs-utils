@@ -14,6 +14,7 @@
 
 @SET_MAKE@
 
+
 VPATH = @srcdir@
 pkgdatadir = $(datadir)/@PACKAGE@
 pkglibdir = $(libdir)/@PACKAGE@
@@ -32,33 +33,40 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-sbin_PROGRAMS = statd$(EXEEXT)
+sbin_PROGRAMS = statd$(EXEEXT) sm-notify$(EXEEXT)
 subdir = utils/statd
-DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in COPYING TODO
+DIST_COMMON = $(dist_sbin_SCRIPTS) $(srcdir)/Makefile.am \
+	$(srcdir)/Makefile.in COPYING TODO
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/aclocal/bsdsignals.m4 \
 	$(top_srcdir)/aclocal/kerberos5.m4 \
 	$(top_srcdir)/aclocal/nfs-utils.m4 \
 	$(top_srcdir)/aclocal/tcp-wrappers.m4 \
-	$(top_srcdir)/configure.in
+	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/support/include/config.h
 CONFIG_CLEAN_FILES =
-am__installdirs = "$(DESTDIR)$(sbindir)" "$(DESTDIR)$(man8dir)"
+am__installdirs = "$(DESTDIR)$(sbindir)" "$(DESTDIR)$(sbindir)" \
+	"$(DESTDIR)$(man8dir)"
 sbinPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(sbin_PROGRAMS)
-am_statd_OBJECTS = callback.$(OBJEXT) notlist.$(OBJEXT) log.$(OBJEXT) \
-	misc.$(OBJEXT) monitor.$(OBJEXT) notify.$(OBJEXT) \
-	simu.$(OBJEXT) stat.$(OBJEXT) statd.$(OBJEXT) state.$(OBJEXT) \
-	svc_run.$(OBJEXT) rmtcall.$(OBJEXT) sm_inter_clnt.$(OBJEXT) \
-	sm_inter_svc.$(OBJEXT) sm_inter_xdr.$(OBJEXT)
-statd_OBJECTS = $(am_statd_OBJECTS)
+am_sm_notify_OBJECTS = sm-notify.$(OBJEXT)
+sm_notify_OBJECTS = $(am_sm_notify_OBJECTS)
 am__DEPENDENCIES_1 =
+sm_notify_DEPENDENCIES = $(am__DEPENDENCIES_1)
+am_statd_OBJECTS = callback.$(OBJEXT) notlist.$(OBJEXT) log.$(OBJEXT) \
+	misc.$(OBJEXT) monitor.$(OBJEXT) simu.$(OBJEXT) stat.$(OBJEXT) \
+	statd.$(OBJEXT) svc_run.$(OBJEXT) rmtcall.$(OBJEXT) \
+	sm_inter_clnt.$(OBJEXT) sm_inter_svc.$(OBJEXT) \
+	sm_inter_xdr.$(OBJEXT)
+statd_OBJECTS = $(am_statd_OBJECTS)
 statd_DEPENDENCIES = ../../support/export/libexport.a \
 	../../support/nfs/libnfs.a ../../support/misc/libmisc.a \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+dist_sbinSCRIPT_INSTALL = $(INSTALL_SCRIPT)
+SCRIPTS = $(dist_sbin_SCRIPTS)
 DEFAULT_INCLUDES = -I. -I$(top_builddir)/support/include@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -71,8 +79,8 @@ CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-SOURCES = $(statd_SOURCES)
-DIST_SOURCES = $(statd_SOURCES)
+SOURCES = $(sm_notify_SOURCES) $(statd_SOURCES)
+DIST_SOURCES = $(sm_notify_SOURCES) $(statd_SOURCES)
 man8dir = $(mandir)/man8
 NROFF = nroff
 MANS = $(man8_MANS)
@@ -159,6 +167,7 @@ PATH_SEPARATOR = @PATH_SEPARATOR@
 PKG_CONFIG = @PKG_CONFIG@
 RANLIB = @RANLIB@
 RELEASE = @RELEASE@
+RPCGEN_PATH = @RPCGEN_PATH@
 RPCSECGSS_CFLAGS = @RPCSECGSS_CFLAGS@
 RPCSECGSS_LIBS = @RPCSECGSS_LIBS@
 SET_MAKE = @SET_MAKE@
@@ -218,14 +227,14 @@ sbindir = @sbindir@
 secure_statd = @secure_statd@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@
+startstatd = @startstatd@
 statduser = @statduser@
 statedir = @statedir@
 sysconfdir = @sysconfdir@
 target_alias = @target_alias@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-man8_MANS = statd.man
-RPCGEN = $(top_builddir)/tools/rpcgen/rpcgen
+man8_MANS = statd.man sm-notify.man
 GENFILES_CLNT = sm_inter_clnt.c
 GENFILES_SVC = sm_inter_svc.c
 GENFILES_XDR = sm_inter_xdr.c
@@ -233,18 +242,23 @@ GENFILES_H = sm_inter.h
 GENFILES = $(GENFILES_CLNT) $(GENFILES_SVC) $(GENFILES_XDR) $(GENFILES_H)
 RPCPREFIX = rpc.
 KPREFIX = @kprefix@
-statd_SOURCES = callback.c notlist.c log.c misc.c monitor.c notify.c \
-	        simu.c stat.c statd.c state.c svc_run.c rmtcall.c \
+dist_sbin_SCRIPTS = start-statd
+statd_SOURCES = callback.c notlist.c log.c misc.c monitor.c \
+	        simu.c stat.c statd.c svc_run.c rmtcall.c \
 	        sm_inter_clnt.c sm_inter_svc.c sm_inter_xdr.c log.h \
 	        notlist.h statd.h system.h version.h sm_inter.h
 
+sm_notify_SOURCES = sm-notify.c
 BUILT_SOURCES = $(GENFILES)
 statd_LDADD = ../../support/export/libexport.a \
 	      ../../support/nfs/libnfs.a \
 	      ../../support/misc/libmisc.a \
 	      $(LIBWRAP) $(LIBNSL)
 
+sm_notify_LDADD = $(LIBNSL)
 EXTRA_DIST = sim_sm_inter.x sm_inter.x $(man8_MANS) COPYRIGHT simulate.c
+@CONFIG_RPCGEN_FALSE@RPCGEN = @RPCGEN_PATH@
+@CONFIG_RPCGEN_TRUE@RPCGEN = $(top_builddir)/tools/rpcgen/rpcgen
 MAINTAINERCLEANFILES = Makefile.in
 CLEANFILES = $(GENFILES)
 all: $(BUILT_SOURCES)
@@ -309,9 +323,31 @@ clean-sbinPROGRAMS:
 	  echo " rm -f $$p $$f"; \
 	  rm -f $$p $$f ; \
 	done
+sm-notify$(EXEEXT): $(sm_notify_OBJECTS) $(sm_notify_DEPENDENCIES) 
+	@rm -f sm-notify$(EXEEXT)
+	$(LINK) $(sm_notify_OBJECTS) $(sm_notify_LDADD) $(LIBS)
 statd$(EXEEXT): $(statd_OBJECTS) $(statd_DEPENDENCIES) 
 	@rm -f statd$(EXEEXT)
 	$(LINK) $(statd_OBJECTS) $(statd_LDADD) $(LIBS)
+install-dist_sbinSCRIPTS: $(dist_sbin_SCRIPTS)
+	@$(NORMAL_INSTALL)
+	test -z "$(sbindir)" || $(MKDIR_P) "$(DESTDIR)$(sbindir)"
+	@list='$(dist_sbin_SCRIPTS)'; for p in $$list; do \
+	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
+	  if test -f $$d$$p; then \
+	    f=`echo "$$p" | sed 's|^.*/||;$(transform)'`; \
+	    echo " $(dist_sbinSCRIPT_INSTALL) '$$d$$p' '$(DESTDIR)$(sbindir)/$$f'"; \
+	    $(dist_sbinSCRIPT_INSTALL) "$$d$$p" "$(DESTDIR)$(sbindir)/$$f"; \
+	  else :; fi; \
+	done
+
+uninstall-dist_sbinSCRIPTS:
+	@$(NORMAL_UNINSTALL)
+	@list='$(dist_sbin_SCRIPTS)'; for p in $$list; do \
+	  f=`echo "$$p" | sed 's|^.*/||;$(transform)'`; \
+	  echo " rm -f '$(DESTDIR)$(sbindir)/$$f'"; \
+	  rm -f "$(DESTDIR)$(sbindir)/$$f"; \
+	done
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -323,16 +359,15 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/log.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/misc.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/monitor.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/notify.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/notlist.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rmtcall.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/simu.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sm-notify.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sm_inter_clnt.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sm_inter_svc.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sm_inter_xdr.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stat.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/statd.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/state.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/svc_run.Po@am__quote@
 
 .c.o:
@@ -484,9 +519,9 @@ distdir: $(DISTFILES)
 check-am: all-am
 check: $(BUILT_SOURCES)
 	$(MAKE) $(AM_MAKEFLAGS) check-am
-all-am: Makefile $(PROGRAMS) $(MANS)
+all-am: Makefile $(PROGRAMS) $(SCRIPTS) $(MANS)
 installdirs:
-	for dir in "$(DESTDIR)$(sbindir)" "$(DESTDIR)$(man8dir)"; do \
+	for dir in "$(DESTDIR)$(sbindir)" "$(DESTDIR)$(sbindir)" "$(DESTDIR)$(man8dir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
 install: $(BUILT_SOURCES)
@@ -542,7 +577,7 @@ install-data-am: install-man
 
 install-dvi: install-dvi-am
 
-install-exec-am: install-sbinPROGRAMS
+install-exec-am: install-dist_sbinSCRIPTS install-sbinPROGRAMS
 	@$(NORMAL_INSTALL)
 	$(MAKE) $(AM_MAKEFLAGS) install-exec-hook
 
@@ -574,7 +609,8 @@ ps: ps-am
 
 ps-am:
 
-uninstall-am: uninstall-man uninstall-sbinPROGRAMS
+uninstall-am: uninstall-dist_sbinSCRIPTS uninstall-man \
+	uninstall-sbinPROGRAMS
 	@$(NORMAL_INSTALL)
 	$(MAKE) $(AM_MAKEFLAGS) uninstall-hook
 
@@ -584,20 +620,21 @@ uninstall-am: uninstall-man uninstall-sbinPROGRAMS
 	clean-libtool clean-sbinPROGRAMS ctags distclean \
 	distclean-compile distclean-generic distclean-libtool \
 	distclean-tags distdir dvi dvi-am html html-am info info-am \
-	install install-am install-data install-data-am install-dvi \
-	install-dvi-am install-exec install-exec-am install-exec-hook \
-	install-html install-html-am install-info install-info-am \
-	install-man install-man8 install-pdf install-pdf-am install-ps \
+	install install-am install-data install-data-am \
+	install-dist_sbinSCRIPTS install-dvi install-dvi-am \
+	install-exec install-exec-am install-exec-hook install-html \
+	install-html-am install-info install-info-am install-man \
+	install-man8 install-pdf install-pdf-am install-ps \
 	install-ps-am install-sbinPROGRAMS install-strip installcheck \
 	installcheck-am installdirs maintainer-clean \
 	maintainer-clean-generic mostlyclean mostlyclean-compile \
 	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
-	tags uninstall uninstall-am uninstall-hook uninstall-man \
-	uninstall-man8 uninstall-sbinPROGRAMS
+	tags uninstall uninstall-am uninstall-dist_sbinSCRIPTS \
+	uninstall-hook uninstall-man uninstall-man8 \
+	uninstall-sbinPROGRAMS
 
-
-$(RPCGEN):
-	make -C ../../tools/rpcgen all
+@CONFIG_RPCGEN_TRUE@$(RPCGEN):
+@CONFIG_RPCGEN_TRUE@	make -C ../../tools/rpcgen all
 
 $(GENFILES_CLNT): %_clnt.c: %.x $(RPCGEN)
 	test -f $@ && rm -rf $@ || true
@@ -626,12 +663,12 @@ $(GENFILES_H): %.h: %.x $(RPCGEN)
 install-exec-hook:
 	(cd $(DESTDIR)$(sbindir) && \
 	  for p in $(sbin_PROGRAMS); do \
-	    mv -f $$p$(EXEEXT) $(RPCPREFIX)$(KPREFIX)$$p$(EXEEXT) ;\
+	    [ $$p = sm-notify ] || mv -f $$p$(EXEEXT) $(RPCPREFIX)$(KPREFIX)$$p$(EXEEXT) ;\
 	  done)
 uninstall-hook:
 	(cd $(DESTDIR)$(sbindir) && \
 	  for p in $(sbin_PROGRAMS); do \
-	    rm -f $(RPCPREFIX)$(KPREFIX)$$p$(EXEEXT) ;\
+	    [ $$p = sm-notify ] || rm -f $(RPCPREFIX)$(KPREFIX)$$p$(EXEEXT) ;\
 	  done)
 
 # XXX This makes some assumptions about what automake does.

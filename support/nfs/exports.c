@@ -32,7 +32,7 @@
 #include "xio.h"
 
 #define EXPORT_DEFAULT_FLAGS	\
-  (NFSEXP_READONLY|NFSEXP_ROOTSQUASH|NFSEXP_GATHERED_WRITES)
+  (NFSEXP_READONLY|NFSEXP_ROOTSQUASH|NFSEXP_GATHERED_WRITES|NFSEXP_NOSUBTREECHECK)
 
 int export_errno;
 
@@ -48,7 +48,6 @@ static int	getpath(char *path, int len);
 static int	parseopts(char *cp, struct exportent *ep, int warn, int *had_subtree_opt_ptr);
 static int	parsesquash(char *list, int **idp, int *lenp, char **ep);
 static int	parsenum(char **cpp);
-static int	parsemaptype(char *type);
 static void	freesquash(void);
 static void	syntaxerr(char *msg);
 
@@ -94,7 +93,6 @@ getexportent(int fromkernel, int fromexports)
 			def_ee.e_flags &= ~NFSEXP_ASYNC;
 			def_ee.e_flags &= ~NFSEXP_GATHERED_WRITES;
 		}
-		def_ee.e_maptype = CLE_MAP_IDENT;
 		def_ee.e_anonuid = 65534;
 		def_ee.e_anongid = 65534;
 		def_ee.e_squids = NULL;
@@ -245,21 +243,6 @@ putexportent(struct exportent *ep)
 		xlog(L_ERROR, "unknown fsloc method for %s:%s",
 		     ep->e_hostname, ep->e_path);
 	}
-	fprintf(fp, "mapping=");
-	switch (ep->e_maptype) {
-	case CLE_MAP_IDENT:
-		fprintf(fp, "identity,");
-		break;
-	case CLE_MAP_UGIDD:
-		fprintf(fp, "ugidd,");
-		break;
-	case CLE_MAP_FILE:
-		fprintf(fp, "file,");
-		break;
-	default:
-		xlog(L_ERROR, "unknown mapping type for %s:%s",
-					ep->e_hostname, ep->e_path);
-	}
 	if ((id = ep->e_squids) != NULL) {
 		fprintf(fp, "squash_uids=");
 		for (i = 0; i < ep->e_nsquids; i += 2)
@@ -317,7 +300,6 @@ mkexportent(char *hname, char *path, char *options)
 	static struct exportent	ee;
 
 	ee.e_flags = EXPORT_DEFAULT_FLAGS;
-	ee.e_maptype = CLE_MAP_IDENT;
 	ee.e_anonuid = 65534;
 	ee.e_anongid = 65534;
 	ee.e_squids = NULL;
@@ -447,12 +429,6 @@ parseopts(char *cp, struct exportent *ep, int warn, int *had_subtree_opt_ptr)
 			ep->e_flags &= ~NFSEXP_NOACL;
 		else if (strcmp(opt, "no_acl") == 0)
 			ep->e_flags |= NFSEXP_NOACL;
-		else if (strncmp(opt, "mapping=", 8) == 0)
-			ep->e_maptype = parsemaptype(opt+8);
-		else if (strcmp(opt, "map_identity") == 0)	/* old style */
-			ep->e_maptype = CLE_MAP_IDENT;
-		else if (strcmp(opt, "map_daemon") == 0)	/* old style */
-			ep->e_maptype = CLE_MAP_UGIDD;
 		else if (strncmp(opt, "anonuid=", 8) == 0) {
 			char *oe;
 			ep->e_anonuid = strtol(opt+8, &oe, 10);
@@ -541,8 +517,8 @@ bad_option:
 out:
 	if (warn && !had_subtree_opt)
 		xlog(L_WARNING, "%s [%d]: Neither 'subtree_check' or 'no_subtree_check' specified for export \"%s:%s\".\n"
-				"  Assuming default behaviour ('subtree_check').\n"
-		     		"  NOTE: this default will change with nfs-utils version 1.1.0\n",
+				"  Assuming default behaviour ('no_subtree_check').\n"
+		     		"  NOTE: this default has changed since nfs-utils version 1.0.x\n",
 
 				flname, flline,
 				ep->e_hostname, ep->e_path);
@@ -622,19 +598,6 @@ parsenum(char **cpp)
 		(*cpp)++;
 	c = **cpp; **cpp = '\0'; num = atoi(cp); **cpp = c;
 	return num;
-}
-
-static int
-parsemaptype(char *type)
-{
-	if (!strcmp(type, "identity"))
-		return CLE_MAP_IDENT;
-	if (!strcmp(type, "ugidd"))
-		return CLE_MAP_UGIDD;
-	if (!strcmp(type, "file"))
-		return CLE_MAP_FILE;
-	syntaxerr("invalid map type");
-	return CLE_MAP_IDENT;	/* default */
 }
 
 static int

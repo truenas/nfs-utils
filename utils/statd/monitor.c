@@ -19,6 +19,7 @@
 #include <sys/stat.h>
 #include <errno.h>
 #include <arpa/inet.h>
+#include <dirent.h>
 #include "misc.h"
 #include "statd.h"
 #include "notlist.h"
@@ -26,6 +27,7 @@
 
 notify_list *		rtnl = NULL;	/* Run-time notify list. */
 
+#define LINELEN (4*(8+1)+SM_PRIV_SIZE*2+1)
 
 /*
  * Services SM_MON requests.
@@ -41,11 +43,11 @@ sm_mon_1_svc(struct mon *argp, struct svc_req *rqstp)
 	int             fd;
 	notify_list	*clnt;
 	struct in_addr	my_addr;
+	char		*dnsname;
 #ifdef RESTRICTED_STATD
-	struct in_addr	mon_addr, caller;
-#else
-	struct hostent	*hostinfo = NULL;
+	struct in_addr	caller;
 #endif
+	struct hostent	*hostinfo = NULL;
 
 	/* Assume that we'll fail. */
 	result.res_stat = STAT_FAIL;
@@ -87,6 +89,11 @@ sm_mon_1_svc(struct mon *argp, struct svc_req *rqstp)
 		goto failure;
 	}
 
+#if 0
+	This is not usable anymore.  Linux-kernel can be configured to use
+	host names with NSM so that multi-homed hosts are handled properly.
+		NeilBrown 15mar2007
+
 	/* 3.	mon_name must be an address in dotted quad.
 	 *	Again, specific to the linux kernel lockd.
 	 */
@@ -96,31 +103,46 @@ sm_mon_1_svc(struct mon *argp, struct svc_req *rqstp)
 			mon_name);
 		goto failure;
 	}
+#endif
 #else
+	if (!(hostinfo = gethostbyname(my_name))) {
+		note(N_WARNING, "gethostbyname error for %s", my_name);
+		goto failure;
+	} else
+		my_addr = *(struct in_addr *) hostinfo->h_addr;
+#endif
 	/*
 	 * Check hostnames.  If I can't look them up, I won't monitor.  This
 	 * might not be legal, but it adds a little bit of safety and sanity.
 	 */
 
 	/* must check for /'s in hostname!  See CERT's CA-96.09 for details. */
-	if (strchr(mon_name, '/')) {
-		note(N_CRIT, "SM_MON request for hostname containing '/': %s",
-			mon_name);
+	if (strchr(mon_name, '/') || mon_name[0] == '.') {
+		note(N_CRIT, "SM_MON request for hostname containing '/' "
+		     "or starting '.': %s", mon_name);
 		note(N_CRIT, "POSSIBLE SPOOF/ATTACK ATTEMPT!");
 		goto failure;
-	} else if (gethostbyname(mon_name) == NULL) {
+	} else if ((hostinfo = gethostbyname(mon_name)) == NULL) {
 		note(N_WARNING, "gethostbyname error for %s", mon_name);
 		goto failure;
-	} else if (!(hostinfo = gethostbyname(my_name))) {
-		note(N_WARNING, "gethostbyname error for %s", my_name);
-		goto failure;
-	} else
-		my_addr = *(struct in_addr *) hostinfo->h_addr;
-#endif
+	}
 
 	/*
 	 * Hostnames checked OK.
-	 * Now check to see if this is a duplicate, and warn if so.
+	 * Now choose a hostname to use for matching.  We cannot
+	 * really trust much in the incoming NOTIFY, so to make
+	 * sure that multi-homed hosts work nicely, we get an
+	 * FQDN now, and use that for matching
+	 */
+	hostinfo = gethostbyaddr(hostinfo->h_addr,
+				 hostinfo->h_length,
+				 hostinfo->h_addrtype);
+	if (hostinfo)
+		dnsname = xstrdup(hostinfo->h_name);
+	else
+		dnsname = xstrdup(my_name);
+
+	/* Now check to see if this is a duplicate, and warn if so.
 	 * I will also return STAT_FAIL. (I *think* this is how I should
 	 * handle it.)
 	 *
@@ -129,27 +151,26 @@ sm_mon_1_svc(struct mon *argp, struct svc_req *rqstp)
 	 * I'll just do a quickie success return and things should
 	 * be happy.
 	 */
-	if (rtnl) {
-		notify_list    *temp = rtnl;
+	clnt = rtnl;
 
-		while ((temp = nlist_gethost(temp, mon_name, 0))) {
-			if (matchhostname(NL_MY_NAME(temp), my_name) &&
-				NL_MY_PROC(temp) == id->my_proc &&
-				NL_MY_PROG(temp) == id->my_prog &&
-				NL_MY_VERS(temp) == id->my_vers) {
-				/* Hey!  We already know you guys! */
-				dprintf(N_DEBUG,
-					"Duplicate SM_MON request for %s "
-					"from procedure on %s",
-					mon_name, my_name);
+	while ((clnt = nlist_gethost(clnt, mon_name, 0))) {
+		if (matchhostname(NL_MY_NAME(clnt), my_name) &&
+		    NL_MY_PROC(clnt) == id->my_proc &&
+		    NL_MY_PROG(clnt) == id->my_prog &&
+		    NL_MY_VERS(clnt) == id->my_vers &&
+		    memcmp(NL_PRIV(clnt), argp->priv, SM_PRIV_SIZE) == 0) {
+			/* Hey!  We already know you guys! */
+			dprintf(N_DEBUG,
+				"Duplicate SM_MON request for %s "
+				"from procedure on %s",
+				mon_name, my_name);
 
-				/* But we'll let you pass anyway. */
-				result.res_stat = STAT_SUCC;
-				result.state = MY_STATE;
-				return (&result);
-			}
-			temp = NL_NEXT(temp);
+			/* But we'll let you pass anyway. */
+			result.res_stat = STAT_SUCC;
+			result.state = MY_STATE;
+			return (&result);
 		}
+		clnt = NL_NEXT(clnt);
 	}
 
 	/*
@@ -166,20 +187,36 @@ sm_mon_1_svc(struct mon *argp, struct svc_req *rqstp)
 	NL_MY_VERS(clnt) = id->my_vers;
 	NL_MY_PROC(clnt) = id->my_proc;
 	memcpy(NL_PRIV(clnt), argp->priv, SM_PRIV_SIZE);
+	clnt->dns_name = dnsname;
 
 	/*
 	 * Now, Create file on stable storage for host.
 	 */
 
-	path=xmalloc(strlen(SM_DIR)+strlen(mon_name)+2);
-	sprintf(path, "%s/%s", SM_DIR, mon_name);
-	if ((fd = open(path, O_WRONLY|O_SYNC|O_CREAT, S_IRUSR|S_IWUSR)) < 0) {
+	path=xmalloc(strlen(SM_DIR)+strlen(dnsname)+2);
+	sprintf(path, "%s/%s", SM_DIR, dnsname);
+	if ((fd = open(path, O_WRONLY|O_SYNC|O_CREAT|O_APPEND,
+		       S_IRUSR|S_IWUSR)) < 0) {
 		/* Didn't fly.  We won't monitor. */
 		note(N_ERROR, "creat(%s) failed: %s", path, strerror (errno));
 		nlist_free(NULL, clnt);
 		free(path);
 		goto failure;
 	}
+	{
+		char buf[LINELEN + 1 + SM_MAXSTRLEN + 2];
+		char *e;
+		int i;
+		e = buf + sprintf(buf, "%08x %08x %08x %08x ",
+				  my_addr.s_addr, id->my_prog,
+				  id->my_vers, id->my_proc);
+		for (i=0; i<SM_PRIV_SIZE; i++)
+			e += sprintf(e, "%02x", 0xff & (argp->priv[i]));
+		if (e+1-buf != LINELEN) abort();
+		e += sprintf(e, " %s\n", mon_name);
+		write(fd, buf, e-buf);
+	}
+
 	free(path);
 	/* PRC: do the HA callout: */
 	ha_callout("add-client", mon_name, my_name, -1);
@@ -195,6 +232,65 @@ failure:
 	note(N_WARNING, "STAT_FAIL to %s for SM_MON of %s", my_name, mon_name);
 	return (&result);
 }
+
+void load_state(void)
+{
+	DIR *d;
+	struct dirent *de;
+	char buf[LINELEN + 1 + SM_MAXSTRLEN + 2];
+
+	d = opendir(SM_DIR);
+	if (!d)
+		return;
+	while ((de = readdir(d))) {
+		char *path;
+		FILE *f;
+		int p;
+
+		if (de->d_name[0] == '.')
+			continue;
+		path = xmalloc(strlen(SM_DIR)+strlen(de->d_name)+2);
+		sprintf(path, "%s/%s", SM_DIR, de->d_name);
+		f = fopen(path, "r");
+		free(path);
+		if (f == NULL)
+			continue;
+		while (fgets(buf, sizeof(buf), f) != NULL) {
+			int addr, proc, prog, vers;
+			char priv[SM_PRIV_SIZE];
+			char *b;
+			int i;
+			notify_list	*clnt;
+
+			buf[sizeof(buf)-1] = 0;
+			b = strchr(buf, '\n');
+			if (b) *b = 0;
+			sscanf(buf, "%x %x %x %x ",
+			       &addr, &prog, &vers, &proc);
+			b = buf+36;
+			for (i=0; i<SM_PRIV_SIZE; i++) {
+				sscanf(b, "%2x", &p);
+				priv[i] = p;
+				b += 2;
+			}
+			b++;
+			clnt = nlist_new("127.0.0.1", b, 0);
+			if (!clnt)
+				break;
+			NL_ADDR(clnt).s_addr = addr;
+			NL_MY_PROG(clnt) = prog;
+			NL_MY_VERS(clnt) = vers;
+			NL_MY_PROC(clnt) = proc;
+			clnt->dns_name = xstrdup(de->d_name);
+			memcpy(NL_PRIV(clnt), priv, SM_PRIV_SIZE);
+			nlist_insert(&rtnl, clnt);
+		}
+		fclose(f);
+	}
+	closedir(d);
+}
+
+
 
 
 /*

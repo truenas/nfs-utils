@@ -191,7 +191,7 @@ gssd_find_existing_krb5_ccache(uid_t uid, struct dirent **d)
 				 namelist[i]->d_name);
 			snprintf(statname, sizeof(statname),
 				 "%s/%s", ccachedir, namelist[i]->d_name);
-			if (stat(statname, &tmp_stat)) {
+			if (lstat(statname, &tmp_stat)) {
 				printerr(0, "Error doing stat on file '%s'\n",
 					 statname);
 				free(namelist[i]);
@@ -448,7 +448,7 @@ gssd_have_realm_ple(void *r)
 
 /*
  * Process the given keytab file and create a list of principals we
- * might use to perform mount operations.
+ * might use as machine credentials.
  *
  * Returns:
  *	0 => Sucess
@@ -465,9 +465,8 @@ gssd_process_krb5_keytab(krb5_context context, krb5_keytab kt, char *kt_name)
 
 	/*
 	 * Look through each entry in the keytab file and determine
-	 * if we might want to use it later to do a mount.  If so,
-	 * save info in the global principal list
-	 * (gssd_k5_kt_princ_list).
+	 * if we might want to use it as machine credentials.  If so,
+	 * save info in the global principal list (gssd_k5_kt_princ_list).
 	 * Note: (ple == principal list entry)
 	 */
 	if ((code = krb5_kt_start_seq_get(context, kt, &cursor))) {
@@ -485,22 +484,14 @@ gssd_process_krb5_keytab(krb5_context context, krb5_keytab kt, char *kt_name)
 			printerr(0, "WARNING: Skipping keytab entry because "
 				    "we failed to unparse principal name: %s\n",
 				 error_message(code));
+			krb5_kt_free_entry(context, &kte);
 			continue;
 		}
 		printerr(2, "Processing keytab entry for principal '%s'\n",
 			 pname);
-#ifdef HAVE_KRB5
-		if ( (kte.principal->data[0].length == GSSD_SERVICE_NAME_LEN) &&
-		     (strncmp(kte.principal->data[0].data, GSSD_SERVICE_NAME,
-			      GSSD_SERVICE_NAME_LEN) == 0) &&
-#else
-		if ( (strlen(kte.principal->name.name_string.val[0]) == GSSD_SERVICE_NAME_LEN) &&
-		     (strncmp(kte.principal->name.name_string.val[0], GSSD_SERVICE_NAME,
-			      GSSD_SERVICE_NAME_LEN) == 0) &&
-			      
-#endif
-		     (!gssd_have_realm_ple((void *)&kte.principal->realm)) ) {
-			printerr(2, "We will use this entry (%s)\n", pname);
+		/* Just use the first keytab entry found for each realm */
+	        if ((!gssd_have_realm_ple((void *)&kte.principal->realm)) ) {
+			printerr(2, "We WILL use this entry (%s)\n", pname);
 			ple = malloc(sizeof(struct gssd_k5_kt_princ));
 			if (ple == NULL) {
 				printerr(0, "ERROR: could not allocate storage "
@@ -510,6 +501,7 @@ gssd_process_krb5_keytab(krb5_context context, krb5_keytab kt, char *kt_name)
 #else
 				free(pname);
 #endif
+				krb5_kt_free_entry(context, &kte);
 				retval = ENOMEM;
 				goto out;
 			}
@@ -533,6 +525,7 @@ gssd_process_krb5_keytab(krb5_context context, krb5_keytab kt, char *kt_name)
 #else
 				free(pname);
 #endif
+				krb5_kt_free_entry(context, &kte);
 				retval = ENOMEM;
 				goto out;
 			}
@@ -546,6 +539,7 @@ gssd_process_krb5_keytab(krb5_context context, krb5_keytab kt, char *kt_name)
 #else
 				free(pname);
 #endif
+				krb5_kt_free_entry(context, &kte);
 				retval = code;
 				goto out;
 			}
@@ -565,6 +559,7 @@ gssd_process_krb5_keytab(krb5_context context, krb5_keytab kt, char *kt_name)
 #else
 		free(pname);
 #endif
+		krb5_kt_free_entry(context, &kte);
 	}
 
 	if ((code = krb5_kt_end_seq_get(context, kt, &cursor))) {

@@ -40,13 +40,14 @@ am__aclocal_m4_deps = $(top_srcdir)/aclocal/bsdsignals.m4 \
 	$(top_srcdir)/aclocal/kerberos5.m4 \
 	$(top_srcdir)/aclocal/nfs-utils.m4 \
 	$(top_srcdir)/aclocal/tcp-wrappers.m4 \
-	$(top_srcdir)/configure.in
+	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/support/include/config.h
 CONFIG_CLEAN_FILES =
-am__installdirs = "$(DESTDIR)$(sbindir)" "$(DESTDIR)$(man8dir)"
+am__installdirs = "$(DESTDIR)$(sbindir)" "$(DESTDIR)$(man5dir)" \
+	"$(DESTDIR)$(man8dir)"
 sbinPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(sbin_PROGRAMS)
 am_mount_nfs_OBJECTS = mount.$(OBJEXT) nfsmount.$(OBJEXT) \
@@ -68,9 +69,10 @@ LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	$(LDFLAGS) -o $@
 SOURCES = $(mount_nfs_SOURCES)
 DIST_SOURCES = $(mount_nfs_SOURCES)
+man5dir = $(mandir)/man5
 man8dir = $(mandir)/man8
 NROFF = nroff
-MANS = $(man8_MANS)
+MANS = $(man5_MANS) $(man8_MANS)
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -154,6 +156,7 @@ PATH_SEPARATOR = @PATH_SEPARATOR@
 PKG_CONFIG = @PKG_CONFIG@
 RANLIB = @RANLIB@
 RELEASE = @RELEASE@
+RPCGEN_PATH = @RPCGEN_PATH@
 RPCSECGSS_CFLAGS = @RPCSECGSS_CFLAGS@
 RPCSECGSS_LIBS = @RPCSECGSS_LIBS@
 SET_MAKE = @SET_MAKE@
@@ -209,10 +212,14 @@ pdfdir = @pdfdir@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
 psdir = @psdir@
-sbindir = @sbindir@
+
+# These binaries go in /sbin (not /usr/sbin), and that cannot be
+# overriden at config time.
+sbindir = /sbin
 secure_statd = @secure_statd@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@
+startstatd = @startstatd@
 statduser = @statduser@
 statedir = @statedir@
 sysconfdir = @sysconfdir@
@@ -220,7 +227,8 @@ target_alias = @target_alias@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 man8_MANS = mount.nfs.man umount.nfs.man
-EXTRA_DIST = nfsmount.x $(man8_MANS)
+man5_MANS = nfs.man
+EXTRA_DIST = nfsmount.x $(man8_MANS) $(man5_MANS)
 mount_nfs_SOURCES = mount.c nfsmount.c nfs4mount.c nfsumount.c \
 		  mount_constants.h nfs4_mount.h nfs_mount4.h
 
@@ -330,6 +338,51 @@ mostlyclean-libtool:
 
 clean-libtool:
 	-rm -rf .libs _libs
+install-man5: $(man5_MANS) $(man_MANS)
+	@$(NORMAL_INSTALL)
+	test -z "$(man5dir)" || $(MKDIR_P) "$(DESTDIR)$(man5dir)"
+	@list='$(man5_MANS) $(dist_man5_MANS) $(nodist_man5_MANS)'; \
+	l2='$(man_MANS) $(dist_man_MANS) $(nodist_man_MANS)'; \
+	for i in $$l2; do \
+	  case "$$i" in \
+	    *.5*) list="$$list $$i" ;; \
+	  esac; \
+	done; \
+	for i in $$list; do \
+	  if test -f $(srcdir)/$$i; then file=$(srcdir)/$$i; \
+	  else file=$$i; fi; \
+	  ext=`echo $$i | sed -e 's/^.*\\.//'`; \
+	  case "$$ext" in \
+	    5*) ;; \
+	    *) ext='5' ;; \
+	  esac; \
+	  inst=`echo $$i | sed -e 's/\\.[0-9a-z]*$$//'`; \
+	  inst=`echo $$inst | sed -e 's/^.*\///'`; \
+	  inst=`echo $$inst | sed '$(transform)'`.$$ext; \
+	  echo " $(INSTALL_DATA) '$$file' '$(DESTDIR)$(man5dir)/$$inst'"; \
+	  $(INSTALL_DATA) "$$file" "$(DESTDIR)$(man5dir)/$$inst"; \
+	done
+uninstall-man5:
+	@$(NORMAL_UNINSTALL)
+	@list='$(man5_MANS) $(dist_man5_MANS) $(nodist_man5_MANS)'; \
+	l2='$(man_MANS) $(dist_man_MANS) $(nodist_man_MANS)'; \
+	for i in $$l2; do \
+	  case "$$i" in \
+	    *.5*) list="$$list $$i" ;; \
+	  esac; \
+	done; \
+	for i in $$list; do \
+	  ext=`echo $$i | sed -e 's/^.*\\.//'`; \
+	  case "$$ext" in \
+	    5*) ;; \
+	    *) ext='5' ;; \
+	  esac; \
+	  inst=`echo $$i | sed -e 's/\\.[0-9a-z]*$$//'`; \
+	  inst=`echo $$inst | sed -e 's/^.*\///'`; \
+	  inst=`echo $$inst | sed '$(transform)'`.$$ext; \
+	  echo " rm -f '$(DESTDIR)$(man5dir)/$$inst'"; \
+	  rm -f "$(DESTDIR)$(man5dir)/$$inst"; \
+	done
 install-man8: $(man8_MANS) $(man_MANS)
 	@$(NORMAL_INSTALL)
 	test -z "$(man8dir)" || $(MKDIR_P) "$(DESTDIR)$(man8dir)"
@@ -454,7 +507,7 @@ check-am: all-am
 check: check-am
 all-am: Makefile $(PROGRAMS) $(MANS)
 installdirs:
-	for dir in "$(DESTDIR)$(sbindir)" "$(DESTDIR)$(man8dir)"; do \
+	for dir in "$(DESTDIR)$(sbindir)" "$(DESTDIR)$(man5dir)" "$(DESTDIR)$(man8dir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
 install: install-am
@@ -515,7 +568,7 @@ install-html: install-html-am
 
 install-info: install-info-am
 
-install-man: install-man8
+install-man: install-man5 install-man8
 
 install-pdf: install-pdf-am
 
@@ -545,7 +598,7 @@ uninstall-am: uninstall-man uninstall-sbinPROGRAMS
 	@$(NORMAL_INSTALL)
 	$(MAKE) $(AM_MAKEFLAGS) uninstall-hook
 
-uninstall-man: uninstall-man8
+uninstall-man: uninstall-man5 uninstall-man8
 
 .MAKE: install-am install-exec-am install-strip uninstall-am
 
@@ -556,20 +609,22 @@ uninstall-man: uninstall-man8
 	install install-am install-data install-data-am install-dvi \
 	install-dvi-am install-exec install-exec-am install-exec-hook \
 	install-html install-html-am install-info install-info-am \
-	install-man install-man8 install-pdf install-pdf-am install-ps \
-	install-ps-am install-sbinPROGRAMS install-strip installcheck \
-	installcheck-am installdirs maintainer-clean \
-	maintainer-clean-generic mostlyclean mostlyclean-compile \
-	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
-	tags uninstall uninstall-am uninstall-hook uninstall-man \
-	uninstall-man8 uninstall-sbinPROGRAMS
+	install-man install-man5 install-man8 install-pdf \
+	install-pdf-am install-ps install-ps-am install-sbinPROGRAMS \
+	install-strip installcheck installcheck-am installdirs \
+	maintainer-clean maintainer-clean-generic mostlyclean \
+	mostlyclean-compile mostlyclean-generic mostlyclean-libtool \
+	pdf pdf-am ps ps-am tags uninstall uninstall-am uninstall-hook \
+	uninstall-man uninstall-man5 uninstall-man8 \
+	uninstall-sbinPROGRAMS
 
 
 install-exec-hook:
 	(cd $(DESTDIR)$(sbindir) && \
-	  ln -sf $(sbin_PROGRAMS) mount.nfs4 && \
-	  ln -sf $(sbin_PROGRAMS) umount.nfs && \
-	  ln -sf $(sbin_PROGRAMS) umount.nfs4)
+	  ln -sf mount.nfs mount.nfs4 && \
+	  ln -sf mount.nfs umount.nfs && \
+	  ln -sf mount.nfs umount.nfs4 && \
+	  chmod 4511 mount.nfs )
 uninstall-hook:
 	(cd $(DESTDIR)$(sbindir) && \
 	    rm -f mount.nfs4 umount.nfs umount.nfs4)
@@ -580,11 +635,21 @@ install-man-links:
 	    inst=`echo $$m | sed -e 's/man$$/8/'`; \
 	    rm -f $$inst ; \
 	  done)
+	(cd $(DESTDIR)$(man5dir) && \
+	  for m in $(man5_MANS) $(dist_man5_MANS) $(nodist_man5_MANS); do \
+	    inst=`echo $$m | sed -e 's/man$$/5/'`; \
+	    rm -f $$inst ; \
+	  done)
 
 uninstall-man-links:
 	(cd $(DESTDIR)$(man8dir) && \
 	  for m in $(man8_MANS) $(dist_man8_MANS) $(nodist_man8_MANS); do \
 	    inst=`echo $$m | sed -e 's/man$$/8/'`; \
+	    rm -f $$inst ; \
+	  done)
+	(cd $(DESTDIR)$(man5dir) && \
+	  for m in $(man5_MANS) $(dist_man5_MANS) $(nodist_man5_MANS); do \
+	    inst=`echo $$m | sed -e 's/man$$/5/'`; \
 	    rm -f $$inst ; \
 	  done)
 # Tell versions [3.59,3.63) of GNU make to not export all variables.

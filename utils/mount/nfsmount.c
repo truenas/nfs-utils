@@ -104,6 +104,7 @@ typedef union {
 static char errbuf[BUFSIZ];
 static char *erreob = &errbuf[BUFSIZ];
 extern int verbose;
+extern int sloppy;
 
 /* Convert RPC errors into strings */
 int rpc_strerror(int);
@@ -292,21 +293,21 @@ int nfs_gethostbyname(const char *hostname, struct sockaddr_in *saddr)
  * instead of reserve ports since reserve ports
  * are not needed for pmap requests.
  */
-static u_short
+u_short
 getport(
 	struct sockaddr_in *saddr, 
 	u_long prog, 
 	u_long vers, 
 	u_int prot)
 {
-	u_short port;
+	u_short port = 0;
 	int    socket;
 	CLIENT *clnt = NULL;
 	struct pmap parms;
 	enum clnt_stat stat;
 
 	saddr->sin_port = htons (PMAPPORT);
-	socket = get_socket(saddr, prot, FALSE);
+	socket = get_socket(saddr, prot, FALSE, FALSE);
 
 	switch (prot) {
 	case IPPROTO_UDP:
@@ -547,15 +548,31 @@ parse_options(char *old_opts, struct nfs_mount_data *data,
 	struct pmap *mnt_pmap = &mnt_server->pmap;
 	struct pmap *nfs_pmap = &nfs_server->pmap;
 	int len;
-	char *opt, *opteq;
+	char *opt, *opteq, *p, *opt_b;
 	char *mounthost = NULL;
 	char cbuf[128];
+	int open_quote = 0;
 
 	data->flags = 0;
 	*bg = 0;
 
 	len = strlen(new_opts);
-	for (opt = strtok(old_opts, ","); opt; opt = strtok(NULL, ",")) {
+	for (p=old_opts, opt_b=NULL; p && *p; p++) {
+		if (!opt_b)
+			opt_b = p;		/* begin of the option item */
+		if (*p == '"')
+			open_quote ^= 1;	/* reverse the status */
+		if (open_quote)
+			continue;		/* still in a quoted block */
+		if (*p == ',')
+			*p = '\0';		/* terminate the option item */
+		if (*p == '\0' || *(p+1) == '\0') {
+			opt = opt_b;		/* opt is useful now */
+			opt_b = NULL;
+		}
+		else
+			continue;		/* still somewhere in the option item */
+
 		if (strlen(opt) >= sizeof(cbuf))
 			goto bad_parameter;
 		if ((opteq = strchr(opt, '=')) && isdigit(opteq[1])) {
@@ -606,13 +623,17 @@ parse_options(char *old_opts, struct nfs_mount_data *data,
 			} else if (!strcmp(opt, "namlen")) {
 				if (nfs_mount_version >= 2)
 					data->namlen = val;
+				else if (sloppy)
+					continue;
 				else
 					goto bad_parameter;
 #endif
 			} else if (!strcmp(opt, "addr")) {
 				/* ignore */;
 				continue;
- 			} else
+ 			} else if (sloppy)
+				continue;
+			else
 				goto bad_parameter;
 			sprintf(cbuf, "%s=%s,", opt, opteq+1);
 		} else if (opteq) {
@@ -629,7 +650,9 @@ parse_options(char *old_opts, struct nfs_mount_data *data,
 					mnt_pmap->pm_prot = IPPROTO_TCP;
 					data->flags |= NFS_MOUNT_TCP;
 #endif
-				} else
+				} else if (sloppy)
+					continue;
+				else
 					goto bad_parameter;
 #if NFS_MOUNT_VERSION >= 5
 			} else if (!strcmp(opt, "sec")) {
@@ -638,7 +661,9 @@ parse_options(char *old_opts, struct nfs_mount_data *data,
 				if (nfs_mount_version < 5) {
 					printf(_("Warning: ignoring sec=%s option\n"), secflavor);
 					continue;
-				} else if (!strcmp(secflavor, "sys"))
+				} else if (!strcmp(secflavor, "none"))
+					data->pseudoflavor = AUTH_NONE;
+				else if (!strcmp(secflavor, "sys"))
 					data->pseudoflavor = AUTH_SYS;
 				else if (!strcmp(secflavor, "krb5"))
 					data->pseudoflavor = AUTH_GSS_KRB5;
@@ -658,6 +683,8 @@ parse_options(char *old_opts, struct nfs_mount_data *data,
 					data->pseudoflavor = AUTH_GSS_SPKMI;
 				else if (!strcmp(secflavor, "spkm3p"))
 					data->pseudoflavor = AUTH_GSS_SPKMP;
+				else if (sloppy)
+					continue;
 				else {
 					printf(_("Warning: Unrecognized security flavor %s.\n"),
 						secflavor);
@@ -669,15 +696,27 @@ parse_options(char *old_opts, struct nfs_mount_data *data,
 			        mounthost=xstrndup(opteq+1,
 						   strcspn(opteq+1," \t\n\r,"));
 			 else if (!strcmp(opt, "context")) {
- 				char *context = opteq + 1;
- 				
- 				if (strlen(context) > NFS_MAX_CONTEXT_LEN) {
- 					printf(_("context parameter exceeds limit of %d\n"),
- 						 NFS_MAX_CONTEXT_LEN);
+				char *context = opteq + 1;
+				int ctxlen = strlen(context);
+
+				if (ctxlen > NFS_MAX_CONTEXT_LEN) {
+					printf(_("context parameter exceeds limit of %d\n"),
+						 NFS_MAX_CONTEXT_LEN);
 					goto bad_parameter;
- 				}
- 				strncpy(data->context, context, NFS_MAX_CONTEXT_LEN);
- 			} else
+				}
+				/* The context string is in the format of
+				 * "system_u:object_r:...".  We only want
+				 * the context str between the quotes.
+				 */
+				if (*context == '"')
+					strncpy(data->context, context+1,
+							ctxlen-2);
+				else
+					strncpy(data->context, context,
+							NFS_MAX_CONTEXT_LEN);
+ 			} else if (sloppy)
+				continue;
+			else
 				goto bad_parameter;
 			sprintf(cbuf, "%s=%s,", opt, opteq+1);
 		} else {
@@ -761,9 +800,15 @@ parse_options(char *old_opts, struct nfs_mount_data *data,
 				data->flags &= ~NFS_MOUNT_NOACL;
 				if (!val)
 					data->flags |= NFS_MOUNT_NOACL;
+			} else if (!strcmp(opt, "rdirplus")) {
+				data->flags &= ~NFS_MOUNT_NORDIRPLUS;
+				if (!val)
+					data->flags |= NFS_MOUNT_NORDIRPLUS;
 #endif
 			} else {
 			bad_option:
+				if (sloppy)
+					continue;
 				printf(_("Unsupported nfs mount option: "
 					 "%s%s\n"), val ? "" : "no", opt);
 				goto out_bad;
@@ -815,8 +860,8 @@ nfsmnt_check_compat(const struct pmap *nfs_pmap, const struct pmap *mnt_pmap)
 
 int
 nfsmount(const char *spec, const char *node, int *flags,
-	 char **extra_opts, char **mount_opts, int *nfs_mount_vers,
-	 int running_bg)
+	 char **extra_opts, char **mount_opts,
+	 int running_bg, int *need_statd)
 {
 	static char *prev_bg_host;
 	char hostdir[1024];
@@ -833,26 +878,20 @@ nfsmount(const char *spec, const char *node, int *flags,
 		     *nfs_pmap = &nfs_server.pmap;
 	struct pmap  save_mnt, save_nfs;
 
-	int fsock;
+	int fsock = -1;
 
 	mntres_t mntres;
 
 	struct stat statbuf;
 	char *s;
 	int bg, retry;
-	int retval;
+	int retval = EX_FAIL;
 	time_t t;
 	time_t prevt;
 	time_t timeout;
 
-	/* The version to try is either specified or 0
-	   In case it is 0 we tell the caller what we tried */
-	if (!*nfs_mount_vers)
-		*nfs_mount_vers = find_kernel_nfs_mount_version();
-	nfs_mount_version = *nfs_mount_vers;
+	nfs_mount_version = find_kernel_nfs_mount_version();
 
-	retval = EX_FAIL;
-	fsock = -1;
 	if (strlen(spec) >= sizeof(hostdir)) {
 		fprintf(stderr, _("mount: "
 				  "excessively long host:dir argument\n"));
@@ -902,7 +941,6 @@ nfsmount(const char *spec, const char *node, int *flags,
 #if NFS_MOUNT_VERSION >= 2
 	data.namlen	= NAME_MAX;
 #endif
-	data.pseudoflavor = AUTH_SYS;
 
 	bg = 0;
 	retry = 10000;		/* 10000 minutes ~ 1 week */
@@ -949,6 +987,7 @@ nfsmount(const char *spec, const char *node, int *flags,
 #endif
 #if NFS_MOUNT_VERSION >= 5
 	printf("sec = %u ", data.pseudoflavor);
+	printf("readdirplus = %d ", (data.flags & NFS_MOUNT_NORDIRPLUS) != 0);
 #endif
 	printf("\n");
 #endif
@@ -1090,6 +1129,15 @@ nfsmount(const char *spec, const char *node, int *flags,
 
 		flavor = mountres->auth_flavors.auth_flavors_val;
 		while (--i >= 0) {
+			/* If no flavour requested, use first simple
+			 * flavour that is offered.
+			 */
+			if (! (data.flags & NFS_MOUNT_SECFLAVOUR) &&
+			    (flavor[i] == AUTH_SYS ||
+			     flavor[i] == AUTH_NONE)) {
+				data.pseudoflavor = flavor[i];
+				data.flags |= NFS_MOUNT_SECFLAVOUR;
+			}
 			if (flavor[i] == data.pseudoflavor)
 				yum = 1;
 #ifdef NFS_MOUNT_DEBUG
@@ -1102,7 +1150,7 @@ nfsmount(const char *spec, const char *node, int *flags,
 				"mount: %s:%s failed, "
 				"security flavor not supported\n",
 				hostname, dirname);
-			/* server has registered us in mtab, send umount */
+			/* server has registered us in rmtab, send umount */
 			nfs_call_umount(&mnt_server, &dirname);
 			goto fail;
 		}
@@ -1120,20 +1168,22 @@ noauth_flavors:
 #endif
 	}
 
-	/* create nfs socket for kernel */
+	if (nfs_mount_version == 1) {
+		/* create nfs socket for kernel */
+		if (nfs_pmap->pm_prot == IPPROTO_TCP)
+			fsock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+		else
+			fsock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+		if (fsock < 0) {
+			perror(_("nfs socket"));
+			goto fail;
+		}
+		if (bindresvport(fsock, 0) < 0) {
+			perror(_("nfs bindresvport"));
+			goto fail;
+		}
+	}
 
-	if (nfs_pmap->pm_prot == IPPROTO_TCP)
-		fsock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-	else
-		fsock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-	if (fsock < 0) {
-		perror(_("nfs socket"));
-		goto fail;
-	}
-	if (bindresvport(fsock, 0) < 0) {
-		perror(_("nfs bindresvport"));
-		goto fail;
-	}
 #ifdef NFS_MOUNT_DEBUG
 	printf(_("using port %d for nfs deamon\n"), nfs_pmap->pm_port);
 #endif
@@ -1143,7 +1193,7 @@ noauth_flavors:
 	 * to avoid problems with multihomed hosts.
 	 * --Swen
 	 */
-	if (linux_version_code() <= 66314
+	if (linux_version_code() <= 0x01030a && fsock != -1
 	    && connect(fsock, (struct sockaddr *) nfs_saddr,
 		       sizeof (*nfs_saddr)) < 0) {
 		perror(_("nfs connect"));
@@ -1175,6 +1225,7 @@ noauth_flavors:
 	strcat(new_opts, cbuf);
 
 	*extra_opts = xstrdup(new_opts);
+	*need_statd = ! (data.flags & NFS_MOUNT_NONLM);
 	return 0;
 
 	/* abort */

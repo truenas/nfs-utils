@@ -40,7 +40,7 @@ am__aclocal_m4_deps = $(top_srcdir)/aclocal/bsdsignals.m4 \
 	$(top_srcdir)/aclocal/kerberos5.m4 \
 	$(top_srcdir)/aclocal/nfs-utils.m4 \
 	$(top_srcdir)/aclocal/tcp-wrappers.m4 \
-	$(top_srcdir)/configure.in
+	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
@@ -159,6 +159,7 @@ PATH_SEPARATOR = @PATH_SEPARATOR@
 PKG_CONFIG = @PKG_CONFIG@
 RANLIB = @RANLIB@
 RELEASE = @RELEASE@
+RPCGEN_PATH = @RPCGEN_PATH@
 RPCSECGSS_CFLAGS = @RPCSECGSS_CFLAGS@
 RPCSECGSS_LIBS = @RPCSECGSS_LIBS@
 SET_MAKE = @SET_MAKE@
@@ -218,6 +219,7 @@ sbindir = @sbindir@
 secure_statd = @secure_statd@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@
+startstatd = @startstatd@
 statduser = @statduser@
 statedir = @statedir@
 sysconfdir = @sysconfdir@

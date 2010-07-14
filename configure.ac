@@ -1,9 +1,8 @@
 dnl Process this file with autoconf to produce a configure script.
 dnl
-AC_INIT([linux nfs-utils],[1.0.11],[nfs@lists.sf.net],[nfs-utils])
+AC_INIT([linux nfs-utils],[1.1.0-rc1],[nfs@lists.sf.net],[nfs-utils])
 AC_CANONICAL_BUILD([])
 AC_CANONICAL_HOST([])
-AC_CONFIG_SRCDIR(tools/getiversion/getiversion.c)
 AC_CONFIG_MACRO_DIR(aclocal)
 AM_INIT_AUTOMAKE
 AC_PREREQ(2.59)
@@ -38,6 +37,15 @@ AC_ARG_WITH(statduser,
 		statduser=nobody
 	fi)
 	AC_SUBST(statduser)
+AC_ARG_WITH(start-statd,
+	[AC_HELP_STRING([--with-start-statd=scriptname],
+			[When an nfs filesystems is mounted with locking, run this script]
+	)],
+	startstatd=$withval,
+	startstatd=/usr/sbin/start-statd
+	)
+	AC_SUBST(startstatd)
+	AC_DEFINE_UNQUOTED(START_STATD, "$startstatd", [Define this to a script which can start statd on mount])
 AC_ARG_ENABLE(nfsv3,
 	[AC_HELP_STRING([--enable-nfsv3],
                         [enable support for NFSv3 @<:@default=yes@:>@])],
@@ -91,7 +99,7 @@ AC_ARG_ENABLE(secure-statd,
 	[AC_HELP_STRING([--enable-secure-statd],
                         [Only lockd can use statd (security)])],
 	test "$enableval" = "yes" && secure_statd=yes,
-	secure_statd=no)
+	secure_statd=yes)
 	if test "$secure_statd" = yes; then
 		AC_DEFINE(RESTRICTED_STATD, 1, [Define this if you want to enable various security checks in statd. These checks basically keep anyone but lockd from using this service.])
 	fi
@@ -107,16 +115,36 @@ AC_ARG_ENABLE(rquotad,
 		RQUOTAD=
 	fi
 	AM_CONDITIONAL(CONFIG_RQUOTAD, [test "$enable_rquotad" = "yes"])
-
+AC_ARG_WITH(rpcgen,
+	[AC_HELP_STRING([--with-rpcgen=internal], [use internal rpcgen instead of system one])],
+	rpcgen_path=$withval,
+	rpcgen_path=yes )
+	RPCGEN_PATH=
+	if test "$rpcgen_path" == "yes"; then
+	    for p in /usr/local/bin/rpcgen /usr/bin/rpcgen /bin/rpcgen
+	    do if test -f $p ; then RPCGEN_PATH=$p ; break; fi ; done
+	elif test "$rpcgen_path" != "internal"; then
+	    RPCGEN_PATH=$rpcgen_path
+	fi
+	AC_SUBST(RPCGEN_PATH)
+	AM_CONDITIONAL(CONFIG_RPCGEN, [test "$RPCGEN_PATH" == ""])
+AC_ARG_ENABLE(uuid,
+	[AC_HELP_STRING([--without-uuid], [Exclude uuid support and so avoid possibly buggy libblkid])],
+	if test "$enableval" = "yes" ; then use_blkid=1; else use_blkid=0; fi,
+	use_blkid=1)
+	AC_DEFINE_UNQUOTED(USE_BLKID, $use_blkid, [Define if you want to use blkid to find uuid of filesystems])
 AC_ARG_ENABLE(mount,
 	[AC_HELP_STRING([--enable-mount],
 			[Create mount.nfs and don't use the util-linux mount(8) functionality. @<:@default=no@:>@])],
 	enable_mount=$enableval,
-	enable_mount=no)
+	enable_mount=yes)
 	AM_CONDITIONAL(CONFIG_MOUNT, [test "$enable_mount" = "yes"])
 
 # Check whether user wants TCP wrappers support
 AC_TCP_WRAPPERS
+
+# Arrange for large-file support
+AC_SYS_LARGEFILE
 
 AC_CONFIG_SRCDIR([support/include/config.h.in])
 AC_CONFIG_HEADERS([support/include/config.h])
@@ -129,6 +157,7 @@ AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
 AC_PROG_LIBTOOL
+AM_PROG_CC_C_O
 
 if test "x$cross_compiling" = "xno"; then
 	CC_FOR_BUILD=${CC_FOR_BUILD-${CC-gcc}}
@@ -175,8 +204,10 @@ fi
 if test "$knfsd_cv_glibc2" = no; then
     AC_CHECK_LIB(bsd, daemon, [LIBBSD="-lbsd"])
 fi
-AC_CHECK_LIB(blkid, blkid_get_cache, [LIBBLKID="-lblkid"], AC_MSG_ERROR([libblkid needed]))
-AC_CHECK_HEADER(blkid/blkid.h, , AC_MSG_ERROR([Cannot file libblkid header file blkid/blkid.h]))
+if test "$use_blkid" = 1; then
+   AC_CHECK_LIB(blkid, blkid_get_cache, [LIBBLKID="-lblkid"], AC_MSG_ERROR([libblkid needed]))
+   AC_CHECK_HEADER(blkid/blkid.h, , AC_MSG_ERROR([Cannot file libblkid header file blkid/blkid.h]))
+fi
 AC_SUBST(LIBSOCKET)
 AC_SUBST(LIBCRYPT)
 AC_SUBST(LIBBSD)
@@ -303,7 +334,7 @@ esac
 
 my_am_cflags="-Wall $ARCHFLAGS -pipe"
 
-AC_SUBST([AM_CPPFLAGS], ["-I\${top_srcdir}/support/include -D_FILE_OFFSET_BITS=64"])
+AC_SUBST([AM_CPPFLAGS], ["-I\${top_srcdir}/support/include"])
 AC_SUBST([AM_CFLAGS], ["$my_am_cflags"])
 
 # Make sure that $ACLOCAL_FLAGS are used during a rebuild
@@ -322,7 +353,6 @@ AC_CONFIG_FILES([
 	support/misc/Makefile
 	support/nfs/Makefile
 	tools/Makefile
-	tools/getiversion/Makefile
 	tools/locktest/Makefile
 	tools/nlmtest/Makefile
 	tools/rpcdebug/Makefile
@@ -331,7 +361,6 @@ AC_CONFIG_FILES([
 	utils/exportfs/Makefile
 	utils/gssd/Makefile
 	utils/idmapd/Makefile
-	utils/lockd/Makefile
 	utils/mount/Makefile
 	utils/mountd/Makefile
 	utils/nfsd/Makefile

@@ -40,7 +40,7 @@ am__aclocal_m4_deps = $(top_srcdir)/aclocal/bsdsignals.m4 \
 	$(top_srcdir)/aclocal/kerberos5.m4 \
 	$(top_srcdir)/aclocal/nfs-utils.m4 \
 	$(top_srcdir)/aclocal/tcp-wrappers.m4 \
-	$(top_srcdir)/configure.in
+	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
@@ -158,6 +158,7 @@ PATH_SEPARATOR = @PATH_SEPARATOR@
 PKG_CONFIG = @PKG_CONFIG@
 RANLIB = @RANLIB@
 RELEASE = @RELEASE@
+RPCGEN_PATH = @RPCGEN_PATH@
 RPCSECGSS_CFLAGS = @RPCSECGSS_CFLAGS@
 RPCSECGSS_LIBS = @RPCSECGSS_LIBS@
 SET_MAKE = @SET_MAKE@
@@ -217,13 +218,13 @@ sbindir = @sbindir@
 secure_statd = @secure_statd@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@
+startstatd = @startstatd@
 statduser = @statduser@
 statedir = @statedir@
 sysconfdir = @sysconfdir@
 target_alias = @target_alias@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-RPCGEN = $(top_builddir)/tools/rpcgen/rpcgen
 GENFILES_XDR = rquota_xdr.c
 GENFILES_H = rquota.h
 BUILT_SOURCES = $(GENFILES_H)
@@ -244,6 +245,8 @@ rquotad_CPPFLAGS = $(AM_CPPFLAGS) $(CPPFLAGS) \
                    -I$(top_srcdir)/support/export
 
 MAINTAINERCLEANFILES = Makefile.in
+@CONFIG_RPCGEN_FALSE@RPCGEN = @RPCGEN_PATH@
+@CONFIG_RPCGEN_TRUE@RPCGEN = $(top_builddir)/tools/rpcgen/rpcgen
 CLEANFILES = $(GENFILES)
 all: $(BUILT_SOURCES)
 	$(MAKE) $(AM_MAKEFLAGS) all-am
@@ -653,9 +656,8 @@ uninstall-am: uninstall-man uninstall-sbinPROGRAMS
 	tags uninstall uninstall-am uninstall-hook uninstall-man \
 	uninstall-man8 uninstall-sbinPROGRAMS
 
-
-$(RPCGEN):
-	make -C $(top_srcdir)/tools/rpcgen all
+@CONFIG_RPCGEN_TRUE@$(RPCGEN):
+@CONFIG_RPCGEN_TRUE@	make -C $(top_srcdir)/tools/rpcgen all
 
 $(GENFILES_XDR): %_xdr.c: %.x $(RPCGEN)
 	test -f $@ && rm -rf $@ || true

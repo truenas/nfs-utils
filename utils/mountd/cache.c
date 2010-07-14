@@ -23,6 +23,7 @@
 #include <ctype.h>
 #include <pwd.h>
 #include <grp.h>
+#include <mntent.h>
 #include "misc.h"
 #include "nfslib.h"
 #include "exportfs.h"
@@ -30,7 +31,9 @@
 #include "xmalloc.h"
 #include "fsloc.h"
 
+#ifdef USE_BLKID
 #include "blkid/blkid.h"
+#endif
 
 
 enum nfsd_fsid {
@@ -52,7 +55,7 @@ enum nfsd_fsid {
  * Record is terminated with newline.
  *
  */
-int cache_export_ent(char *domain, struct exportent *exp);
+int cache_export_ent(char *domain, struct exportent *exp, char *p);
 
 
 char *lbuf  = NULL;
@@ -151,6 +154,7 @@ void auth_unix_gid(FILE *f)
 		free(groups);
 }
 
+#if USE_BLKID
 int get_uuid(char *path, char *uuid, int uuidlen, char *u)
 {
 	/* extract hex digits from uuidstr and compose a uuid
@@ -215,7 +219,32 @@ int get_uuid(char *path, char *uuid, int uuidlen, char *u)
 	}
 	return 1;
 }
-	
+#endif
+
+/* Iterate through /etc/mtab, finding mountpoints
+ * at or below a given path
+ */
+static char *next_mnt(void **v, char *p)
+{
+	FILE *f;
+	struct mntent *me;
+	int l = strlen(p);
+	if (*v == NULL) {
+		f = setmntent("/etc/mtab", "r");
+		*v = f;
+	} else
+		f = *v;
+	while ((me = getmntent(f)) != NULL &&
+	       (strncmp(me->mnt_dir, p, l) != 0 ||
+		me->mnt_dir[l] != '/'))
+		;
+	if (me == NULL) {
+		endmntent(f);
+		*v = NULL;
+		return NULL;
+	}
+	return me->mnt_dir;
+}
 
 void nfsd_fh(FILE *f)
 {
@@ -234,6 +263,7 @@ void nfsd_fh(FILE *f)
 	unsigned int fsidnum=0;
 	char fsid[32];
 	struct exportent *found = NULL;
+	char *found_path = NULL;
 	nfs_export *exp;
 	int i;
 	int dev_missing = 0;
@@ -328,9 +358,35 @@ void nfsd_fh(FILE *f)
 
 	/* Now determine export point for this fsid/domain */
 	for (i=0 ; i < MCL_MAXTYPES; i++) {
-		for (exp = exportlist[i]; exp; exp = exp->m_next) {
+		nfs_export *next_exp;
+		for (exp = exportlist[i]; exp; exp = next_exp) {
 			struct stat stb;
-			char u[16];			
+			char u[16];
+			char *path;
+
+			if (exp->m_export.e_flags & NFSEXP_CROSSMOUNT) {
+				static nfs_export *prev = NULL;
+				static void *mnt = NULL;
+				
+				if (prev == exp) {
+					/* try a submount */
+					path = next_mnt(&mnt, exp->m_export.e_path);
+					if (!path) {
+						next_exp = exp->m_next;
+						prev = NULL;
+						continue;
+					}
+					next_exp = exp;
+				} else {
+					prev = exp;
+					mnt = NULL;
+					path = exp->m_export.e_path;
+					next_exp = exp;
+				}
+			} else {
+				path = exp->m_export.e_path;
+				next_exp = exp->m_next;
+			}
 
 			if (!client_member(dom, exp->m_client->m_hostname))
 				continue;
@@ -339,7 +395,7 @@ void nfsd_fh(FILE *f)
 					   exp->m_export.e_mountpoint:
 					   exp->m_export.e_path))
 				dev_missing ++;
-			if (stat(exp->m_export.e_path, &stb) != 0)
+			if (stat(path, &stb) != 0)
 				continue;
 			switch(fsidtype){
 			case FSID_DEV:
@@ -363,27 +419,32 @@ void nfsd_fh(FILE *f)
 				goto check_uuid;
 			case FSID_UUID8:
 			case FSID_UUID16:
-				if (!is_mountpoint(exp->m_export.e_path))
+				if (!is_mountpoint(path))
 					continue;
 			check_uuid:
+#if USE_BLKID
 				if (exp->m_export.e_uuid)
 					get_uuid(NULL, exp->m_export.e_uuid,
 						 uuidlen, u);
-				else if (get_uuid(exp->m_export.e_path, NULL,
+				else if (get_uuid(path, NULL,
 						  uuidlen, u) == 0)
 					continue;
 
 				if (memcmp(u, fhuuid, uuidlen) != 0)
 					continue;
 				break;
+#else
+				continue;
+#endif
 			}
 			/* It's a match !! */
-			if (!found)
+			if (!found) {
 				found = &exp->m_export;
-			else if (strcmp(found->e_path, exp->m_export.e_path)!= 0)
+				found_path = strdup(path);
+			} else if (strcmp(found->e_path, exp->m_export.e_path)!= 0)
 			{
 				xlog(L_WARNING, "%s and %s have same filehandle for %s, using first",
-				     found->e_path, exp->m_export.e_path, dom);
+				     found_path, path, dom);
 			}
 		}
 	}
@@ -408,12 +469,21 @@ void nfsd_fh(FILE *f)
 	}
 
 	if (found)
-		cache_export_ent(dom, found);
+		if (cache_export_ent(dom, found, found_path) < 0)
+			found = 0;
 
 	qword_print(f, dom);
 	qword_printint(f, fsidtype);
 	qword_printhex(f, fsid, fsidlen);
-	qword_printint(f, time(0)+30*60);
+	/* The fsid -> path lookup can be quite expensive as it
+	 * potentially stats and reads lots of devices, and some of those
+	 * might have spun-down.  The Answer is not likely to
+	 * change underneath us, and an 'exportfs -f' can always
+	 * remove this from the kernel, so use a really log
+	 * timeout.  Maybe this should be configurable on the command
+	 * line.
+	 */
+	qword_printint(f, 0x7fffffff);
 	if (found)
 		qword_print(f, found->e_path);
 	qword_eol(f);
@@ -456,9 +526,10 @@ static int dump_to_cache(FILE *f, char *domain, char *path, struct exportent *ex
 		qword_printint(f, exp->e_anongid);
 		qword_printint(f, exp->e_fsid);
 		write_fsloc(f, exp, path);
+#if USE_BLKID
  		if (exp->e_uuid == NULL) {
  			char u[16];
- 			if (get_uuid(exp->e_path, NULL, 16, u)) {
+ 			if (get_uuid(path, NULL, 16, u)) {
  				qword_print(f, "uuid");
  				qword_printhex(f, u, 16);
  			}
@@ -466,6 +537,7 @@ static int dump_to_cache(FILE *f, char *domain, char *path, struct exportent *ex
  			qword_print(f, "uuid");
  			qword_printhex(f, exp->e_uuid, 16);
  		}
+#endif
 	}
 	return qword_eol(f);
 }
@@ -482,6 +554,7 @@ void nfsd_export(FILE *f)
 	int i;
 	char *dom, *path;
 	nfs_export *exp, *found = NULL;
+	int found_type = 0;
 
 
 	if (readline(fileno(f), &lbuf, &lbuflen) != 1)
@@ -506,21 +579,51 @@ void nfsd_export(FILE *f)
 		for (exp = exportlist[i]; exp; exp = exp->m_next) {
 			if (!client_member(dom, exp->m_client->m_hostname))
 				continue;
-			if (strcmp(path, exp->m_export.e_path))
+			if (exp->m_export.e_flags & NFSEXP_CROSSMOUNT) {
+				/* if path is a mountpoint below e_path, then OK */
+				int l = strlen(exp->m_export.e_path);
+				if (strcmp(path, exp->m_export.e_path) == 0 ||
+				    (strncmp(path, exp->m_export.e_path, l) == 0 &&
+				     path[l] == '/' &&
+				     is_mountpoint(path)))
+					/* ok */;
+				else
+					continue;
+			} else if (strcmp(path, exp->m_export.e_path) != 0)
 				continue;
-			if (!found)
+			if (!found) {
 				found = exp;
-			else {
-				xlog(L_WARNING, "%s exported to both %s and %s in %s",
-				     path, exp->m_client->m_hostname, found->m_client->m_hostname,
+				found_type = i;
+				continue;
+			}
+			/* If one is a CROSSMOUNT, then prefer the longest path */
+			if (((found->m_export.e_flags & NFSEXP_CROSSMOUNT) ||
+			     (found->m_export.e_flags & NFSEXP_CROSSMOUNT)) &&
+			    strlen(found->m_export.e_path) !=
+			    strlen(found->m_export.e_path)) {
+
+				if (strlen(exp->m_export.e_path) >
+				    strlen(found->m_export.e_path)) {
+					found = exp;
+					found_type = i;
+				}
+				continue;
+
+			} else if (found_type == i && found->m_warned == 0) {
+				xlog(L_WARNING, "%s exported to both %s and %s, "
+				     "arbitrarily choosing options from first",
+				     path, found->m_client->m_hostname, exp->m_client->m_hostname,
 				     dom);
+				found->m_warned = 1;
 			}
 		}
 	}
 
 	if (found) {
-		dump_to_cache(f, dom, path, &found->m_export);
-		mountlist_add(dom, path);
+		if (dump_to_cache(f, dom, path, &found->m_export) < 0)
+			dump_to_cache(f, dom, path, NULL);
+		else
+			mountlist_add(dom, path);
 	} else {
 		dump_to_cache(f, dom, path, NULL);
 	}
@@ -586,7 +689,7 @@ int cache_process_req(fd_set *readfds)
  * % echo $domain $path $[now+30*60] $options $anonuid $anongid $fsid > /proc/net/rpc/nfsd.export/channel
  */
 
-int cache_export_ent(char *domain, struct exportent *exp)
+int cache_export_ent(char *domain, struct exportent *exp, char *path)
 {
 	int err;
 	FILE *f = fopen("/proc/net/rpc/nfsd.export/channel", "w");
@@ -594,21 +697,55 @@ int cache_export_ent(char *domain, struct exportent *exp)
 		return -1;
 
 	err = dump_to_cache(f, domain, exp->e_path, exp);
-	fclose(f);
 	mountlist_add(domain, exp->e_path);
+
+	while ((exp->e_flags & NFSEXP_CROSSMOUNT) && path) {
+		/* really an 'if', but we can break out of
+		 * a 'while' more easily */
+		/* Look along 'path' for other filesystems
+		 * and export them with the same options
+		 */
+		struct stat stb;
+		int l = strlen(exp->e_path);
+		int dev;
+
+		if (strlen(path) <= l || path[l] != '/' ||
+		    strncmp(exp->e_path, path, l) != 0)
+			break;
+		if (stat(exp->e_path, &stb) != 0)
+			break;
+		dev = stb.st_dev;
+		while(path[l] == '/') {
+			char c;
+			int err;
+
+			l++;
+			while (path[l] != '/' && path[l])
+				l++;
+			c = path[l];
+			path[l] = 0;
+			err = lstat(path, &stb);
+			path[l] = c;
+			if (err < 0)
+				break;
+			if (stb.st_dev == dev)
+				continue;
+			dev = stb.st_dev;
+			path[l] = 0;
+			dump_to_cache(f, domain, path, exp);
+			path[l] = c;
+		}
+		break;
+	}
+
+	fclose(f);
 	return err;
 }
 
-int cache_export(nfs_export *exp)
+int cache_export(nfs_export *exp, char *path)
 {
 	int err;
 	FILE *f;
-
-	if (exp->m_export.e_maptype != CLE_MAP_IDENT) {
-		xlog(L_ERROR, "%s: unsupported mapping; kernel supports only 'identity' (default)",
-		    exp->m_export.m_path);
-		return -1;
-	}
 
 	f = fopen("/proc/net/rpc/auth.unix.ip/channel", "w");
 	if (!f)
@@ -622,7 +759,7 @@ int cache_export(nfs_export *exp)
 	
 	fclose(f);
 
-	err = cache_export_ent(exp->m_client->m_hostname, &exp->m_export)
+	err = cache_export_ent(exp->m_client->m_hostname, &exp->m_export, path)
 		|| err;
 	return err;
 }

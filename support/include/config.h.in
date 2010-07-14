@@ -1,4 +1,4 @@
-/* support/include/config.h.in.  Generated from configure.in by autoheader.  */
+/* support/include/config.h.in.  Generated from configure.ac by autoheader.  */
 
 /* Define to 1 if the `closedir' function returns void instead of `int'. */
 #undef CLOSEDIR_VOID
@@ -319,6 +319,9 @@
    definitions in config.mk! */
 #undef NFS_STATEDIR
 
+/* Define to 1 if your C compiler doesn't accept -c and -o together. */
+#undef NO_MINUS_C_MINUS_O
+
 /* Name of package */
 #undef PACKAGE
 
@@ -376,6 +379,9 @@
 	STACK_DIRECTION = 0 => direction of growth unknown */
 #undef STACK_DIRECTION
 
+/* Define this to a script which can start statd on mount */
+#undef START_STATD
+
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
 
@@ -385,6 +391,9 @@
 /* Define to 1 if your <sys/time.h> declares `struct tm'. */
 #undef TM_IN_SYS_TIME
 
+/* Define if you want to use blkid to find uuid of filesystems */
+#undef USE_BLKID
+
 /* Define this if the private function, gss_krb5_cache_name, must be used to
    tell the Kerberos library which credentials cache to use. Otherwise, this
    is done by setting the KRB5CCNAME environment variable */
@@ -392,6 +401,12 @@
 
 /* Version number of package */
 #undef VERSION
+
+/* Number of bits in a file offset, on hosts where this is settable. */
+#undef _FILE_OFFSET_BITS
+
+/* Define for large files, on AIX-style hosts. */
+#undef _LARGE_FILES
 
 /* Define to empty if `const' does not conform to ANSI C. */
 #undef const

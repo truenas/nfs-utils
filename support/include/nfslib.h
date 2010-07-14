@@ -51,12 +51,6 @@
 #define	_PATH_PROC_EXPORTS_ALT	"/proc/fs/nfsd/exports"
 #endif
 
-enum cle_maptypes {
-	CLE_MAP_IDENT = 0,
-	CLE_MAP_FILE,
-	CLE_MAP_UGIDD,
-};
-
 /*
  * Data related to a single exports entry as returned by getexportent.
  * FIXME: export options should probably be parsed at a later time to
@@ -71,7 +65,6 @@ struct exportent {
 	   use it for anything else. */
 	char		m_path[NFS_MAXPATHLEN+1];
 	int		e_flags;
-	int		e_maptype;
 	int		e_anonuid;
 	int		e_anongid;
 	int *		e_squids;
@@ -143,9 +136,6 @@ void cache_flush(int force);
 int check_new_cache(void);
 
 void closeall(int min);
-
-/* lockd. */
-int			lockdsvc();
 
 int			svctcp_socket (u_long __number, int __reuse);
 int			svcudp_socket (u_long __number, int __reuse);

@@ -23,6 +23,7 @@
 #include <rpc/pmap_clnt.h>
 #include <rpcmisc.h>
 #include <sys/resource.h>
+#include <sys/wait.h>
 #include <grp.h>
 #include "statd.h"
 #include "version.h"
@@ -44,7 +45,6 @@ char *  SM_STAT_PATH = DEFAULT_SM_STAT_PATH;
 
 /* ----- end of state directory path stuff ------- */
 
-short int restart = 0;
 int	run_mode = 0;		/* foreground logging mode */
 
 /* LH - I had these local to main, but it seemed silly to have 
@@ -70,11 +70,12 @@ static struct option longopts[] =
 	{ "state-directory-path", 1, 0, 'P' },
 	{ "notify-mode", 0, 0, 'N' },
 	{ "ha-callout", 1, 0, 'H' },
+	{ "no-notify", 0, 0, 'L' },
 	{ NULL, 0, 0, 0 }
 };
 
 extern void sm_prog_1 (struct svc_req *, register SVCXPRT *);
-extern int statd_get_socket(int port);
+extern int statd_get_socket(void);
 
 #ifdef SIMULATIONS
 extern void simulator (int, char **);
@@ -107,8 +108,7 @@ static void
 killer (int sig)
 {
 	note (N_FATAL, "Caught signal %d, un-registering and exiting.", sig);
-	if (!(run_mode & MODE_NOTIFY_ONLY))
-		pmap_unset (SM_PROG, SM_VERS);
+	pmap_unset (SM_PROG, SM_VERS);
 
 	exit (0);
 }
@@ -116,9 +116,10 @@ killer (int sig)
 static void
 sigusr (int sig)
 {
+	extern void my_svc_exit (void);
 	dprintf (N_DEBUG, "Caught signal %d, re-notifying (state %d).", sig,
 								MY_STATE);
-	re_notify = 1;
+	my_svc_exit();
 }
 
 /*
@@ -138,16 +139,7 @@ static void log_modes(void)
 	if (run_mode & MODE_LOG_STDERR)
 		strcat(buf,"Log-STDERR ");
 
-	if (run_mode & MODE_NOTIFY_ONLY)
-	{
-		strcat(buf,"Notify-Only ");
-	}
 	note(N_WARNING,buf);
-	/* future: IP aliasing
-	if (run_mode & MODE_NOTIFY_ONLY)
-	{
-		dprintf(N_DEBUG,"Notify IP: %s",svr_addr);
-	} */
 }
 
 /*
@@ -167,6 +159,7 @@ usage()
 	fprintf(stderr,"      -n, --name           Specify a local hostname.\n");
 	fprintf(stderr,"      -P                   State directory path.\n");
 	fprintf(stderr,"      -N                   Run in notify only mode.\n");
+	fprintf(stderr,"      -L, --no-notify      Do not perform any notification.\n");
 	fprintf(stderr,"      -H                   Specify a high-availability callout program.\n");
 }
 
@@ -223,6 +216,29 @@ static void drop_privs(void)
 	}
 }
 
+static void run_sm_notify(int outport)
+{
+	char op[20];
+	char *av[6];
+	int ac = 0;
+
+	av[ac++] = "/usr/sbin/sm-notify";
+	if (run_mode & MODE_NODAEMON)
+		av[ac++] = "-d";
+	if (outport) {
+		sprintf(op, "-p%d", outport);
+		av[ac++] = op;
+	}
+	if (run_mode & STATIC_HOSTNAME) {
+		av[ac++] = "-v";
+		av[ac++] = MY_NAME;
+	}
+	av[ac] = NULL;
+	execv(av[0], av);
+	fprintf(stderr, "%s: failed to run %s\n", name_p, av[0]);
+	exit(2);
+
+}
 /* 
  * Entry routine/main loop.
  */
@@ -258,7 +274,7 @@ int main (int argc, char **argv)
 	MY_NAME = NULL;
 
 	/* Process command line switches */
-	while ((arg = getopt_long(argc, argv, "h?vVFNH:dn:p:o:P:", longopts, NULL)) != EOF) {
+	while ((arg = getopt_long(argc, argv, "h?vVFNH:dn:p:o:P:L", longopts, NULL)) != EOF) {
 		switch (arg) {
 		case 'V':	/* Version */
 		case 'v':
@@ -269,6 +285,9 @@ int main (int argc, char **argv)
 			break;
 		case 'N':
 			run_mode |= MODE_NOTIFY_ONLY;
+			break;
+		case 'L': /* Listen only */
+			run_mode |= MODE_NO_NOTIFY;
 			break;
 		case 'd':	/* No daemon only - log to stderr */
 			run_mode |= MODE_LOG_STDERR;
@@ -346,6 +365,13 @@ int main (int argc, char **argv)
 		fprintf(stderr, "Listening and outgoing ports cannot be the same!\n");
 		exit(-1);
 	}
+
+	if (run_mode & MODE_NOTIFY_ONLY) {
+		fprintf(stderr, "%s: -N deprecated, consider using /usr/sbin/sm-notify directly\n",
+			name_p);
+		run_sm_notify(out_port);
+	}
+
 
 	if (!(run_mode & MODE_NODAEMON)) {
 		run_mode &= ~MODE_LOG_STDERR;	/* Never log to console in
@@ -435,49 +461,68 @@ int main (int argc, char **argv)
 	 */
 	signal(SIGPIPE, SIG_IGN);
 
-	/* initialize out_port */
-	statd_get_socket(out_port);
-
 	create_pidfile();
 	atexit(truncate_pidfile);
+
+	if (! (run_mode & MODE_NO_NOTIFY))
+		switch (pid = fork()) {
+		case 0:
+			run_sm_notify(out_port);
+			break;
+		case -1:
+			break;
+		default:
+			waitpid(pid, NULL, 0);
+		}
+
+	/* Make sure we have a privilege port for calling into the kernel */
+	statd_get_socket();
+
+	/* If sm-notify didn't take all the state files, load
+	 * state information into our notify-list so we can
+	 * pass on any SM_NOTIFY that arrives
+	 */
+	load_state();
+
+	pmap_unset (SM_PROG, SM_VERS);
+
+	/* this registers both UDP and TCP services */
+	rpc_init("statd", SM_PROG, SM_VERS, sm_prog_1, port);
+
+	/* If we got this far, we have successfully started, so notify parent */
+	if (pipefds[1] > 0) {
+		status = 0;
+		write(pipefds[1], &status, 1);
+		close(pipefds[1]);
+		pipefds[1] = -1;
+	}
+
 	drop_privs();
 
 	for (;;) {
-		if (!(run_mode & MODE_NOTIFY_ONLY)) {
-			/* Do not do pmap_unset() when running in notify mode.
-			 * We may clear the portmapper record for a statd not
-			 * running in notify mode disabling it.
-			 * Juan C. Gomez j_carlos_gomez@yahoo.com
-			 */
-			pmap_unset (SM_PROG, SM_VERS);
-		}
-		change_state ();
-		shuffle_dirs ();	/* Move directory names around */
-
-		/* If we got this far, we have successfully started, so notify parent */
-		if (pipefds[1] > 0) {
-			status = 0;
-			write(pipefds[1], &status, 1);
-			close(pipefds[1]);
-			pipefds[1] = -1;
-		}
-
-		notify_hosts ();	/* Send out notify requests */
-		++restart;
-
-		/* this registers both UDP and TCP services */
-		if (!(run_mode & MODE_NOTIFY_ONLY)) {
-			rpc_init("statd", SM_PROG, SM_VERS, sm_prog_1, port);
-		} 
-
 		/*
 		 * Handle incoming requests:  SM_NOTIFY socket requests, as
 		 * well as callbacks from lockd.
 		 */
 		my_svc_run();	/* I rolled my own, Olaf made it better... */
 
-		if ((run_mode & MODE_NOTIFY_ONLY))
-			break;			
+		/* Only get here when simulating a crash so we should probably
+		 * start sm-notify running again.  As we have already dropped
+		 * privileges, this might not work, but I don't think
+		 * responding to SM_SIMU_CRASH is an important use cases to
+		 * get perfect.
+		 */
+		if (! (run_mode & MODE_NO_NOTIFY))
+			switch (pid = fork()) {
+			case 0:
+				run_sm_notify(out_port);
+				break;
+			case -1:
+				break;
+			default:
+				waitpid(pid, NULL, 0);
+			}
+
 	}
 	return 0;
 }

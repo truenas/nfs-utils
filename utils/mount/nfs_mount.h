@@ -63,6 +63,7 @@ struct nfs_mount_data {
 #define NFS_MOUNT_BROKEN_SUID	0x0400	/* 4 */
 #define NFS_MOUNT_NOACL     0x0800  /* 4 */
 #define NFS_MOUNT_SECFLAVOUR	0x2000	/* 5 */
+#define NFS_MOUNT_NORDIRPLUS	0x4000	/* 5 */
 
 /* security pseudoflavors */
 
@@ -78,7 +79,8 @@ struct nfs_mount_data {
 #define AUTH_GSS_SPKMP		390011
 #endif
 
-int nfsmount(const char *, const char *, int *, char **, char **, int *, int);
+int nfsmount(const char *, const char *, int *, char **, char **,
+	     int, int *);
 void mount_errors(char *, int, int);
 
 #endif /* _NFS_MOUNT_H */

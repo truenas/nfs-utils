@@ -80,19 +80,19 @@
  *	with an index into pollarray[], and other basic data about that client.
  *
  * Directory structure: created by the kernel nfs client
- *      /pipefsdir/clntXX             : one per rpc_clnt struct in the kernel
- *      /pipefsdir/clntXX/krb5        : read uid for which kernel wants
- *      				 a context, write the resulting context
- *      /pipefsdir/clntXX/info        : stores info such as server name
+ *      {pipefs_nfsdir}/clntXX             : one per rpc_clnt struct in the kernel
+ *      {pipefs_nfsdir}/clntXX/krb5        : read uid for which kernel wants
+ *					    a context, write the resulting context
+ *      {pipefs_nfsdir}/clntXX/info        : stores info such as server name
  *
  * Algorithm:
- *      Poll all /pipefsdir/clntXX/krb5 files.  When ready, data read
+ *      Poll all {pipefs_nfsdir}/clntXX/krb5 files.  When ready, data read
  *      is a uid; performs rpcsec_gss context initialization protocol to
  *      get a cred for that user.  Writes result to corresponding krb5 file
  *      in a form the kernel code will understand.
  *      In addition, we make sure we are notified whenever anything is
- *      created or destroyed in pipefsdir/ or in an of the clntXX directories,
- *      and rescan the whole pipefsdir when this happens.
+ *      created or destroyed in {pipefs_nfsdir} or in an of the clntXX directories,
+ *      and rescan the whole {pipefs_nfsdir} when this happens.
  */
 
 struct pollfd * pollarray;
@@ -389,16 +389,16 @@ update_client_list(void)
 	struct dirent **namelist;
 	int i, j;
 
-	if (chdir(pipefsdir) < 0) {
+	if (chdir(pipefs_nfsdir) < 0) {
 		printerr(0, "ERROR: can't chdir to %s: %s\n",
-			 pipefsdir, strerror(errno));
+			 pipefs_nfsdir, strerror(errno));
 		return -1;
 	}
 
-	j = scandir(pipefsdir, &namelist, NULL, alphasort);
+	j = scandir(pipefs_nfsdir, &namelist, NULL, alphasort);
 	if (j < 0) {
 		printerr(0, "ERROR: can't scandir %s: %s\n",
-			 pipefsdir, strerror(errno));
+			 pipefs_nfsdir, strerror(errno));
 		return -1;
 	}
 	update_old_clients(namelist, j);
@@ -675,6 +675,7 @@ handle_krb5_upcall(struct clnt_info *clp)
 	gss_buffer_desc		token;
 	char			**credlist = NULL;
 	char			**ccname;
+	int			create_resp = -1;
 
 	printerr(1, "handling krb5 upcall\n");
 
@@ -688,49 +689,52 @@ handle_krb5_upcall(struct clnt_info *clp)
 		goto out;
 	}
 
-	if (uid == 0) {
-		int success = 0;
-
-		/*
-		 * Get a list of credential cache names and try each
-		 * of them until one works or we've tried them all
-		 */
-		if (gssd_get_krb5_machine_cred_list(&credlist)) {
-			printerr(0, "WARNING: Failed to obtain machine "
-				    "credentials for connection to "
-				    "server %s\n", clp->servername);
-				goto out_return_error;
-		}
-		for (ccname = credlist; ccname && *ccname; ccname++) {
-			gssd_setup_krb5_machine_gss_ccache(*ccname);
-			if ((create_auth_rpc_client(clp, &rpc_clnt, &auth, uid,
-						    AUTHTYPE_KRB5)) == 0) {
-				/* Success! */
-				success++;
-				break;
-			}
-			printerr(2, "WARNING: Failed to create krb5 context "
-				    "for user with uid %d with credentials "
-				    "cache %s for server %s\n",
-				 uid, *ccname, clp->servername);
-		}
-		gssd_free_krb5_machine_cred_list(credlist);
-		if (!success) {
-			printerr(0, "WARNING: Failed to create krb5 context "
-				    "for user with uid %d with any "
-				    "credentials cache for server %s\n",
-				 uid, clp->servername);
-			goto out_return_error;
-		}
-	}
-	else {
+	if (uid != 0 || (uid == 0 && root_uses_machine_creds == 0)) {
 		/* Tell krb5 gss which credentials cache to use */
 		gssd_setup_krb5_user_gss_ccache(uid, clp->servername);
 
-		if ((create_auth_rpc_client(clp, &rpc_clnt, &auth, uid,
-							AUTHTYPE_KRB5)) != 0) {
+		create_resp = create_auth_rpc_client(clp, &rpc_clnt, &auth, uid,
+						     AUTHTYPE_KRB5);
+	}
+	if (create_resp != 0) {
+		if (uid == 0 && root_uses_machine_creds == 1) {
+			int success = 0;
+
+			/*
+			 * Get a list of credential cache names and try each
+			 * of them until one works or we've tried them all
+			 */
+			if (gssd_get_krb5_machine_cred_list(&credlist)) {
+				printerr(0, "WARNING: Failed to obtain machine "
+					 "credentials for connection to "
+					 "server %s\n", clp->servername);
+					goto out_return_error;
+			}
+			for (ccname = credlist; ccname && *ccname; ccname++) {
+				gssd_setup_krb5_machine_gss_ccache(*ccname);
+				if ((create_auth_rpc_client(clp, &rpc_clnt,
+							    &auth, uid,
+							    AUTHTYPE_KRB5)) == 0) {
+					/* Success! */
+					success++;
+					break;
+				}
+				printerr(2, "WARNING: Failed to create krb5 context "
+					 "for user with uid %d with credentials "
+					 "cache %s for server %s\n",
+					 uid, *ccname, clp->servername);
+			}
+			gssd_free_krb5_machine_cred_list(credlist);
+			if (!success) {
+				printerr(0, "WARNING: Failed to create krb5 context "
+					 "for user with uid %d with any "
+					 "credentials cache for server %s\n",
+					 uid, clp->servername);
+				goto out_return_error;
+			}
+		} else {
 			printerr(0, "WARNING: Failed to create krb5 context "
-				    "for user with uid %d for server %s\n",
+				 "for user with uid %d for server %s\n",
 				 uid, clp->servername);
 			goto out_return_error;
 		}

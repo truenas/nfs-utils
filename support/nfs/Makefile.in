@@ -39,7 +39,7 @@ am__aclocal_m4_deps = $(top_srcdir)/aclocal/bsdsignals.m4 \
 	$(top_srcdir)/aclocal/kerberos5.m4 \
 	$(top_srcdir)/aclocal/nfs-utils.m4 \
 	$(top_srcdir)/aclocal/tcp-wrappers.m4 \
-	$(top_srcdir)/configure.in
+	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
@@ -53,9 +53,9 @@ am_libnfs_a_OBJECTS = exports.$(OBJEXT) rmtab.$(OBJEXT) xio.$(OBJEXT) \
 	rpcmisc.$(OBJEXT) rpcdispatch.$(OBJEXT) xlog.$(OBJEXT) \
 	xcommon.$(OBJEXT) wildmat.$(OBJEXT) nfssvc.$(OBJEXT) \
 	nfsclient.$(OBJEXT) nfsexport.$(OBJEXT) getfh.$(OBJEXT) \
-	nfsctl.$(OBJEXT) lockdsvc.$(OBJEXT) svc_socket.$(OBJEXT) \
-	cacheio.$(OBJEXT) closeall.$(OBJEXT) conn.$(OBJEXT) \
-	fstab.$(OBJEXT) nfs_mntent.$(OBJEXT)
+	nfsctl.$(OBJEXT) svc_socket.$(OBJEXT) cacheio.$(OBJEXT) \
+	closeall.$(OBJEXT) conn.$(OBJEXT) fstab.$(OBJEXT) \
+	nfs_mntent.$(OBJEXT)
 libnfs_a_OBJECTS = $(am_libnfs_a_OBJECTS)
 DEFAULT_INCLUDES = -I. -I$(top_builddir)/support/include@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
@@ -154,6 +154,7 @@ PATH_SEPARATOR = @PATH_SEPARATOR@
 PKG_CONFIG = @PKG_CONFIG@
 RANLIB = @RANLIB@
 RELEASE = @RELEASE@
+RPCGEN_PATH = @RPCGEN_PATH@
 RPCSECGSS_CFLAGS = @RPCSECGSS_CFLAGS@
 RPCSECGSS_LIBS = @RPCSECGSS_LIBS@
 SET_MAKE = @SET_MAKE@
@@ -213,6 +214,7 @@ sbindir = @sbindir@
 secure_statd = @secure_statd@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@
+startstatd = @startstatd@
 statduser = @statduser@
 statedir = @statedir@
 sysconfdir = @sysconfdir@
@@ -222,7 +224,7 @@ top_srcdir = @top_srcdir@
 noinst_LIBRARIES = libnfs.a
 libnfs_a_SOURCES = exports.c rmtab.c xio.c rpcmisc.c rpcdispatch.c \
 		   xlog.c xcommon.c wildmat.c nfssvc.c nfsclient.c \
-		   nfsexport.c getfh.c nfsctl.c lockdsvc.c \
+		   nfsexport.c getfh.c nfsctl.c \
 		   svc_socket.c cacheio.c closeall.c conn.c fstab.c nfs_mntent.c
 
 MAINTAINERCLEANFILES = Makefile.in
@@ -279,7 +281,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/exports.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fstab.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/getfh.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lockdsvc.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nfs_mntent.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nfsclient.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nfsctl.Po@am__quote@

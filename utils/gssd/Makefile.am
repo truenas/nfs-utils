@@ -38,7 +38,8 @@ gssd_SOURCES = \
 	krb5_util.h \
 	write_bytes.h
 
-gssd_LDADD = $(RPCSECGSS_LIBS) $(KRBLIBS)
+gssd_LDADD =	../../support/nfs/libnfs.a \
+		$(RPCSECGSS_LIBS) $(KRBLIBS)
 gssd_LDFLAGS = $(KRBLDFLAGS)
 
 gssd_CFLAGS = $(AM_CFLAGS) $(CFLAGS) \
@@ -46,13 +47,11 @@ gssd_CFLAGS = $(AM_CFLAGS) $(CFLAGS) \
 
 svcgssd_SOURCES = \
 	$(COMMON_SRCS) \
-	cacheio.c \
 	svcgssd.c \
 	svcgssd_main_loop.c \
 	svcgssd_mech2file.c \
 	svcgssd_proc.c \
 	\
-	cacheio.h \
 	svcgssd.h
 
 svcgssd_LDADD = \

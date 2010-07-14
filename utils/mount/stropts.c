@@ -191,10 +191,10 @@ static int append_clientaddr_option(struct sockaddr_in *saddr,
 }
 
 /*
- * Called to resolve the 'mounthost=' hostname and append a new
- * option using an IPv4 address.
+ * Resolve the 'mounthost=' hostname and append a new option using
+ * the resulting IPv4 address.
  */
-static int fix_up_mounthost_opt(struct mount_options *options)
+static int fix_mounthost_option(struct mount_options *options)
 {
 	struct sockaddr_in maddr;
 	char *mounthost, new_option[32];
@@ -215,130 +215,498 @@ static int fix_up_mounthost_opt(struct mount_options *options)
 }
 
 /*
- * nfsmount_s - Mount an NFSv2 or v3 file system using C string options
+ * Set up mandatory mount options.
  *
- * @spec:	C string hostname:path specifying remoteshare to mount
- * @node:	C string pathname of local mounted on directory
- * @flags:	MS_ style flags
- * @extra_opts:	pointer to C string containing fs-specific mount options
- *		(possibly also a return argument)
- * @fake:	flag indicating whether to carry out the whole operation
- * @child:	one if this is a backgrounded mount
- *
- * XXX: need to handle bg, fg, and retry options.
+ * Returns 1 if successful; otherwise zero.
  */
-int nfsmount_s(const char *spec, const char *node, int flags,
-		char **extra_opts, int fake, int child)
+static int set_mandatory_options(const char *type,
+				 struct sockaddr_in *saddr,
+				 struct mount_options *options)
 {
-	struct mount_options *options = NULL;
-	struct sockaddr_in saddr;
-	char *hostname;
-	int err, retval = EX_FAIL;
+	if (!append_addr_option(saddr, options))
+		return 0;
 
-	if (!parse_devname(spec, &hostname))
-		goto out;
-	err = fill_ipv4_sockaddr(hostname, &saddr);
-	free(hostname);
-	if (!err)
-		goto out;
-
-	options = po_split(*extra_opts);
-	if (!options) {
-		nfs_error(_("%s: internal option parsing error"), progname);
-		goto out;
+	if (strncmp(type, "nfs4", 4) == 0) {
+		if (!append_clientaddr_option(saddr, options))
+			return 0;
+	} else {
+		if (!fix_mounthost_option(options))
+			return 0;
 	}
 
-	if (!append_addr_option(&saddr, options))
-		goto out;
-
-	if (!fix_up_mounthost_opt(options))
-		goto out;
-
-	if (po_join(options, extra_opts) == PO_FAILED) {
-		nfs_error(_("%s: internal option parsing error"), progname);
-		goto out;
-	}
-
-	if (verbose)
-		printf(_("%s: text-based options: '%s'\n"),
-			progname, *extra_opts);
-
-	if (!fake) {
-		if (mount(spec, node, "nfs",
-				flags & ~(MS_USER|MS_USERS), *extra_opts)) {
-			mount_error(spec, node, errno);
-			goto out;
-		}
-	}
-
-	retval = EX_SUCCESS;
-
-out:
-	po_destroy(options);
-	return retval;
+	return 1;
 }
 
 /*
- * nfs4mount_s - Mount an NFSv4 file system using C string options
+ * Distinguish between permanent and temporary errors.
  *
- * @spec:	C string hostname:path specifying remoteshare to mount
- * @node:	C string pathname of local mounted on directory
- * @flags:	MS_ style flags
- * @extra_opts:	pointer to C string containing fs-specific mount options
- *		(possibly also a return argument)
- * @fake:	flag indicating whether to carry out the whole operation
- * @child:	one if this is a backgrounded mount
- *
- * XXX: need to handle bg, fg, and retry options.
- *
+ * Returns 0 if the passed-in error is temporary, thus the
+ * mount system call should be retried; returns one if the
+ * passed-in error is permanent, thus the mount system call
+ * should not be retried.
  */
-int nfs4mount_s(const char *spec, const char *node, int flags,
-		char **extra_opts, int fake, int child)
+static int is_permanent_error(int error)
 {
-	struct mount_options *options = NULL;
-	struct sockaddr_in saddr;
-	char *hostname;
-	int err, retval = EX_FAIL;
+	switch (error) {
+	case EACCES:
+	case ESTALE:
+	case ETIMEDOUT:
+	case ECONNREFUSED:
+		return 0;	/* temporary */
+	default:
+		return 1;	/* permanent */
+	}
+}
 
-	if (!parse_devname(spec, &hostname))
-		goto out;
-	err = fill_ipv4_sockaddr(hostname, &saddr);
-	free(hostname);
-	if (!err)
-		goto out;
+/*
+ * Reconstruct the mount option string based on a portmapper probe
+ * of the server.  Returns one if the server's portmapper returned
+ * something we can use, otherwise zero.
+ *
+ * To handle version and transport protocol fallback properly, we
+ * need to parse some of the mount options in order to set up a
+ * portmap probe.  Mount options that rewrite_mount_options()
+ * doesn't recognize are left alone.
+ *
+ * Returns a new group of mount options if successful; otherwise
+ * NULL is returned if some failure occurred.
+ */
+static struct mount_options *rewrite_mount_options(char *str)
+{
+	struct mount_options *options;
+	char *option, new_option[64];
+	clnt_addr_t mnt_server = { };
+	clnt_addr_t nfs_server = { };
+	int p;
 
-	options = po_split(*extra_opts);
-	if (!options) {
-		nfs_error(_("%s: internal option parsing error"), progname);
-		goto out;
+	options = po_split(str);
+	if (!options)
+		return NULL;
+
+	option = po_get(options, "addr");
+	if (option) {
+		nfs_server.saddr.sin_family = AF_INET;
+		if (!inet_aton((const char *)option, &nfs_server.saddr.sin_addr))
+			goto err;
+	} else
+		goto err;
+
+	option = po_get(options, "mountaddr");
+	if (option) {
+		mnt_server.saddr.sin_family = AF_INET;
+		if (!inet_aton((const char *)option, &mnt_server.saddr.sin_addr))
+			goto err;
+	} else
+		memcpy(&mnt_server.saddr, &nfs_server.saddr,
+				sizeof(mnt_server.saddr));
+
+	option = po_get(options, "mountport");
+	if (option)
+		mnt_server.pmap.pm_port = atoi(option);
+	mnt_server.pmap.pm_prog = MOUNTPROG;
+	option = po_get(options, "mountprog");
+	if (option)
+		mnt_server.pmap.pm_prog = atoi(option);
+	option = po_get(options, "mountvers");
+	if (option)
+		mnt_server.pmap.pm_vers = atoi(option);
+
+	option = po_get(options, "port");
+	if (option) {
+		nfs_server.pmap.pm_port = atoi(option);
+		po_remove_all(options, "port");
+	}
+	nfs_server.pmap.pm_prog = NFS_PROGRAM;
+	option = po_get(options, "nfsprog");
+	if (option)
+		nfs_server.pmap.pm_prog = atoi(option);
+
+	option = po_get(options, "nfsvers");
+	if (option) {
+		nfs_server.pmap.pm_vers = atoi(option);
+		po_remove_all(options, "nfsvers");
+	}
+	option = po_get(options, "vers");
+	if (option) {
+		nfs_server.pmap.pm_vers = atoi(option);
+		po_remove_all(options, "vers");
+	}
+	option = po_get(options, "proto");
+	if (option) {
+		if (strcmp(option, "tcp") == 0) {
+			nfs_server.pmap.pm_prot = IPPROTO_TCP;
+			po_remove_all(options, "proto");
+		}
+		if (strcmp(option, "udp") == 0) {
+			nfs_server.pmap.pm_prot = IPPROTO_UDP;
+			po_remove_all(options, "proto");
+		}
+	}
+	p = po_rightmost(options, "tcp", "udp");
+	switch (p) {
+	case PO_KEY2_RIGHTMOST:
+		nfs_server.pmap.pm_prot = IPPROTO_UDP;
+		break;
+	case PO_KEY1_RIGHTMOST:
+		nfs_server.pmap.pm_prot = IPPROTO_TCP;
+		break;
+	}
+	po_remove_all(options, "tcp");
+	po_remove_all(options, "udp");
+
+	if (!probe_bothports(&mnt_server, &nfs_server)) {
+		rpc_mount_errors("rpcbind", 0, 0);
+		goto err;
 	}
 
-	if (!append_addr_option(&saddr, options))
-		goto out;
+	snprintf(new_option, sizeof(new_option) - 1,
+		 "nfsvers=%lu", nfs_server.pmap.pm_vers);
+	if (po_append(options, new_option) == PO_FAILED)
+		goto err;
 
-	if (!append_clientaddr_option(&saddr, options))
-		goto out;
+	if (nfs_server.pmap.pm_prot == IPPROTO_TCP)
+		snprintf(new_option, sizeof(new_option) - 1,
+			 "proto=tcp");
+	else
+		snprintf(new_option, sizeof(new_option) - 1,
+			 "proto=udp");
+	if (po_append(options, new_option) == PO_FAILED)
+		goto err;
 
+	if (nfs_server.pmap.pm_port != NFS_PORT) {
+		snprintf(new_option, sizeof(new_option) - 1,
+			 "port=%lu", nfs_server.pmap.pm_port);
+		if (po_append(options, new_option) == PO_FAILED)
+			goto err;
+
+	}
+
+	return options;
+
+err:
+	po_destroy(options);
+	return NULL;
+}
+
+/*
+ * Retry an NFS mount that failed because the requested service isn't
+ * available on the server.
+ *
+ * Returns 1 if successful.  Otherwise, returns zero.
+ * "errno" is set to reflect the individual error.
+ *
+ * Side effect: If the retry is successful, both 'options' and
+ * 'extra_opts' are updated to reflect the mount options that worked.
+ * If the retry fails, 'options' and 'extra_opts' are left unchanged.
+ */
+static int retry_nfsmount(const char *spec, const char *node,
+			int flags, struct mount_options *options,
+			int fake, char **extra_opts)
+{
+	struct mount_options *retry_options;
+	char *retry_str = NULL;
+
+	retry_options = rewrite_mount_options(*extra_opts);
+	if (!retry_options) {
+		errno = EIO;
+		return 0;
+	}
+
+	if (po_join(retry_options, &retry_str) == PO_FAILED) {
+		po_destroy(retry_options);
+		errno = EIO;
+		return 0;
+	}
+
+	if (verbose)
+		printf(_("%s: text-based options (retry): '%s'\n"),
+			progname, retry_str);
+
+	if (!mount(spec, node, "nfs",
+				flags & ~(MS_USER|MS_USERS), retry_str)) {
+		free(*extra_opts);
+		*extra_opts = retry_str;
+		po_replace(options, retry_options);
+		return 1;
+	}
+
+	po_destroy(retry_options);
+	free(retry_str);
+	return 0;
+}
+
+/*
+ * Attempt an NFSv2/3 mount via a mount(2) system call.  If the kernel
+ * claims the requested service isn't supported on the server, probe
+ * the server to see what's supported, rewrite the mount options,
+ * and retry the request.
+ *
+ * Returns 1 if successful.  Otherwise, returns zero.
+ * "errno" is set to reflect the individual error.
+ *
+ * Side effect: If the retry is successful, both 'options' and
+ * 'extra_opts' are updated to reflect the mount options that worked.
+ * If the retry fails, 'options' and 'extra_opts' are left unchanged.
+ */
+static int try_nfs23mount(const char *spec, const char *node,
+			  int flags, struct mount_options *options,
+			  int fake, char **extra_opts)
+{
 	if (po_join(options, extra_opts) == PO_FAILED) {
-		nfs_error(_("%s: internal option parsing error"), progname);
-		goto out;
+		errno = EIO;
+		return 0;
 	}
 
 	if (verbose)
 		printf(_("%s: text-based options: '%s'\n"),
 			progname, *extra_opts);
 
-	if (!fake) {
-		if (mount(spec, node, "nfs4",
-				flags & ~(MS_USER|MS_USERS), *extra_opts)) {
-			mount_error(spec, node, errno);
-			goto out;
-		}
+	if (fake)
+		return 1;
+
+	if (!mount(spec, node, "nfs",
+				flags & ~(MS_USER|MS_USERS), *extra_opts))
+		return 1;
+
+	/*
+	 * The kernel returns EOPNOTSUPP if the RPC bind failed,
+	 * and EPROTONOSUPPORT if the version isn't supported.
+	 */
+	if (errno != EOPNOTSUPP && errno != EPROTONOSUPPORT)
+		return 0;
+
+	return retry_nfsmount(spec, node, flags, options, fake, extra_opts);
+}
+
+/*
+ * Attempt an NFS v4 mount via a mount(2) system call.
+ *
+ * Returns 1 if successful.  Otherwise, returns zero.
+ * "errno" is set to reflect the individual error.
+ */
+static int try_nfs4mount(const char *spec, const char *node,
+			 int flags, struct mount_options *options,
+			 int fake, char **extra_opts)
+{
+	if (po_join(options, extra_opts) == PO_FAILED) {
+		errno = EIO;
+		return 0;
 	}
 
-	retval = EX_SUCCESS;
+	if (verbose)
+		printf(_("%s: text-based options: '%s'\n"),
+			progname, *extra_opts);
+
+	if (fake)
+		return 1;
+
+	if (!mount(spec, node, "nfs4",
+				flags & ~(MS_USER|MS_USERS), *extra_opts))
+		return 1;
+	return 0;
+}
+
+/*
+ * Try the mount(2) system call.
+ *
+ * Returns 1 if successful.  Otherwise, returns zero.
+ * "errno" is set to reflect the individual error.
+ */
+static int try_mount(const char *spec, const char *node, const char *type,
+		     int flags, struct mount_options *options, int fake,
+		     char **extra_opts)
+{
+	if (strncmp(type, "nfs4", 4) == 0)
+		return try_nfs4mount(spec, node, flags,
+					options, fake, extra_opts);
+	else
+		return try_nfs23mount(spec, node, flags,
+					options, fake, extra_opts);
+}
+
+/*
+ * Handle "foreground" NFS mounts.
+ *
+ * Retry the mount request for as long as the 'retry=' option says.
+ *
+ * Returns a valid mount command exit code.
+ */
+static int nfsmount_fg(const char *spec, const char *node,
+		       const char *type, int flags,
+		       struct mount_options *options, int fake,
+		       char **extra_opts)
+{
+	unsigned int secs = 1;
+	time_t timeout = time(NULL);
+	char *retry;
+
+	timeout += 60 * 2;		/* default: 2 minutes */
+	retry = po_get(options, "retry");
+	if (retry)
+		timeout += 60 * atoi(retry);
+
+	if (verbose)
+		printf(_("%s: timeout set for %s"),
+			progname, ctime(&timeout));
+
+	for (;;) {
+		if (try_mount(spec, node, type, flags,
+					options, fake, extra_opts))
+			return EX_SUCCESS;
+
+		if (is_permanent_error(errno))
+			break;
+
+		if (time(NULL) > timeout) {
+			errno = ETIMEDOUT;
+			break;
+		}
+
+		if (errno != ETIMEDOUT) {
+			if (sleep(secs))
+				break;
+			secs <<= 1;
+			if (secs > 10)
+				secs = 10;
+		}
+	};
+
+	mount_error(spec, node, errno);
+	return EX_FAIL;
+}
+
+/*
+ * Handle "background" NFS mount [first try]
+ *
+ * Returns a valid mount command exit code.
+ *
+ * EX_BG should cause the caller to fork and invoke nfsmount_child.
+ */
+static int nfsmount_parent(const char *spec, const char *node,
+			   const char *type, char *hostname, int flags,
+			   struct mount_options *options,
+			   int fake, char **extra_opts)
+{
+	if (try_mount(spec, node, type, flags, options,
+					fake, extra_opts))
+		return EX_SUCCESS;
+
+	if (is_permanent_error(errno)) {
+		mount_error(spec, node, errno);
+		return EX_FAIL;
+	}
+
+	sys_mount_errors(hostname, errno, 1, 1);
+	return EX_BG;
+}
+
+/*
+ * Handle "background" NFS mount [retry daemon]
+ *
+ * Returns a valid mount command exit code: EX_SUCCESS if successful,
+ * EX_FAIL if a failure occurred.  There's nothing to catch the
+ * error return, though, so we use sys_mount_errors to log the
+ * failure.
+ */
+static int nfsmount_child(const char *spec, const char *node,
+			  const char *type, char *hostname, int flags,
+			  struct mount_options *options,
+			  int fake, char **extra_opts)
+{
+	unsigned int secs = 1;
+	time_t timeout = time(NULL);
+	char *retry;
+
+	timeout += 60 * 10000;		/* default: 10,000 minutes */
+	retry = po_get(options, "retry");
+	if (retry)
+		timeout += 60 * atoi(retry);
+
+	for (;;) {
+		if (sleep(secs))
+			break;
+		secs <<= 1;
+		if (secs > 120)
+			secs = 120;
+
+		if (try_mount(spec, node, type, flags, options,
+							fake, extra_opts))
+			return EX_SUCCESS;
+
+		if (is_permanent_error(errno))
+			break;
+
+		if (time(NULL) > timeout)
+			break;
+
+		sys_mount_errors(hostname, errno, 1, 1);
+	};
+
+	sys_mount_errors(hostname, errno, 1, 0);
+	return EX_FAIL;
+}
+
+/*
+ * Handle "background" NFS mount
+ *
+ * Returns a valid mount command exit code.
+ */
+static int nfsmount_bg(const char *spec, const char *node,
+			  const char *type, char *hostname, int flags,
+			  struct mount_options *options,
+			  int fake, int child, char **extra_opts)
+{
+	if (!child)
+		return nfsmount_parent(spec, node, type, hostname, flags,
+					options, fake, extra_opts);
+	else
+		return nfsmount_child(spec, node, type, hostname, flags,
+					options, fake, extra_opts);
+}
+
+/**
+ * nfsmount_string - Mount an NFS file system using C string options
+ * @spec: C string specifying remote share to mount ("hostname:path")
+ * @node: C string pathname of local mounted-on directory
+ * @type: C string that represents file system type ("nfs" or "nfs4")
+ * @flags: MS_ style mount flags
+ * @extra_opts:	pointer to C string containing fs-specific mount options
+ *		(input and output argument)
+ * @fake: flag indicating whether to carry out the whole operation
+ * @child: one if this is a mount daemon (bg)
+ */
+int nfsmount_string(const char *spec, const char *node, const char *type,
+		    int flags, char **extra_opts, int fake, int child)
+{
+	struct mount_options *options = NULL;
+	struct sockaddr_in saddr;
+	char *hostname;
+	int retval = EX_FAIL;
+
+	if (!parse_devname(spec, &hostname))
+		return retval;
+	if (!fill_ipv4_sockaddr(hostname, &saddr))
+		goto fail;
+
+	options = po_split(*extra_opts);
+	if (!options) {
+		nfs_error(_("%s: internal option parsing error"), progname);
+		goto fail;
+	}
+
+	if (!set_mandatory_options(type, &saddr, options))
+		goto out;
+
+	if (po_rightmost(options, "bg", "fg") == PO_KEY1_RIGHTMOST)
+		retval = nfsmount_bg(spec, node, type, hostname, flags,
+					options, fake, child, extra_opts);
+	else
+		retval = nfsmount_fg(spec, node, type, flags, options,
+							fake, extra_opts);
 
 out:
 	po_destroy(options);
+fail:
+	free(hostname);
 	return retval;
 }

@@ -38,9 +38,15 @@ subdir = utils/gssd
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/aclocal/bsdsignals.m4 \
+	$(top_srcdir)/aclocal/ipv6.m4 \
 	$(top_srcdir)/aclocal/kerberos5.m4 \
 	$(top_srcdir)/aclocal/libblkid.m4 \
+	$(top_srcdir)/aclocal/libevent.m4 \
+	$(top_srcdir)/aclocal/libnfsidmap.m4 \
+	$(top_srcdir)/aclocal/librpcsecgss.m4 \
+	$(top_srcdir)/aclocal/libtirpc.m4 \
 	$(top_srcdir)/aclocal/nfs-utils.m4 \
+	$(top_srcdir)/aclocal/rpcsec_vers.m4 \
 	$(top_srcdir)/aclocal/tcp-wrappers.m4 \
 	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
@@ -71,7 +77,7 @@ am_gssd_OBJECTS = $(am__objects_1) gssd-gssd.$(OBJEXT) \
 gssd_OBJECTS = $(am_gssd_OBJECTS)
 am__DEPENDENCIES_1 =
 gssd_DEPENDENCIES = ../../support/nfs/libnfs.a $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 gssd_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(gssd_CFLAGS) $(CFLAGS) $(gssd_LDFLAGS) \
 	$(LDFLAGS) -o $@
@@ -87,7 +93,8 @@ am_svcgssd_OBJECTS = $(am__objects_2) svcgssd-svcgssd.$(OBJEXT) \
 	svcgssd-svcgssd_proc.$(OBJEXT)
 svcgssd_OBJECTS = $(am_svcgssd_OBJECTS)
 svcgssd_DEPENDENCIES = ../../support/nfs/libnfs.a \
-	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 svcgssd_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(svcgssd_CFLAGS) $(CFLAGS) \
 	$(svcgssd_LDFLAGS) $(LDFLAGS) -o $@
@@ -120,6 +127,7 @@ ACLOCAL_AMFLAGS = @ACLOCAL_AMFLAGS@
 ALLOCA = @ALLOCA@
 AMTAR = @AMTAR@
 AM_CFLAGS = @AM_CFLAGS@
+AM_CPPFLAGS = @AM_CPPFLAGS@
 AR = @AR@
 AUTOCONF = @AUTOCONF@
 AUTOHEADER = @AUTOHEADER@
@@ -232,7 +240,6 @@ enable_gss = @enable_gss@
 enable_ipv6 = @enable_ipv6@
 enable_nfsv3 = @enable_nfsv3@
 enable_nfsv4 = @enable_nfsv4@
-enable_tirpc = @enable_tirpc@
 exec_prefix = @exec_prefix@
 host = @host@
 host_alias = @host_alias@
@@ -302,11 +309,11 @@ gssd_SOURCES = \
 	write_bytes.h
 
 gssd_LDADD = ../../support/nfs/libnfs.a \
-		$(RPCSECGSS_LIBS) $(KRBLIBS)
+		$(RPCSECGSS_LIBS) $(GSSGLUE_LIBS) $(KRBLIBS)
 
 gssd_LDFLAGS = $(KRBLDFLAGS)
 gssd_CFLAGS = $(AM_CFLAGS) $(CFLAGS) \
-	      $(RPCSECGSS_CFLAGS) $(KRBCFLAGS)
+	      $(RPCSECGSS_CFLAGS) $(GSSGLUE_CFLAGS) $(KRBCFLAGS)
 
 svcgssd_SOURCES = \
 	$(COMMON_SRCS) \
@@ -319,16 +326,16 @@ svcgssd_SOURCES = \
 
 svcgssd_LDADD = \
 	../../support/nfs/libnfs.a \
-	$(RPCSECGSS_LIBS) -lnfsidmap \
+	$(RPCSECGSS_LIBS) $(GSSGLUE_LIBS) -lnfsidmap \
 	$(KRBLIBS)
 
 svcgssd_LDFLAGS = $(KRBLDFLAGS)
 svcgssd_CFLAGS = $(AM_CFLAGS) $(CFLAGS) \
-		 $(RPCSECGSS_CFLAGS) $(KRBCFLAGS)
+		 $(RPCSECGSS_CFLAGS) $(GSSGLUE_CFLAGS) $(KRBCFLAGS)
 
 gss_clnt_send_err_SOURCES = gss_clnt_send_err.c
 gss_clnt_send_err_CFLAGS = $(AM_CFLAGS) $(CFLAGS) \
-		 $(RPCSECGSS_CFLAGS) $(KRBCFLAGS)
+		 $(RPCSECGSS_CFLAGS) $(GSSGLUE_CFLAGS) $(KRBCFLAGS)
 
 MAINTAINERCLEANFILES = Makefile.in
 all: all-am

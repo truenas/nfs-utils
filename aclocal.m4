@@ -7725,7 +7725,13 @@ AC_SUBST([am__untar])
 ]) # _AM_PROG_TAR
 
 m4_include([aclocal/bsdsignals.m4])
+m4_include([aclocal/ipv6.m4])
 m4_include([aclocal/kerberos5.m4])
 m4_include([aclocal/libblkid.m4])
+m4_include([aclocal/libevent.m4])
+m4_include([aclocal/libnfsidmap.m4])
+m4_include([aclocal/librpcsecgss.m4])
+m4_include([aclocal/libtirpc.m4])
 m4_include([aclocal/nfs-utils.m4])
+m4_include([aclocal/rpcsec_vers.m4])
 m4_include([aclocal/tcp-wrappers.m4])

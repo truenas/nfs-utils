@@ -68,3 +68,4 @@ tests/nsm_client/nlm_sm_inter_xdr.c
 cscope.*
 # generic editor backup et al
 *~
+.pc

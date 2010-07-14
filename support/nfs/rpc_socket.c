@@ -132,7 +132,7 @@ static int nfs_bind(const int sock, const sa_family_t family)
 	return -1;
 }
 
-#ifdef IPV6_SUPPORTED
+#ifdef HAVE_LIBTIRPC
 
 /*
  * Bind a socket using an unused privileged source port.
@@ -162,7 +162,7 @@ static int nfs_bindresvport(const int sock, const sa_family_t family)
 	return -1;
 }
 
-#else	/* !IPV6_SUPPORTED */
+#else	/* !HAVE_LIBTIRPC */
 
 /*
  * Bind a socket using an unused privileged source port.
@@ -180,7 +180,7 @@ static int nfs_bindresvport(const int sock, const sa_family_t family)
 	return bindresvport(sock, NULL);
 }
 
-#endif	/* !IPV6_SUPPORTED */
+#endif	/* !HAVE_LIBTIRPC */
 
 /*
  * Perform a non-blocking connect on the socket fd.
@@ -326,7 +326,9 @@ static CLIENT *nfs_get_udpclient(const struct sockaddr *sap,
 					version, *timeout, &sock);
 #endif	/* !HAVE_LIBTIRPC */
 	if (client != NULL) {
-		CLNT_CONTROL(client, CLSET_RETRY_TIMEOUT, (char *)timeout);
+		struct timeval retry_timeout = { 1, 0 };
+		CLNT_CONTROL(client, CLSET_RETRY_TIMEOUT,
+						(char *)&retry_timeout);
 		CLNT_CONTROL(client, CLSET_FD_CLOSE, NULL);
 	} else
 		(void)close(sock);
@@ -414,6 +416,49 @@ static CLIENT *nfs_get_tcpclient(const struct sockaddr *sap,
 }
 
 /**
+ * nfs_get_port - extract port value from a socket address
+ * @sap: pointer to socket address
+ *
+ * Returns port value in host byte order.
+ */
+uint16_t
+nfs_get_port(const struct sockaddr *sap)
+{
+       const struct sockaddr_in *sin = (const struct sockaddr_in *)sap;
+       const struct sockaddr_in6 *sin6 = (const struct sockaddr_in6 *)sap;
+
+       switch (sap->sa_family) {
+       case AF_INET:
+               return ntohs(sin->sin_port);
+       case AF_INET6:
+               return ntohs(sin6->sin6_port);
+       }
+       return 0;
+}
+
+/**
+ * nfs_set_port - set port value in a socket address
+ * @sap: pointer to socket address
+ * @port: port value to set
+ *
+ */
+void
+nfs_set_port(struct sockaddr *sap, const uint16_t port)
+{
+       struct sockaddr_in *sin = (struct sockaddr_in *)sap;
+       struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)sap;
+
+       switch (sap->sa_family) {
+       case AF_INET:
+               sin->sin_port = htons(port);
+               break;
+       case AF_INET6:
+               sin6->sin6_port = htons(port);
+               break;
+       }
+}
+
+/**
  * nfs_get_rpcclient - acquire an RPC client
  * @sap: pointer to socket address of RPC server
  * @salen: length of socket address
@@ -438,27 +483,21 @@ CLIENT *nfs_get_rpcclient(const struct sockaddr *sap,
 			  const rpcvers_t version,
 			  struct timeval *timeout)
 {
-	struct sockaddr_in *sin = (struct sockaddr_in *)sap;
-	struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)sap;
+	nfs_clear_rpc_createerr();
 
 	switch (sap->sa_family) {
 	case AF_LOCAL:
 		return nfs_get_localclient(sap, salen, program,
 						version, timeout);
 	case AF_INET:
-		if (sin->sin_port == 0) {
-			rpc_createerr.cf_stat = RPC_UNKNOWNADDR;
-			return NULL;
-		}
-		break;
 	case AF_INET6:
-		if (sin6->sin6_port == 0) {
+		if (nfs_get_port(sap) == 0) {
 			rpc_createerr.cf_stat = RPC_UNKNOWNADDR;
 			return NULL;
 		}
 		break;
 	default:
-		rpc_createerr.cf_stat = RPC_UNKNOWNHOST;
+		rpc_createerr.cf_stat = RPC_UNKNOWNADDR;
 		return NULL;
 	}
 
@@ -501,27 +540,21 @@ CLIENT *nfs_get_priv_rpcclient(const struct sockaddr *sap,
 			       const rpcvers_t version,
 			       struct timeval *timeout)
 {
-	struct sockaddr_in *sin = (struct sockaddr_in *)sap;
-	struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)sap;
+	nfs_clear_rpc_createerr();
 
 	switch (sap->sa_family) {
 	case AF_LOCAL:
 		return nfs_get_localclient(sap, salen, program,
 						version, timeout);
 	case AF_INET:
-		if (sin->sin_port == 0) {
-			rpc_createerr.cf_stat = RPC_UNKNOWNADDR;
-			return NULL;
-		}
-		break;
 	case AF_INET6:
-		if (sin6->sin6_port == 0) {
+		if (nfs_get_port(sap) == 0) {
 			rpc_createerr.cf_stat = RPC_UNKNOWNADDR;
 			return NULL;
 		}
 		break;
 	default:
-		rpc_createerr.cf_stat = RPC_UNKNOWNHOST;
+		rpc_createerr.cf_stat = RPC_UNKNOWNADDR;
 		return NULL;
 	}
 

@@ -325,6 +325,10 @@
    slash. */
 #undef LSTAT_FOLLOWS_SLASHED_SYMLINK
 
+/* Define to the sub-directory in which libtool stores uninstalled libraries.
+   */
+#undef LT_OBJDIR
+
 /* Define to 1 if `major', `minor', and `makedev' are declared in <mkdev.h>.
    */
 #undef MAJOR_IN_MKDEV
@@ -332,6 +336,12 @@
 /* Define to 1 if `major', `minor', and `makedev' are declared in
    <sysmacros.h>. */
 #undef MAJOR_IN_SYSMACROS
+
+/* This defines the location of the NFS mount configuration file */
+#undef MOUNTOPTS_CONFFILE
+
+/* Define this if you want mount to read a configuration file */
+#undef MOUNT_CONFIG
 
 /* Define this if you want NFSv3 support compiled in */
 #undef NFS3_SUPPORTED

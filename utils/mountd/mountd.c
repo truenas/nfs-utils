@@ -359,6 +359,11 @@ static void set_authflavors(struct mountres3_ok *ok, nfs_export *exp)
 		flavors[i] = s->flav->fnum;
 		i++;
 	}
+	if (i == 0) {
+		/* default when there is no sec= option: */
+		i = 1;
+		flavors[0] = AUTH_UNIX;
+	}
 	ok->auth_flavors.auth_flavors_val = flavors;
 	ok->auth_flavors.auth_flavors_len = i;
 }
@@ -467,8 +472,12 @@ get_rootfh(struct svc_req *rqstp, dirpath *path, nfs_export **expret,
 			return NULL;
 		}
 	} else {
-		if (exp->m_exported<1)
+		int did_export = 0;
+	retry:
+		if (exp->m_exported<1) {
 			export_export(exp);
+			did_export = 1;
+		}
 		if (!exp->m_xtabent)
 			xtab_append(exp);
 
@@ -482,6 +491,11 @@ get_rootfh(struct svc_req *rqstp, dirpath *path, nfs_export **expret,
 				fh = getfh_old ((struct sockaddr *) sin,
 						stb.st_dev, stb.st_ino);
 		}
+		if (fh == NULL && !did_export) {
+			exp->m_exported = 0;
+			goto retry;
+		}
+
 		if (fh == NULL) {
 			xlog(L_WARNING, "getfh failed: %s", strerror(errno));
 			*error = NFSERR_ACCES;

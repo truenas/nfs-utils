@@ -345,7 +345,9 @@ main(int argc, char **argv)
 		errx(1, "Could not find group \"%s\"", nobodygroup);
 	nobodygid = gr->gr_gid;
 
+#ifdef HAVE_NFS4_SET_DEBUG
 	nfs4_set_debug(verbose, idmapd_warnx);
+#endif
 	if (conf_path == NULL)
 		conf_path = _PATH_IDMAPDCONF;
 	if (nfs4_init_name_mapping(conf_path))
@@ -539,7 +541,8 @@ nfsdcb(int fd, short which, void *data)
 	struct idmap_client *ic = data;
 	struct idmap_msg im;
 	u_char buf[IDMAP_MAXMSGSZ + 1];
-	size_t len, bsiz;
+	size_t len;
+	ssize_t bsiz;
 	char *bp, typebuf[IDMAP_MAXMSGSZ],
 		buf1[IDMAP_MAXMSGSZ], authbuf[IDMAP_MAXMSGSZ], *p;
 	unsigned long tmp;
@@ -556,7 +559,7 @@ nfsdcb(int fd, short which, void *data)
 
 	/* Get rid of newline and terminate buffer*/
 	buf[len - 1] = '\0';
-	bp = buf;
+	bp = (char *)buf;
 
 	memset(&im, 0, sizeof(im));
 
@@ -606,7 +609,7 @@ nfsdcb(int fd, short which, void *data)
 	imconv(ic, &im);
 
 	buf[0] = '\0';
-	bp = buf;
+	bp = (char *)buf;
 	bsiz = sizeof(buf);
 
 	/* Authentication name */

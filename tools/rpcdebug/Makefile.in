@@ -36,7 +36,7 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-noinst_PROGRAMS = rpcdebug$(EXEEXT)
+sbin_PROGRAMS = rpcdebug$(EXEEXT)
 subdir = tools/rpcdebug
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -50,7 +50,9 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/support/include/config.h
 CONFIG_CLEAN_FILES =
-PROGRAMS = $(noinst_PROGRAMS)
+am__installdirs = "$(DESTDIR)$(sbindir)" "$(DESTDIR)$(man8dir)"
+sbinPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
+PROGRAMS = $(sbin_PROGRAMS)
 am_rpcdebug_OBJECTS = rpcdebug-rpcdebug.$(OBJEXT)
 rpcdebug_OBJECTS = $(am_rpcdebug_OBJECTS)
 rpcdebug_LDADD = $(LDADD)
@@ -67,6 +69,9 @@ LINK = $(LIBTOOL) --tag=CC --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
 SOURCES = $(rpcdebug_SOURCES)
 DIST_SOURCES = $(rpcdebug_SOURCES)
+man8dir = $(mandir)/man8
+NROFF = nroff
+MANS = $(man8_MANS)
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -129,6 +134,7 @@ INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 K5VERS = @K5VERS@
 KRBCFLAGS = @KRBCFLAGS@
 KRBDIR = @KRBDIR@
+KRBLDFLAGS = @KRBLDFLAGS@
 KRBLIBS = @KRBLIBS@
 LD = @LD@
 LDFLAGS = @LDFLAGS@
@@ -216,7 +222,8 @@ statduser = @statduser@
 statedir = @statedir@
 sysconfdir = @sysconfdir@
 target_alias = @target_alias@
-EXTRA_DIST = neat_idea.c
+man8_MANS = rpcdebug.man
+EXTRA_DIST = $(man8_MANS)
 rpcdebug_SOURCES = rpcdebug.c
 rpcdebug_CFLAGS = $(CFLAGS_FOR_BUILD)
 rpcdebug_CPPFLAGS = $(CPPFLAGS_FOR_BUILD) -I$(top_srcdir)/support/include
@@ -255,9 +262,30 @@ $(top_srcdir)/configure:  $(am__configure_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(ACLOCAL_M4):  $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
+install-sbinPROGRAMS: $(sbin_PROGRAMS)
+	@$(NORMAL_INSTALL)
+	test -z "$(sbindir)" || $(mkdir_p) "$(DESTDIR)$(sbindir)"
+	@list='$(sbin_PROGRAMS)'; for p in $$list; do \
+	  p1=`echo $$p|sed 's/$(EXEEXT)$$//'`; \
+	  if test -f $$p \
+	     || test -f $$p1 \
+	  ; then \
+	    f=`echo "$$p1" | sed 's,^.*/,,;$(transform);s/$$/$(EXEEXT)/'`; \
+	   echo " $(INSTALL_PROGRAM_ENV) $(LIBTOOL) --mode=install $(sbinPROGRAMS_INSTALL) '$$p' '$(DESTDIR)$(sbindir)/$$f'"; \
+	   $(INSTALL_PROGRAM_ENV) $(LIBTOOL) --mode=install $(sbinPROGRAMS_INSTALL) "$$p" "$(DESTDIR)$(sbindir)/$$f" || exit 1; \
+	  else :; fi; \
+	done
 
-clean-noinstPROGRAMS:
-	@list='$(noinst_PROGRAMS)'; for p in $$list; do \
+uninstall-sbinPROGRAMS:
+	@$(NORMAL_UNINSTALL)
+	@list='$(sbin_PROGRAMS)'; for p in $$list; do \
+	  f=`echo "$$p" | sed 's,^.*/,,;s/$(EXEEXT)$$//;$(transform);s/$$/$(EXEEXT)/'`; \
+	  echo " rm -f '$(DESTDIR)$(sbindir)/$$f'"; \
+	  rm -f "$(DESTDIR)$(sbindir)/$$f"; \
+	done
+
+clean-sbinPROGRAMS:
+	@list='$(sbin_PROGRAMS)'; for p in $$list; do \
 	  f=`echo $$p|sed 's/$(EXEEXT)$$//'`; \
 	  echo " rm -f $$p $$f"; \
 	  rm -f $$p $$f ; \
@@ -318,6 +346,51 @@ clean-libtool:
 distclean-libtool:
 	-rm -f libtool
 uninstall-info-am:
+install-man8: $(man8_MANS) $(man_MANS)
+	@$(NORMAL_INSTALL)
+	test -z "$(man8dir)" || $(mkdir_p) "$(DESTDIR)$(man8dir)"
+	@list='$(man8_MANS) $(dist_man8_MANS) $(nodist_man8_MANS)'; \
+	l2='$(man_MANS) $(dist_man_MANS) $(nodist_man_MANS)'; \
+	for i in $$l2; do \
+	  case "$$i" in \
+	    *.8*) list="$$list $$i" ;; \
+	  esac; \
+	done; \
+	for i in $$list; do \
+	  if test -f $(srcdir)/$$i; then file=$(srcdir)/$$i; \
+	  else file=$$i; fi; \
+	  ext=`echo $$i | sed -e 's/^.*\\.//'`; \
+	  case "$$ext" in \
+	    8*) ;; \
+	    *) ext='8' ;; \
+	  esac; \
+	  inst=`echo $$i | sed -e 's/\\.[0-9a-z]*$$//'`; \
+	  inst=`echo $$inst | sed -e 's/^.*\///'`; \
+	  inst=`echo $$inst | sed '$(transform)'`.$$ext; \
+	  echo " $(INSTALL_DATA) '$$file' '$(DESTDIR)$(man8dir)/$$inst'"; \
+	  $(INSTALL_DATA) "$$file" "$(DESTDIR)$(man8dir)/$$inst"; \
+	done
+uninstall-man8:
+	@$(NORMAL_UNINSTALL)
+	@list='$(man8_MANS) $(dist_man8_MANS) $(nodist_man8_MANS)'; \
+	l2='$(man_MANS) $(dist_man_MANS) $(nodist_man_MANS)'; \
+	for i in $$l2; do \
+	  case "$$i" in \
+	    *.8*) list="$$list $$i" ;; \
+	  esac; \
+	done; \
+	for i in $$list; do \
+	  ext=`echo $$i | sed -e 's/^.*\\.//'`; \
+	  case "$$ext" in \
+	    8*) ;; \
+	    *) ext='8' ;; \
+	  esac; \
+	  inst=`echo $$i | sed -e 's/\\.[0-9a-z]*$$//'`; \
+	  inst=`echo $$inst | sed -e 's/^.*\///'`; \
+	  inst=`echo $$inst | sed '$(transform)'`.$$ext; \
+	  echo " rm -f '$(DESTDIR)$(man8dir)/$$inst'"; \
+	  rm -f "$(DESTDIR)$(man8dir)/$$inst"; \
+	done
 
 ID: $(HEADERS) $(SOURCES) $(LISP) $(TAGS_FILES)
 	list='$(SOURCES) $(HEADERS) $(LISP) $(TAGS_FILES)'; \
@@ -396,8 +469,11 @@ distdir: $(DISTFILES)
 	done
 check-am: all-am
 check: check-am
-all-am: Makefile $(PROGRAMS)
+all-am: Makefile $(PROGRAMS) $(MANS)
 installdirs:
+	for dir in "$(DESTDIR)$(sbindir)" "$(DESTDIR)$(man8dir)"; do \
+	  test -z "$$dir" || $(mkdir_p) "$$dir"; \
+	done
 install: install-am
 install-exec: install-exec-am
 install-data: install-data-am
@@ -425,7 +501,7 @@ maintainer-clean-generic:
 	-test -z "$(MAINTAINERCLEANFILES)" || rm -f $(MAINTAINERCLEANFILES)
 clean: clean-am
 
-clean-am: clean-generic clean-libtool clean-noinstPROGRAMS \
+clean-am: clean-generic clean-libtool clean-sbinPROGRAMS \
 	mostlyclean-am
 
 distclean: distclean-am
@@ -444,13 +520,13 @@ info: info-am
 
 info-am:
 
-install-data-am:
+install-data-am: install-man
 
-install-exec-am:
+install-exec-am: install-sbinPROGRAMS
 
 install-info: install-info-am
 
-install-man:
+install-man: install-man8
 
 installcheck-am:
 
@@ -472,19 +548,22 @@ ps: ps-am
 
 ps-am:
 
-uninstall-am: uninstall-info-am
+uninstall-am: uninstall-info-am uninstall-man uninstall-sbinPROGRAMS
+
+uninstall-man: uninstall-man8
 
 .PHONY: CTAGS GTAGS all all-am check check-am clean clean-generic \
-	clean-libtool clean-noinstPROGRAMS ctags distclean \
+	clean-libtool clean-sbinPROGRAMS ctags distclean \
 	distclean-compile distclean-generic distclean-libtool \
 	distclean-tags distdir dvi dvi-am html html-am info info-am \
 	install install-am install-data install-data-am install-exec \
 	install-exec-am install-info install-info-am install-man \
-	install-strip installcheck installcheck-am installdirs \
-	maintainer-clean maintainer-clean-generic mostlyclean \
-	mostlyclean-compile mostlyclean-generic mostlyclean-libtool \
-	pdf pdf-am ps ps-am tags uninstall uninstall-am \
-	uninstall-info-am
+	install-man8 install-sbinPROGRAMS install-strip installcheck \
+	installcheck-am installdirs maintainer-clean \
+	maintainer-clean-generic mostlyclean mostlyclean-compile \
+	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
+	tags uninstall uninstall-am uninstall-info-am uninstall-man \
+	uninstall-man8 uninstall-sbinPROGRAMS
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

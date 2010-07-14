@@ -158,6 +158,9 @@
 /* Define to 1 if you have the <netinet/in.h> header file. */
 #undef HAVE_NETINET_IN_H
 
+/* Whether nfs4_set_debug() is present in libnfsidmap */
+#undef HAVE_NFS4_SET_DEBUG
+
 /* Define to 1 if you have the <nfsidmap.h> header file. */
 #undef HAVE_NFSIDMAP_H
 
@@ -179,6 +182,9 @@
 /* Define this if the Kerberos GSS library supports
    gss_krb5_set_allowable_enctypes */
 #undef HAVE_SET_ALLOWABLE_ENCTYPES
+
+/* Define to 1 if you have the `sigprocmask' function. */
+#undef HAVE_SIGPROCMASK
 
 /* Define to 1 if you have the `socket' function. */
 #undef HAVE_SOCKET
@@ -358,6 +364,9 @@
 
 /* The size of `size_t', as computed by sizeof. */
 #undef SIZEOF_SIZE_T
+
+/* The size of `socklen_t', as computed by sizeof. */
+#undef SIZEOF_SOCKLEN_T
 
 /* If using the C implementation of alloca, define if you know the
    direction of stack growth for your system; otherwise it will be

@@ -140,7 +140,7 @@ send_response(FILE *f, gss_buffer_desc *in_handle, gss_buffer_desc *in_token,
 		return -1;
 	}
 	*bp = '\0';
-	printerr(1, "writing message: %s", buf);
+	printerr(3, "writing message: %s", buf);
 	if (write(g, buf, bp - buf) == -1) {
 		printerr(0, "WARNING: failed to write message\n");
 		close(g);
@@ -220,21 +220,23 @@ get_ids(gss_name_t client_name, gss_OID mech, struct svc_cred *cred)
 	nfs4_init_name_mapping(NULL); /* XXX: should only do this once */
 	res = nfs4_gss_princ_to_ids(secname, sname, &uid, &gid);
 	if (res < 0) {
-		printerr(0, "WARNING: get_ids: failed to map name '%s' "
-			"to uid/gid: %s\n", sname, strerror(-res));
 		/*
 		 * -ENOENT means there was no mapping, any other error
 		 * value means there was an error trying to do the
 		 * mapping.
+		 * If there was no mapping, we send down the value -1
+		 * to indicate that the anonuid/anongid for the export
+		 * should be used.
 		 */
 		if (res == -ENOENT) {
-			cred->cr_uid = 65534;      /* XXX */
-			cred->cr_gid = 65534;      /* XXX */
-			cred->cr_groups[0] = 65534;/* XXX */
-			cred->cr_ngroups = 1;
+			cred->cr_uid = -1;
+			cred->cr_gid = -1;
+			cred->cr_ngroups = 0;
 			res = 0;
 			goto out_free;
 		}
+		printerr(0, "WARNING: get_ids: failed to map name '%s' "
+			"to uid/gid: %s\n", sname, strerror(-res));
 		goto out_free;
 	}
 	cred->cr_uid = uid;

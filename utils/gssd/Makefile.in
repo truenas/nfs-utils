@@ -56,7 +56,8 @@ am__installdirs = "$(DESTDIR)$(sbindir)" "$(DESTDIR)$(sbindir)" \
 	"$(DESTDIR)$(man8dir)"
 sbinPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(sbin_PROGRAMS)
-am_gss_clnt_send_err_OBJECTS = gss_clnt_send_err.$(OBJEXT)
+am_gss_clnt_send_err_OBJECTS =  \
+	gss_clnt_send_err-gss_clnt_send_err.$(OBJEXT)
 gss_clnt_send_err_OBJECTS = $(am_gss_clnt_send_err_OBJECTS)
 gss_clnt_send_err_LDADD = $(LDADD)
 am__objects_1 = gssd-context.$(OBJEXT) gssd-context_mit.$(OBJEXT) \
@@ -163,6 +164,7 @@ INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 K5VERS = @K5VERS@
 KRBCFLAGS = @KRBCFLAGS@
 KRBDIR = @KRBDIR@
+KRBLDFLAGS = @KRBLDFLAGS@
 KRBLIBS = @KRBLIBS@
 LD = @LD@
 LDFLAGS = @LDFLAGS@
@@ -285,7 +287,7 @@ gssd_SOURCES = \
 	write_bytes.h
 
 gssd_LDADD = $(RPCSECGSS_LIBS) $(KRBLIBS)
-gssd_LDFLAGS = -Wl,-rpath=$(KRBDIR)/lib
+gssd_LDFLAGS = $(KRBLDFLAGS)
 gssd_CFLAGS = $(AM_CFLAGS) $(CFLAGS) \
 	      $(RPCSECGSS_CFLAGS) $(KRBCFLAGS)
 
@@ -305,11 +307,14 @@ svcgssd_LDADD = \
 	$(RPCSECGSS_LIBS) -lnfsidmap \
 	$(KRBLIBS)
 
-svcgssd_LDFLAGS = -Wl,-rpath=$(KRBDIR)/lib
+svcgssd_LDFLAGS = $(KRBLDFLAGS)
 svcgssd_CFLAGS = $(AM_CFLAGS) $(CFLAGS) \
 		 $(RPCSECGSS_CFLAGS) $(KRBCFLAGS)
 
 gss_clnt_send_err_SOURCES = gss_clnt_send_err.c
+gss_clnt_send_err_CFLAGS = $(AM_CFLAGS) $(CFLAGS) \
+		 $(RPCSECGSS_CFLAGS) $(KRBCFLAGS)
+
 MAINTAINERCLEANFILES = Makefile.in
 all: all-am
 
@@ -407,7 +412,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gss_clnt_send_err.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gss_clnt_send_err-gss_clnt_send_err.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gssd-context.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gssd-context_heimdal.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gssd-context_mit.Po@am__quote@
@@ -452,6 +457,20 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LTCOMPILE) -c -o $@ $<
+
+gss_clnt_send_err-gss_clnt_send_err.o: gss_clnt_send_err.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gss_clnt_send_err_CFLAGS) $(CFLAGS) -MT gss_clnt_send_err-gss_clnt_send_err.o -MD -MP -MF "$(DEPDIR)/gss_clnt_send_err-gss_clnt_send_err.Tpo" -c -o gss_clnt_send_err-gss_clnt_send_err.o `test -f 'gss_clnt_send_err.c' || echo '$(srcdir)/'`gss_clnt_send_err.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/gss_clnt_send_err-gss_clnt_send_err.Tpo" "$(DEPDIR)/gss_clnt_send_err-gss_clnt_send_err.Po"; else rm -f "$(DEPDIR)/gss_clnt_send_err-gss_clnt_send_err.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='gss_clnt_send_err.c' object='gss_clnt_send_err-gss_clnt_send_err.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gss_clnt_send_err_CFLAGS) $(CFLAGS) -c -o gss_clnt_send_err-gss_clnt_send_err.o `test -f 'gss_clnt_send_err.c' || echo '$(srcdir)/'`gss_clnt_send_err.c
+
+gss_clnt_send_err-gss_clnt_send_err.obj: gss_clnt_send_err.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gss_clnt_send_err_CFLAGS) $(CFLAGS) -MT gss_clnt_send_err-gss_clnt_send_err.obj -MD -MP -MF "$(DEPDIR)/gss_clnt_send_err-gss_clnt_send_err.Tpo" -c -o gss_clnt_send_err-gss_clnt_send_err.obj `if test -f 'gss_clnt_send_err.c'; then $(CYGPATH_W) 'gss_clnt_send_err.c'; else $(CYGPATH_W) '$(srcdir)/gss_clnt_send_err.c'; fi`; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/gss_clnt_send_err-gss_clnt_send_err.Tpo" "$(DEPDIR)/gss_clnt_send_err-gss_clnt_send_err.Po"; else rm -f "$(DEPDIR)/gss_clnt_send_err-gss_clnt_send_err.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='gss_clnt_send_err.c' object='gss_clnt_send_err-gss_clnt_send_err.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gss_clnt_send_err_CFLAGS) $(CFLAGS) -c -o gss_clnt_send_err-gss_clnt_send_err.obj `if test -f 'gss_clnt_send_err.c'; then $(CYGPATH_W) 'gss_clnt_send_err.c'; else $(CYGPATH_W) '$(srcdir)/gss_clnt_send_err.c'; fi`
 
 gssd-context.o: context.c
 @am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gssd_CFLAGS) $(CFLAGS) -MT gssd-context.o -MD -MP -MF "$(DEPDIR)/gssd-context.Tpo" -c -o gssd-context.o `test -f 'context.c' || echo '$(srcdir)/'`context.c; \

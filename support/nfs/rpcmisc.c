@@ -34,6 +34,10 @@
 #include <time.h>
 #include "nfslib.h"
 
+#if SIZEOF_SOCKLEN_T - 0 == 0
+#define socklen_t int
+#endif
+
 static void	closedown(int sig);
 int	makesock(int port, int proto);
 
@@ -48,13 +52,13 @@ rpc_init(char *name, int prog, int vers, void (*dispatch)(), int defport)
 	struct sockaddr_in saddr;
 	SVCXPRT	*transp;
 	int	sock;
-	int	asize;
+	socklen_t asize;
 
 	asize = sizeof(saddr);
 	sock = 0;
 	if (getsockname(0, (struct sockaddr *) &saddr, &asize) == 0
 	    && saddr.sin_family == AF_INET) {
-		int ssize = sizeof (int);
+		socklen_t ssize = sizeof (int);
 		int fdtype = 0;
 		if (getsockopt(0, SOL_SOCKET, SO_TYPE,
 				(char *)&fdtype, &ssize) == -1)
@@ -228,10 +232,12 @@ rpc_logcall(struct svc_req *rqstp, char *xname, char *arg)
 		break;
 	case AUTH_UNIX: {
 		struct authunix_parms *unix_cred;
+		time_t time;
 		struct tm *tm;
 
 		unix_cred = (struct authunix_parms *) rqstp->rq_clntcred;
-		tm = localtime(&unix_cred->aup_time);
+		time = unix_cred->aup_time;
+		tm = localtime(&time);
 		snprintf(sp, buflen, "UNIX %d/%d/%d %02d:%02d:%02d %s %d.%d",
 			tm->tm_year, tm->tm_mon + 1, tm->tm_mday,
 			tm->tm_hour, tm->tm_min, tm->tm_sec,

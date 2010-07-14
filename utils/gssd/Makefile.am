@@ -38,7 +38,7 @@ gssd_SOURCES = \
 	write_bytes.h
 
 gssd_LDADD = $(RPCSECGSS_LIBS) $(KRBLIBS)
-gssd_LDFLAGS = 
+gssd_LDFLAGS = $(KRBLDFLAGS)
 
 gssd_CFLAGS = $(AM_CFLAGS) $(CFLAGS) \
 	      $(RPCSECGSS_CFLAGS) $(KRBCFLAGS)
@@ -59,12 +59,15 @@ svcgssd_LDADD = \
 	$(RPCSECGSS_LIBS) -lnfsidmap \
 	$(KRBLIBS)
 
-svcgssd_LDFLAGS = -Wl,-rpath=$(KRBDIR)/lib
+svcgssd_LDFLAGS = $(KRBLDFLAGS)
 
 svcgssd_CFLAGS = $(AM_CFLAGS) $(CFLAGS) \
 		 $(RPCSECGSS_CFLAGS) $(KRBCFLAGS)
 
 gss_clnt_send_err_SOURCES = gss_clnt_send_err.c
+
+gss_clnt_send_err_CFLAGS = $(AM_CFLAGS) $(CFLAGS) \
+		 $(RPCSECGSS_CFLAGS) $(KRBCFLAGS)
 
 MAINTAINERCLEANFILES = Makefile.in
 

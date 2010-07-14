@@ -140,6 +140,7 @@ INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 K5VERS = @K5VERS@
 KRBCFLAGS = @KRBCFLAGS@
 KRBDIR = @KRBDIR@
+KRBLDFLAGS = @KRBLDFLAGS@
 KRBLIBS = @KRBLIBS@
 LD = @LD@
 LDFLAGS = @LDFLAGS@
@@ -227,12 +228,17 @@ statduser = @statduser@
 statedir = @statedir@
 sysconfdir = @sysconfdir@
 target_alias = @target_alias@
+RPCGEN = $(top_builddir)/tools/rpcgen/rpcgen
+GENFILES_XDR = rquota_xdr.c
+GENFILES_H = rquota.h
+BUILT_SOURCES = $(GENFILES_H)
+GENFILES = $(GENFILES_XDR) $(GENFILES_H)
 man8_MANS = rquotad.man
 RPCPREFIX = rpc.
 KPREFIX = @kprefix@
 EXTRA_DIST = rquota.x $(man8_MANS) NEW README.okir
 rquotad_SOURCES = rquota_server.c rquota_svc.c rquota_xdr.c quotactl.c \
-		  hasquota.c mntent.h pathnames.h rquota.h
+		  hasquota.c mntent.h rquota.h
 
 rquotad_LDADD = ../../support/export/libexport.a \
 		../../support/nfs/libnfs.a \
@@ -243,7 +249,8 @@ rquotad_CPPFLAGS = $(AM_CPPFLAGS) $(CPPFLAGS) \
                    -I$(top_srcdir)/support/export
 
 MAINTAINERCLEANFILES = Makefile.in
-all: all-am
+all: $(BUILT_SOURCES)
+	$(MAKE) $(AM_MAKEFLAGS) all-am
 
 .SUFFIXES:
 .SUFFIXES: .c .lo .o .obj
@@ -542,13 +549,15 @@ distdir: $(DISTFILES)
 	  fi; \
 	done
 check-am: all-am
-check: check-am
+check: $(BUILT_SOURCES)
+	$(MAKE) $(AM_MAKEFLAGS) check-am
 all-am: Makefile $(PROGRAMS) $(MANS)
 installdirs:
 	for dir in "$(DESTDIR)$(sbindir)" "$(DESTDIR)$(man8dir)"; do \
 	  test -z "$$dir" || $(mkdir_p) "$$dir"; \
 	done
-install: install-am
+install: $(BUILT_SOURCES)
+	$(MAKE) $(AM_MAKEFLAGS) install-am
 install-exec: install-exec-am
 install-data: install-data-am
 uninstall: uninstall-am
@@ -572,6 +581,7 @@ distclean-generic:
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
 	@echo "it deletes files that may require special tools to rebuild."
+	-test -z "$(BUILT_SOURCES)" || rm -f $(BUILT_SOURCES)
 	-test -z "$(MAINTAINERCLEANFILES)" || rm -f $(MAINTAINERCLEANFILES)
 clean: clean-am
 
@@ -639,6 +649,17 @@ uninstall-am: uninstall-info-am uninstall-man uninstall-sbinPROGRAMS
 	tags uninstall uninstall-am uninstall-hook uninstall-info-am \
 	uninstall-man uninstall-man8 uninstall-sbinPROGRAMS
 
+
+$(RPCGEN):
+	make -C $(top_srcdir)/tools/rpcgen all
+
+$(GENFILES_XDR): %_xdr.c: %.x $(RPCGEN)
+	test -f $@ && rm -rf $@ || true
+	$(RPCGEN) -c -o $@ $<
+
+$(GENFILES_H): %.h: %.x $(RPCGEN)
+	test -f $@ && rm -rf $@ || true
+	$(RPCGEN) -h -o $@ $<
 
 #######################################################################
 # The following allows the current practice of having

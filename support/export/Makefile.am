@@ -8,10 +8,7 @@ GENFILES_H	= mount.h
 
 GENFILES	= $(GENFILES_CLNT) $(GENFILES_SVC) $(GENFILES_XDR) $(GENFILES_H)
 
-EXTRA_DIST	= \
-	mount.x \
-	\
-	keys.c
+EXTRA_DIST	= mount.x
 
 noinst_LIBRARIES = libexport.a
 libexport_a_SOURCES = client.c export.c hostname.c nfsctl.c rmtab.c \
@@ -39,6 +36,7 @@ $(GENFILES_XDR): %_xdr.c: %.x $(RPCGEN)
 $(GENFILES_H): %.h: %.x $(RPCGEN)
 	test -f $@ && rm -rf $@ || true
 	$(RPCGEN) -h -o $@ $<
+	rm -f $(top_builddir)/support/include/mount.h
 	$(LN_S) ../export/mount.h $(top_builddir)/support/include/mount.h
 
 MAINTAINERCLEANFILES = Makefile.in

@@ -61,6 +61,7 @@ int cache_export_ent(char *domain, struct exportent *exp, char *p);
 
 char *lbuf  = NULL;
 int lbuflen = 0;
+extern int use_ipaddr;
 
 void auth_unix_ip(FILE *f)
 {
@@ -74,8 +75,9 @@ void auth_unix_ip(FILE *f)
 	char *cp;
 	char class[20];
 	char ipaddr[20];
-	char *client;
+	char *client = NULL;
 	struct in_addr addr;
+	struct hostent *he = NULL;
 	if (readline(fileno(f), &lbuf, &lbuflen) != 1)
 		return;
 
@@ -94,18 +96,22 @@ void auth_unix_ip(FILE *f)
 	auth_reload();
 
 	/* addr is a valid, interesting address, find the domain name... */
-	client = client_compose(addr);
-
+	if (!use_ipaddr) {
+		he = client_resolve(addr);
+		client = client_compose(he);
+	}
 	
 	qword_print(f, "nfsd");
 	qword_print(f, ipaddr);
 	qword_printint(f, time(0)+30*60);
-	if (client)
+	if (use_ipaddr)
+		qword_print(f, ipaddr);
+	else if (client)
 		qword_print(f, *client?client:"DEFAULT");
 	qword_eol(f);
 
 	if (client) free(client);
-	
+	free(he);
 }
 
 void auth_unix_gid(FILE *f)
@@ -264,6 +270,8 @@ void nfsd_fh(FILE *f)
 	unsigned int fsidnum=0;
 	char fsid[32];
 	struct exportent *found = NULL;
+	struct hostent *he = NULL;
+	struct in_addr addr;
 	char *found_path = NULL;
 	nfs_export *exp;
 	int i;
@@ -389,7 +397,7 @@ void nfsd_fh(FILE *f)
 				next_exp = exp->m_next;
 			}
 
-			if (!client_member(dom, exp->m_client->m_hostname))
+			if (!use_ipaddr && !client_member(dom, exp->m_client->m_hostname))
 				continue;
 			if (exp->m_export.e_mountpoint &&
 			    !is_mountpoint(exp->m_export.e_mountpoint[0]?
@@ -441,10 +449,21 @@ void nfsd_fh(FILE *f)
 				continue;
 #endif
 			}
+			if (use_ipaddr) {
+				if (he == NULL) {
+					if (!inet_aton(dom, &addr))
+						goto out;
+					he = client_resolve(addr);
+				}
+				if (!client_check(exp->m_client, he))
+					continue;
+			}
 			/* It's a match !! */
 			if (!found) {
 				found = &exp->m_export;
 				found_path = strdup(path);
+				if (found_path == NULL)
+					goto out;
 			} else if (strcmp(found->e_path, exp->m_export.e_path)!= 0)
 			{
 				xlog(L_WARNING, "%s and %s have same filehandle for %s, using first",
@@ -492,6 +511,8 @@ void nfsd_fh(FILE *f)
 		qword_print(f, found->e_path);
 	qword_eol(f);
  out:
+	free(found_path);
+	free(he);
 	free(dom);
 	return;		
 }
@@ -579,6 +600,8 @@ void nfsd_export(FILE *f)
 	char *dom, *path;
 	nfs_export *exp, *found = NULL;
 	int found_type = 0;
+	struct in_addr addr;
+	struct hostent *he = NULL;
 
 
 	if (readline(fileno(f), &lbuf, &lbuflen) != 1)
@@ -601,7 +624,7 @@ void nfsd_export(FILE *f)
 	/* now find flags for this export point in this domain */
 	for (i=0 ; i < MCL_MAXTYPES; i++) {
 		for (exp = exportlist[i]; exp; exp = exp->m_next) {
-			if (!client_member(dom, exp->m_client->m_hostname))
+			if (!use_ipaddr && !client_member(dom, exp->m_client->m_hostname))
 				continue;
 			if (exp->m_export.e_flags & NFSEXP_CROSSMOUNT) {
 				/* if path is a mountpoint below e_path, then OK */
@@ -615,6 +638,15 @@ void nfsd_export(FILE *f)
 					continue;
 			} else if (strcmp(path, exp->m_export.e_path) != 0)
 				continue;
+			if (use_ipaddr) {
+				if (he == NULL) {
+					if (!inet_aton(dom, &addr))
+						goto out;
+					he = client_resolve(addr);
+				}
+				if (!client_check(exp->m_client, he))
+					continue;
+			}
 			if (!found) {
 				found = exp;
 				found_type = i;
@@ -656,6 +688,7 @@ void nfsd_export(FILE *f)
  out:
 	if (dom) free(dom);
 	if (path) free(path);
+	if (he) free(he);
 }
 
 

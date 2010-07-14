@@ -1,5 +1,5 @@
 /*
- * error.h:  Common error handling functions
+ * stropts.h -- Provide common network functions for NFS mount/umount
  *
  * Copyright (C) 2007 Oracle.  All rights reserved.
  * Copyright (C) 2007 Chuck Lever <chuck.lever@oracle.com>
@@ -21,10 +21,5 @@
  *
  */
 
-char *nfs_strerror(int);
-
-void mount_error(const char *, const char *, int);
-void rpc_mount_errors(char *, int, int);
-void sys_mount_errors(char *, int, int, int);
-
-void umount_error(int, const char *);
+int nfsmount_s(const char *, const char *, int , char **, int, int);
+int nfs4mount_s(const char *, const char *, int, char **, int, int);

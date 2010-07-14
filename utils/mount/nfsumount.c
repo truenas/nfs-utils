@@ -51,72 +51,85 @@ int force;
 int lazy;
 int remount;
 
+
+static int try_remount(const char *spec, const char *node)
+{
+	int res;
+
+	res = mount(spec, node, NULL,
+		    MS_MGC_VAL | MS_REMOUNT | MS_RDONLY, NULL);
+	if (res == 0) {
+		struct mntent remnt;
+		nfs_error(_("%s: %s busy - remounted read-only"),
+				progname, spec);
+		remnt.mnt_type = remnt.mnt_fsname = NULL;
+		remnt.mnt_dir = xstrdup(node);
+		remnt.mnt_opts = xstrdup("ro");
+		if (!nomtab)
+			update_mtab(node, &remnt);
+	} else if (errno != EBUSY) {    /* hmm ... */
+		perror(_("remount"));
+		nfs_error(_("%s: could not remount %s read-only"),
+				progname, spec);
+	}
+	return res;
+}
+
 static int del_mtab(const char *spec, const char *node)
 {
 	int umnt_err, res;
 
-        umnt_err = 0;
-        if (lazy) {
-                res = umount2 (node, MNT_DETACH);
-                if (res < 0)
-                        umnt_err = errno;
-                goto writemtab;
-        }
+	umnt_err = 0;
+	if (lazy) {
+		res = umount2 (node, MNT_DETACH);
+		if (res < 0)
+			umnt_err = errno;
+		goto writemtab;
+	}
 
-        if (force) {
-                res = umount2 (node, MNT_FORCE);
-                if (res == -1) {
-                        int errsv = errno;
-                        perror(_("umount2"));
-                        errno = errsv;
-                        if (errno == ENOSYS) {
-                                if (verbose)
-                                        printf(_("no umount2, trying umount...\n"));
-                                res = umount (node);
-                        }
-                }
-        } else
-                res = umount (node);
+	if (force) {
+		res = umount2 (node, MNT_FORCE);
+		if (res == -1) {
+			int errsv = errno;
+			perror(_("umount2"));
+			errno = errsv;
+			if (errno == ENOSYS) {
+				if (verbose)
+					printf(_("no umount2, trying umount...\n"));
+				res = umount (node);
+			}
+		}
+	} else
+		res = umount (node);
 
-        if (res < 0 && remount && errno == EBUSY && spec) {
-                /* Umount failed - let us try a remount */
-                res = mount(spec, node, NULL,
-                            MS_MGC_VAL | MS_REMOUNT | MS_RDONLY, NULL);
-                if (res == 0) {
-                        struct mntent remnt;
-                        nfs_error(_("%s: %s busy - remounted read-only"),
-                                	progname, spec);
-                        remnt.mnt_type = remnt.mnt_fsname = NULL;
-                        remnt.mnt_dir = xstrdup(node);
-                        remnt.mnt_opts = xstrdup("ro");
-                        if (!nomtab)
-                                update_mtab(node, &remnt);
-                        return 0;
-                } else if (errno != EBUSY) {    /* hmm ... */
-                        perror(_("remount"));
-                        nfs_error(_("%s: could not remount %s read-only"),
-                                	progname, spec);
-                }
-        }
+	if (res < 0) {
+		if (remount && errno == EBUSY && spec) {
+			res = try_remount(spec, node);
+			if (res)
+				goto writemtab;
+			return 0;
+		} else
+			umnt_err = errno;
+	}
 
-        if (res >= 0) {
-                /* Umount succeeded */
-                if (verbose)
-                        printf(_("%s umounted\n"), spec ? spec : node);
-        }
+	if (res >= 0) {
+		/* Umount succeeded */
+		if (verbose)
+			printf(_("%s umounted\n"), spec ? spec : node);
+	}
 
  writemtab:
-        if (!nomtab &&
-            (umnt_err == 0 || umnt_err == EINVAL || umnt_err == ENOENT)) {
-               update_mtab(node, NULL);
-        }
+	if (!nomtab &&
+	    (umnt_err == 0 || umnt_err == EINVAL || umnt_err == ENOENT)) {
+		update_mtab(node, NULL);
+	}
 
-        if (res >= 0)
-                return 0;
+	if (res >= 0)
+		return 0;
 
-        if (umnt_err)
-                umount_error(umnt_err, node);
-        return EX_FILEIO;
+	if (umnt_err)
+		umount_error(umnt_err, node);
+	return EX_FILEIO;
 }
 
 /*
@@ -209,7 +222,7 @@ static int do_nfs_umount(const char *spec, char *opts)
 		return EX_USAGE;
 	}
 
-	return 0;
+	return EX_SUCCESS;
 }
 
 static struct option umount_longopts[] =
@@ -305,7 +318,7 @@ int nfsumount(int argc, char *argv[])
 			/* umount might call us twice.  The second time there will
 			 * be no entry in mtab and we should just exit quietly
 			 */
-			return 0;
+			return EX_SUCCESS;
 
 		only_root:
 			nfs_error(_("%s: You are not permitted to unmount %s"),
@@ -335,7 +348,7 @@ int nfsumount(int argc, char *argv[])
 
 	ret = 0;
 	if (mc) {
-		if (!lazy)
+		if (!lazy && strcmp(mc->m.mnt_type, "nfs4") != 0)
 			ret = do_nfs_umount(mc->m.mnt_fsname, mc->m.mnt_opts);
 		if (!ret || force)
 			ret = del_mtab(mc->m.mnt_fsname, mc->m.mnt_dir);

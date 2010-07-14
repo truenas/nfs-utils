@@ -139,6 +139,13 @@ static const unsigned long probe_mnt3_first[] = {
 	0,
 };
 
+/**
+ * nfs_gethostbyname - resolve a hostname to an IPv4 address
+ * @hostname: pointer to a C string containing a DNS hostname
+ * @saddr: returns an IPv4 address 
+ *
+ * Returns 1 if successful, otherwise zero.
+ */
 int nfs_gethostbyname(const char *hostname, struct sockaddr_in *saddr)
 {
 	struct hostent *hp;
@@ -303,14 +310,16 @@ static unsigned short getport(struct sockaddr_in *saddr,
 				unsigned long version,
 				unsigned int proto)
 {
+	struct sockaddr_in bind_saddr;
 	unsigned short port = 0;
 	int socket;
 	CLIENT *clnt = NULL;
 	enum clnt_stat stat;
+ 
+	bind_saddr = *saddr;
+	bind_saddr.sin_port = htons(PMAPPORT);
 
-	saddr->sin_port = htons(PMAPPORT);
-
-	socket = get_socket(saddr, proto, PMAP_TIMEOUT, FALSE, FALSE);
+	socket = get_socket(&bind_saddr, proto, PMAP_TIMEOUT, FALSE, FALSE);
 	if (socket == RPC_ANYSOCK) {
 		if (proto == IPPROTO_TCP &&
 		    rpc_createerr.cf_error.re_errno == ETIMEDOUT)
@@ -320,14 +329,16 @@ static unsigned short getport(struct sockaddr_in *saddr,
 
 	switch (proto) {
 	case IPPROTO_UDP:
-		clnt = clntudp_bufcreate(saddr,
+		clnt = clntudp_bufcreate(&bind_saddr,
 					 PMAPPROG, PMAPVERS,
 					 RETRY_TIMEOUT, &socket,
 					 RPCSMALLMSGSIZE,
 					 RPCSMALLMSGSIZE);
 		break;
 	case IPPROTO_TCP:
-		clnt = clnttcp_create(saddr, PMAPPROG, PMAPVERS, &socket,
+		clnt = clnttcp_create(&bind_saddr,
+				      PMAPPROG, PMAPVERS,
+				      &socket,
 				      RPCSMALLMSGSIZE, RPCSMALLMSGSIZE);
 		break;
 	}
@@ -388,7 +399,7 @@ static int probe_port(clnt_addr_t *server, const unsigned long *versions,
 						inet_ntoa(saddr->sin_addr),
 						prog, *p_vers,
 						*p_prot == IPPROTO_UDP ?
-							"udp" : "tcp",
+							_("UDP") : _("TCP"),
 						p_port);
                                 }
 				if (clnt_ping(saddr, prog, *p_vers, *p_prot, NULL))
@@ -453,6 +464,16 @@ static int probe_mntport(clnt_addr_t *mnt_server)
 		return probe_port(mnt_server, probe_mnt1_first, probe_udp_only);
 }
 
+/**
+ * probe_bothports - discover the RPC endpoints of mountd and NFS server
+ * @mnt_server: pointer to address and pmap argument for mountd results
+ * @nfs_server: pointer to address and pmap argument for NFS server
+ *
+ * Returns 1 if successful, otherwise zero if some error occurred.
+ * Note that the arguments are both input and output arguments.
+ *
+ * A side effect of calling this function is that rpccreateerr is set.
+ */
 int probe_bothports(clnt_addr_t *mnt_server, clnt_addr_t *nfs_server)
 {
 	struct pmap *nfs_pmap = &nfs_server->pmap;
@@ -520,8 +541,10 @@ static int probe_statd(void)
 	return 1;
 }
 
-/*
- * Attempt to start rpc.statd
+/**
+ * start_statd - attempt to start rpc.statd
+ *
+ * Returns 1 if statd is running; otherwise zero.
  */
 int start_statd(void)
 {
@@ -545,7 +568,7 @@ int start_statd(void)
 	return 0;
 }
 
-/*
+/**
  * nfs_call_umount - ask the server to remove a share from it's rmtab
  * @mnt_server: address of RPC MNT program server
  * @argp: directory path of share to "unmount"
@@ -589,6 +612,13 @@ int nfs_call_umount(clnt_addr_t *mnt_server, dirpath *argp)
 	return 0;
 }
 
+/**
+ * mnt_openclnt - get a handle for a remote mountd service
+ * @mnt_server: address and pmap arguments of mountd service
+ * @msock: returns a file descriptor of the underlying transport socket
+ *
+ * Returns an active handle for the remote's mountd service
+ */
 CLIENT *mnt_openclnt(clnt_addr_t *mnt_server, int *msock)
 {
 	struct sockaddr_in *mnt_saddr = &mnt_server->saddr;
@@ -630,6 +660,12 @@ CLIENT *mnt_openclnt(clnt_addr_t *mnt_server, int *msock)
 	return NULL;
 }
 
+/**
+ * mnt_closeclnt - terminate a handle for a remote mountd service
+ * @clnt: pointer to an active handle for a remote mountd service
+ * @msock: file descriptor of the underlying transport socket
+ *
+ */
 void mnt_closeclnt(CLIENT *clnt, int msock)
 {
 	auth_destroy(clnt->cl_auth);
@@ -637,11 +673,24 @@ void mnt_closeclnt(CLIENT *clnt, int msock)
 	close(msock);
 }
 
-/*
+/**
+ * clnt_ping - send an RPC ping to the remote RPC service endpoint
+ * @saddr: server's address
+ * @prog: target RPC program number
+ * @vers: target RPC version number
+ * @prot: target RPC protocol
+ * @caddr: filled in with our network address
+ *
  * Sigh... getport() doesn't actually check the version number.
  * In order to make sure that the server actually supports the service
  * we're requesting, we open and RPC client, and fire off a NULL
  * RPC call.
+ *
+ * caddr is the network address that the server will use to call us back.
+ * On multi-homed clients, this address depends on which NIC we use to
+ * route requests to the server.
+ *
+ * Returns one if successful, otherwise zero.
  */
 int clnt_ping(struct sockaddr_in *saddr, const unsigned long prog,
 		const unsigned long vers, const unsigned int prot,
@@ -710,4 +759,37 @@ int clnt_ping(struct sockaddr_in *saddr, const unsigned long prog,
 		return 1;
 	else
 		return 0;
+}
+
+/**
+ * get_client_address - acquire our local network address
+ * @saddr: server's address
+ * @caddr: filled in with our network address
+ *
+ * Discover a network address that the server will use to call us back.
+ * On multi-homed clients, this address depends on which NIC we use to
+ * route requests to the server.
+ *
+ * Use a connected datagram socket so as not to leave a socket in TIME_WAIT.
+ *
+ * Returns one if successful, otherwise zero.
+ */
+int get_client_address(struct sockaddr_in *saddr, struct sockaddr_in *caddr)
+{
+	socklen_t len = sizeof(*caddr);
+	int socket, err;
+
+	socket = get_socket(saddr, IPPROTO_UDP, CONNECT_TIMEOUT, FALSE, TRUE);
+	if (socket == RPC_ANYSOCK)
+		return 0;
+
+	err = getsockname(socket, caddr, &len);
+	close(socket);
+
+	if (err && verbose) {
+		nfs_error(_("%s: getsockname failed: %s"),
+				progname, strerror(errno));
+		return 0;
+	}
+	return 1;
 }

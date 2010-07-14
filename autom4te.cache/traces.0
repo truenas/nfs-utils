@@ -9721,7 +9721,7 @@ aclocal/bsdsignals.m4:2: AC_BSD_SIGNALS is expanded from...
 configure.ac:163: the top level])
 m4trace:configure.ac:163: -1- m4_pattern_allow([^HAVE_BSD_SIGNALS$])
 m4trace:configure.ac:169: -1- m4_pattern_allow([^LIBNSL$])
-m4trace:configure.ac:184: -1- PKG_CHECK_MODULES([RPCSECGSS], [librpcsecgss >= 0.10], [], [AC_MSG_ERROR([Unable to locate information required to use librpcsecgss.  If you have pkgconfig installed, you might try setting environment variable PKG_CONFIG_PATH to /usr/local/lib/pkgconfig])
+m4trace:configure.ac:184: -1- PKG_CHECK_MODULES([RPCSECGSS], [librpcsecgss >= 0.16], [], [AC_MSG_ERROR([Unable to locate information required to use librpcsecgss.  If you have pkgconfig installed, you might try setting environment variable PKG_CONFIG_PATH to /usr/local/lib/pkgconfig])
       
      ])
 m4trace:configure.ac:184: -1- PKG_PROG_PKG_CONFIG
@@ -9731,14 +9731,14 @@ m4trace:configure.ac:184: -1- m4_pattern_allow([^PKG_CONFIG$])
 m4trace:configure.ac:184: -1- m4_pattern_allow([^PKG_CONFIG$])
 m4trace:configure.ac:184: -1- m4_pattern_allow([^RPCSECGSS_CFLAGS$])
 m4trace:configure.ac:184: -1- m4_pattern_allow([^RPCSECGSS_LIBS$])
-m4trace:configure.ac:184: -1- PKG_CHECK_EXISTS([librpcsecgss >= 0.10], [pkg_cv_[]RPCSECGSS_CFLAGS=`$PKG_CONFIG --[]cflags "librpcsecgss >= 0.10" 2>/dev/null`], [pkg_failed=yes])
-m4trace:configure.ac:184: -1- PKG_CHECK_EXISTS([librpcsecgss >= 0.10], [pkg_cv_[]RPCSECGSS_LIBS=`$PKG_CONFIG --[]libs "librpcsecgss >= 0.10" 2>/dev/null`], [pkg_failed=yes])
+m4trace:configure.ac:184: -1- PKG_CHECK_EXISTS([librpcsecgss >= 0.16], [pkg_cv_[]RPCSECGSS_CFLAGS=`$PKG_CONFIG --[]cflags "librpcsecgss >= 0.16" 2>/dev/null`], [pkg_failed=yes])
+m4trace:configure.ac:184: -1- PKG_CHECK_EXISTS([librpcsecgss >= 0.16], [pkg_cv_[]RPCSECGSS_LIBS=`$PKG_CONFIG --[]libs "librpcsecgss >= 0.16" 2>/dev/null`], [pkg_failed=yes])
 m4trace:configure.ac:184: -1- _PKG_SHORT_ERRORS_SUPPORTED
-m4trace:configure.ac:188: -1- PKG_CHECK_MODULES([GSSAPI], [libgssapi >= 0.11])
-m4trace:configure.ac:188: -1- m4_pattern_allow([^GSSAPI_CFLAGS$])
-m4trace:configure.ac:188: -1- m4_pattern_allow([^GSSAPI_LIBS$])
-m4trace:configure.ac:188: -1- PKG_CHECK_EXISTS([libgssapi >= 0.11], [pkg_cv_[]GSSAPI_CFLAGS=`$PKG_CONFIG --[]cflags "libgssapi >= 0.11" 2>/dev/null`], [pkg_failed=yes])
-m4trace:configure.ac:188: -1- PKG_CHECK_EXISTS([libgssapi >= 0.11], [pkg_cv_[]GSSAPI_LIBS=`$PKG_CONFIG --[]libs "libgssapi >= 0.11" 2>/dev/null`], [pkg_failed=yes])
+m4trace:configure.ac:188: -1- PKG_CHECK_MODULES([GSSGLUE], [libgssglue >= 0.1])
+m4trace:configure.ac:188: -1- m4_pattern_allow([^GSSGLUE_CFLAGS$])
+m4trace:configure.ac:188: -1- m4_pattern_allow([^GSSGLUE_LIBS$])
+m4trace:configure.ac:188: -1- PKG_CHECK_EXISTS([libgssglue >= 0.1], [pkg_cv_[]GSSGLUE_CFLAGS=`$PKG_CONFIG --[]cflags "libgssglue >= 0.1" 2>/dev/null`], [pkg_failed=yes])
+m4trace:configure.ac:188: -1- PKG_CHECK_EXISTS([libgssglue >= 0.1], [pkg_cv_[]GSSGLUE_LIBS=`$PKG_CONFIG --[]libs "libgssglue >= 0.1" 2>/dev/null`], [pkg_failed=yes])
 m4trace:configure.ac:188: -1- _PKG_SHORT_ERRORS_SUPPORTED
 m4trace:configure.ac:199: -1- AC_BLKID_VERS
 m4trace:configure.ac:199: -1- _m4_warn([obsolete], [The macro `AC_TRY_RUN' is obsolete.

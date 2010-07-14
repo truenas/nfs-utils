@@ -1,5 +1,5 @@
 /*
- * error.h:  Common error handling functions
+ * token.h -- tokenize strings, a la strtok(3)
  *
  * Copyright (C) 2007 Oracle.  All rights reserved.
  * Copyright (C) 2007 Chuck Lever <chuck.lever@oracle.com>
@@ -21,10 +21,9 @@
  *
  */
 
-char *nfs_strerror(int);
+struct tokenizer_state;
 
-void mount_error(const char *, const char *, int);
-void rpc_mount_errors(char *, int, int);
-void sys_mount_errors(char *, int, int, int);
-
-void umount_error(int, const char *);
+char *next_token(struct tokenizer_state *);
+struct tokenizer_state *init_tokenizer(char *, char);
+int tokenizer_error(struct tokenizer_state *);
+void end_tokenizer(struct tokenizer_state *);

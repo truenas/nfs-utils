@@ -1,5 +1,5 @@
 /*
- * error.h:  Common error handling functions
+ * parse_opt.h -- mount option string parsing helpers
  *
  * Copyright (C) 2007 Oracle.  All rights reserved.
  * Copyright (C) 2007 Chuck Lever <chuck.lever@oracle.com>
@@ -21,10 +21,26 @@
  *
  */
 
-char *nfs_strerror(int);
+enum {
+	PO_FAILED = 0,
+	PO_SUCCEEDED = 1,
+};
 
-void mount_error(const char *, const char *, int);
-void rpc_mount_errors(char *, int, int);
-void sys_mount_errors(char *, int, int, int);
+enum {
+	PO_NOT_FOUND = 0,
+	PO_FOUND = 1,
+};
 
-void umount_error(int, const char *);
+struct mount_options;
+
+struct mount_options *	po_split(char *);
+void			po_replace(struct mount_options *,
+				   struct mount_options *);
+int			po_join(struct mount_options *, char **);
+
+int			po_append(struct mount_options *, char *);
+int			po_contains(struct mount_options *, char *);
+char *			po_get(struct mount_options *, char *);
+int			po_rightmost(struct mount_options *, char *, char *);
+int			po_remove_all(struct mount_options *, char *);
+void			po_destroy(struct mount_options *);

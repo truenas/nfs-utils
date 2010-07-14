@@ -904,8 +904,8 @@ LIBNSL
 PKG_CONFIG
 RPCSECGSS_CFLAGS
 RPCSECGSS_LIBS
-GSSAPI_CFLAGS
-GSSAPI_LIBS
+GSSGLUE_CFLAGS
+GSSGLUE_LIBS
 LIBSOCKET
 LIBCRYPT
 LIBBSD
@@ -944,8 +944,8 @@ FFLAGS
 PKG_CONFIG
 RPCSECGSS_CFLAGS
 RPCSECGSS_LIBS
-GSSAPI_CFLAGS
-GSSAPI_LIBS'
+GSSGLUE_CFLAGS
+GSSGLUE_LIBS'
 
 
 # Initialize some variables set by options.
@@ -1583,9 +1583,10 @@ Some influential environment variables:
               C compiler flags for RPCSECGSS, overriding pkg-config
   RPCSECGSS_LIBS 
               linker flags for RPCSECGSS, overriding pkg-config
-  GSSAPI_CFLAGS 
-              C compiler flags for GSSAPI, overriding pkg-config
-  GSSAPI_LIBS linker flags for GSSAPI, overriding pkg-config
+  GSSGLUE_CFLAGS 
+              C compiler flags for GSSGLUE, overriding pkg-config
+  GSSGLUE_LIBS 
+              linker flags for GSSGLUE, overriding pkg-config
 
 Use these variables to override the choices made by `configure' or to help
 it to find libraries and programs with nonstandard names/locations.
@@ -22631,12 +22632,12 @@ if test -n "$PKG_CONFIG"; then
         pkg_cv_RPCSECGSS_CFLAGS="$RPCSECGSS_CFLAGS"
     else
         if test -n "$PKG_CONFIG" && \
-    { (echo "$as_me:$LINENO: \$PKG_CONFIG --exists --print-errors \"librpcsecgss >= 0.10\"") >&5
-  ($PKG_CONFIG --exists --print-errors "librpcsecgss >= 0.10") 2>&5
+    { (echo "$as_me:$LINENO: \$PKG_CONFIG --exists --print-errors \"librpcsecgss >= 0.16\"") >&5
+  ($PKG_CONFIG --exists --print-errors "librpcsecgss >= 0.16") 2>&5
   ac_status=$?
   echo "$as_me:$LINENO: \$? = $ac_status" >&5
   (exit $ac_status); }; then
-  pkg_cv_RPCSECGSS_CFLAGS=`$PKG_CONFIG --cflags "librpcsecgss >= 0.10" 2>/dev/null`
+  pkg_cv_RPCSECGSS_CFLAGS=`$PKG_CONFIG --cflags "librpcsecgss >= 0.16" 2>/dev/null`
 else
   pkg_failed=yes
 fi
@@ -22649,12 +22650,12 @@ if test -n "$PKG_CONFIG"; then
         pkg_cv_RPCSECGSS_LIBS="$RPCSECGSS_LIBS"
     else
         if test -n "$PKG_CONFIG" && \
-    { (echo "$as_me:$LINENO: \$PKG_CONFIG --exists --print-errors \"librpcsecgss >= 0.10\"") >&5
-  ($PKG_CONFIG --exists --print-errors "librpcsecgss >= 0.10") 2>&5
+    { (echo "$as_me:$LINENO: \$PKG_CONFIG --exists --print-errors \"librpcsecgss >= 0.16\"") >&5
+  ($PKG_CONFIG --exists --print-errors "librpcsecgss >= 0.16") 2>&5
   ac_status=$?
   echo "$as_me:$LINENO: \$? = $ac_status" >&5
   (exit $ac_status); }; then
-  pkg_cv_RPCSECGSS_LIBS=`$PKG_CONFIG --libs "librpcsecgss >= 0.10" 2>/dev/null`
+  pkg_cv_RPCSECGSS_LIBS=`$PKG_CONFIG --libs "librpcsecgss >= 0.16" 2>/dev/null`
 else
   pkg_failed=yes
 fi
@@ -22673,9 +22674,9 @@ else
         _pkg_short_errors_supported=no
 fi
         if test $_pkg_short_errors_supported = yes; then
-	        RPCSECGSS_PKG_ERRORS=`$PKG_CONFIG --short-errors --errors-to-stdout --print-errors "librpcsecgss >= 0.10"`
+	        RPCSECGSS_PKG_ERRORS=`$PKG_CONFIG --short-errors --errors-to-stdout --print-errors "librpcsecgss >= 0.16"`
         else 
-	        RPCSECGSS_PKG_ERRORS=`$PKG_CONFIG --errors-to-stdout --print-errors "librpcsecgss >= 0.10"`
+	        RPCSECGSS_PKG_ERRORS=`$PKG_CONFIG --errors-to-stdout --print-errors "librpcsecgss >= 0.16"`
         fi
 	# Put the nasty error message in config.log where it belongs
 	echo "$RPCSECGSS_PKG_ERRORS" >&5
@@ -22702,20 +22703,20 @@ echo "${ECHO_T}yes" >&6; }
 fi
     
 pkg_failed=no
-{ echo "$as_me:$LINENO: checking for GSSAPI" >&5
-echo $ECHO_N "checking for GSSAPI... $ECHO_C" >&6; }
+{ echo "$as_me:$LINENO: checking for GSSGLUE" >&5
+echo $ECHO_N "checking for GSSGLUE... $ECHO_C" >&6; }
 
 if test -n "$PKG_CONFIG"; then
-    if test -n "$GSSAPI_CFLAGS"; then
-        pkg_cv_GSSAPI_CFLAGS="$GSSAPI_CFLAGS"
+    if test -n "$GSSGLUE_CFLAGS"; then
+        pkg_cv_GSSGLUE_CFLAGS="$GSSGLUE_CFLAGS"
     else
         if test -n "$PKG_CONFIG" && \
-    { (echo "$as_me:$LINENO: \$PKG_CONFIG --exists --print-errors \"libgssapi >= 0.11\"") >&5
-  ($PKG_CONFIG --exists --print-errors "libgssapi >= 0.11") 2>&5
+    { (echo "$as_me:$LINENO: \$PKG_CONFIG --exists --print-errors \"libgssglue >= 0.1\"") >&5
+  ($PKG_CONFIG --exists --print-errors "libgssglue >= 0.1") 2>&5
   ac_status=$?
   echo "$as_me:$LINENO: \$? = $ac_status" >&5
   (exit $ac_status); }; then
-  pkg_cv_GSSAPI_CFLAGS=`$PKG_CONFIG --cflags "libgssapi >= 0.11" 2>/dev/null`
+  pkg_cv_GSSGLUE_CFLAGS=`$PKG_CONFIG --cflags "libgssglue >= 0.1" 2>/dev/null`
 else
   pkg_failed=yes
 fi
@@ -22724,16 +22725,16 @@ else
 	pkg_failed=untried
 fi
 if test -n "$PKG_CONFIG"; then
-    if test -n "$GSSAPI_LIBS"; then
-        pkg_cv_GSSAPI_LIBS="$GSSAPI_LIBS"
+    if test -n "$GSSGLUE_LIBS"; then
+        pkg_cv_GSSGLUE_LIBS="$GSSGLUE_LIBS"
     else
         if test -n "$PKG_CONFIG" && \
-    { (echo "$as_me:$LINENO: \$PKG_CONFIG --exists --print-errors \"libgssapi >= 0.11\"") >&5
-  ($PKG_CONFIG --exists --print-errors "libgssapi >= 0.11") 2>&5
+    { (echo "$as_me:$LINENO: \$PKG_CONFIG --exists --print-errors \"libgssglue >= 0.1\"") >&5
+  ($PKG_CONFIG --exists --print-errors "libgssglue >= 0.1") 2>&5
   ac_status=$?
   echo "$as_me:$LINENO: \$? = $ac_status" >&5
   (exit $ac_status); }; then
-  pkg_cv_GSSAPI_LIBS=`$PKG_CONFIG --libs "libgssapi >= 0.11" 2>/dev/null`
+  pkg_cv_GSSGLUE_LIBS=`$PKG_CONFIG --libs "libgssglue >= 0.1" 2>/dev/null`
 else
   pkg_failed=yes
 fi
@@ -22752,33 +22753,33 @@ else
         _pkg_short_errors_supported=no
 fi
         if test $_pkg_short_errors_supported = yes; then
-	        GSSAPI_PKG_ERRORS=`$PKG_CONFIG --short-errors --errors-to-stdout --print-errors "libgssapi >= 0.11"`
+	        GSSGLUE_PKG_ERRORS=`$PKG_CONFIG --short-errors --errors-to-stdout --print-errors "libgssglue >= 0.1"`
         else 
-	        GSSAPI_PKG_ERRORS=`$PKG_CONFIG --errors-to-stdout --print-errors "libgssapi >= 0.11"`
+	        GSSGLUE_PKG_ERRORS=`$PKG_CONFIG --errors-to-stdout --print-errors "libgssglue >= 0.1"`
         fi
 	# Put the nasty error message in config.log where it belongs
-	echo "$GSSAPI_PKG_ERRORS" >&5
+	echo "$GSSGLUE_PKG_ERRORS" >&5
 
-	{ { echo "$as_me:$LINENO: error: Package requirements (libgssapi >= 0.11) were not met:
+	{ { echo "$as_me:$LINENO: error: Package requirements (libgssglue >= 0.1) were not met:
 
-$GSSAPI_PKG_ERRORS
+$GSSGLUE_PKG_ERRORS
 
 Consider adjusting the PKG_CONFIG_PATH environment variable if you
 installed software in a non-standard prefix.
 
-Alternatively, you may set the environment variables GSSAPI_CFLAGS
-and GSSAPI_LIBS to avoid the need to call pkg-config.
+Alternatively, you may set the environment variables GSSGLUE_CFLAGS
+and GSSGLUE_LIBS to avoid the need to call pkg-config.
 See the pkg-config man page for more details.
 " >&5
-echo "$as_me: error: Package requirements (libgssapi >= 0.11) were not met:
+echo "$as_me: error: Package requirements (libgssglue >= 0.1) were not met:
 
-$GSSAPI_PKG_ERRORS
+$GSSGLUE_PKG_ERRORS
 
 Consider adjusting the PKG_CONFIG_PATH environment variable if you
 installed software in a non-standard prefix.
 
-Alternatively, you may set the environment variables GSSAPI_CFLAGS
-and GSSAPI_LIBS to avoid the need to call pkg-config.
+Alternatively, you may set the environment variables GSSGLUE_CFLAGS
+and GSSGLUE_LIBS to avoid the need to call pkg-config.
 See the pkg-config man page for more details.
 " >&2;}
    { (exit 1); exit 1; }; }
@@ -22787,8 +22788,8 @@ elif test $pkg_failed = untried; then
 is in your PATH or set the PKG_CONFIG environment variable to the full
 path to pkg-config.
 
-Alternatively, you may set the environment variables GSSAPI_CFLAGS
-and GSSAPI_LIBS to avoid the need to call pkg-config.
+Alternatively, you may set the environment variables GSSGLUE_CFLAGS
+and GSSGLUE_LIBS to avoid the need to call pkg-config.
 See the pkg-config man page for more details.
 
 To get pkg-config, see <http://pkg-config.freedesktop.org/>.
@@ -22797,16 +22798,16 @@ echo "$as_me: error: The pkg-config script could not be found or is too old.  Ma
 is in your PATH or set the PKG_CONFIG environment variable to the full
 path to pkg-config.
 
-Alternatively, you may set the environment variables GSSAPI_CFLAGS
-and GSSAPI_LIBS to avoid the need to call pkg-config.
+Alternatively, you may set the environment variables GSSGLUE_CFLAGS
+and GSSGLUE_LIBS to avoid the need to call pkg-config.
 See the pkg-config man page for more details.
 
 To get pkg-config, see <http://pkg-config.freedesktop.org/>.
 See \`config.log' for more details." >&2;}
    { (exit 1); exit 1; }; }
 else
-	GSSAPI_CFLAGS=$pkg_cv_GSSAPI_CFLAGS
-	GSSAPI_LIBS=$pkg_cv_GSSAPI_LIBS
+	GSSGLUE_CFLAGS=$pkg_cv_GSSGLUE_CFLAGS
+	GSSGLUE_LIBS=$pkg_cv_GSSGLUE_LIBS
         { echo "$as_me:$LINENO: result: yes" >&5
 echo "${ECHO_T}yes" >&6; }
 	:
@@ -24020,7 +24021,7 @@ if test "${ac_cv_lib_rpcsecgss_authgss_create_default+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
   ac_check_lib_save_LIBS=$LIBS
-LIBS="-lrpcsecgss -lgssapi -ldl $LIBS"
+LIBS="-lrpcsecgss -lgssglue -ldl $LIBS"
 cat >conftest.$ac_ext <<_ACEOF
 /* confdefs.h.  */
 _ACEOF
@@ -24089,7 +24090,7 @@ if test "${ac_cv_lib_rpcsecgss_authgss_set_debug_level+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
   ac_check_lib_save_LIBS=$LIBS
-LIBS="-lrpcsecgss -lgssapi -ldl $LIBS"
+LIBS="-lrpcsecgss -lgssglue -ldl $LIBS"
 cat >conftest.$ac_ext <<_ACEOF
 /* confdefs.h.  */
 _ACEOF
@@ -30869,8 +30870,8 @@ LIBNSL!$LIBNSL$ac_delim
 PKG_CONFIG!$PKG_CONFIG$ac_delim
 RPCSECGSS_CFLAGS!$RPCSECGSS_CFLAGS$ac_delim
 RPCSECGSS_LIBS!$RPCSECGSS_LIBS$ac_delim
-GSSAPI_CFLAGS!$GSSAPI_CFLAGS$ac_delim
-GSSAPI_LIBS!$GSSAPI_LIBS$ac_delim
+GSSGLUE_CFLAGS!$GSSGLUE_CFLAGS$ac_delim
+GSSGLUE_LIBS!$GSSGLUE_LIBS$ac_delim
 LIBSOCKET!$LIBSOCKET$ac_delim
 LIBCRYPT!$LIBCRYPT$ac_delim
 LIBBSD!$LIBBSD$ac_delim

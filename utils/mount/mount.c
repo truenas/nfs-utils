@@ -42,12 +42,14 @@
 #include "mount.h"
 #include "error.h"
 #include "network.h"
+#include "stropts.h"
 
 char *progname;
 int nfs_mount_data_version;
 int nomtab;
 int verbose;
 int sloppy;
+int string;
 
 #define FOREGROUND	(0)
 #define BACKGROUND	(1)
@@ -62,6 +64,7 @@ static struct option longopts[] = {
   { "version", 0, 0, 'V' },
   { "read-write", 0, 0, 'w' },
   { "rw", 0, 0, 'w' },
+  { "string", 0, 0, 'i' },
   { "options", 1, 0, 'o' },
   { NULL, 0, 0, 0 }
 };
@@ -234,7 +237,8 @@ static int add_mtab(char *spec, char *mount_point, char *fstype,
 
 	if (flags & MS_REMOUNT) {
 		update_mtab(ment.mnt_dir, &ment);
-		return 0;
+		free(ment.mnt_opts);
+		return EX_SUCCESS;
 	}
 
 	lock_mtab();
@@ -258,19 +262,20 @@ static int add_mtab(char *spec, char *mount_point, char *fstype,
 		goto fail_close;
 	}
 
-	result = 0;
+	result = EX_SUCCESS;
 
 fail_close:
 	endmntent(mtab);
 fail_unlock:
 	unlock_mtab();
+	free(ment.mnt_opts);
 
 	return result;
 }
 
 void mount_usage(void)
 {
-	printf(_("usage: %s remotetarget dir [-rvVwfnh] [-o nfsoptions]\n"),
+	printf(_("usage: %s remotetarget dir [-rvVwfnsih] [-o nfsoptions]\n"),
 		progname);
 	printf(_("options:\n"));
 	printf(_("\t-r\t\tMount file system readonly\n"));
@@ -279,7 +284,8 @@ void mount_usage(void)
 	printf(_("\t-w\t\tMount file system read-write\n"));
 	printf(_("\t-f\t\tFake mount, do not actually mount\n"));
 	printf(_("\t-n\t\tDo not update /etc/mtab\n"));
-	printf(_("\t-s\t\tTolerate sloppy mount options rather than failing.\n"));
+	printf(_("\t-s\t\tTolerate sloppy mount options rather than fail\n"));
+	printf(_("\t-i\t\tPass mount options to the kernel via a string\n"));
 	printf(_("\t-h\t\tPrint this help\n"));
 	printf(_("\tnfsoptions\tRefer to mount.nfs(8) or nfs(5)\n\n"));
 }
@@ -370,12 +376,21 @@ static int try_mount(char *spec, char *mount_point, int flags,
 {
 	int ret;
 
-	if (strcmp(fs_type, "nfs4") == 0)
-		ret = nfs4mount(spec, mount_point, flags,
-				extra_opts, fake, bg);
-	else
-		ret = nfsmount(spec, mount_point, flags,
-				extra_opts, fake, bg);
+	if (string) {
+		if (strcmp(fs_type, "nfs4") == 0)
+			ret = nfs4mount_s(spec, mount_point, flags,
+						extra_opts, fake, bg);
+		else
+			ret = nfsmount_s(spec, mount_point, flags,
+						extra_opts, fake, bg);
+	} else {
+		if (strcmp(fs_type, "nfs4") == 0)
+			ret = nfs4mount(spec, mount_point, flags,
+					extra_opts, fake, bg);
+		else
+			ret = nfsmount(spec, mount_point, flags,
+					extra_opts, fake, bg);
+	}
 
 	if (ret)
 		return ret;
@@ -408,7 +423,7 @@ int main(int argc, char *argv[])
 			printf("%s ("PACKAGE_STRING")\n", progname);
 		else
 			mount_usage();
-		exit(0);
+		exit(EX_SUCCESS);
 	}
 
 	if ((argc < 3)) {
@@ -420,7 +435,7 @@ int main(int argc, char *argv[])
 	mount_point = argv[2];
 
 	argv[2] = argv[0]; /* so that getopt error messages are correct */
-	while ((c = getopt_long(argc - 2, argv + 2, "rvVwfno:hs",
+	while ((c = getopt_long(argc - 2, argv + 2, "rvVwfno:hsi",
 				longopts, NULL)) != -1) {
 		switch (c) {
 		case 'r':
@@ -431,7 +446,7 @@ int main(int argc, char *argv[])
 			break;
 		case 'V':
 			printf("%s: ("PACKAGE_STRING")\n", progname);
-			return 0;
+			exit(EX_SUCCESS);
 		case 'w':
 			flags &= ~MS_RDONLY;
 			break;
@@ -450,10 +465,24 @@ int main(int argc, char *argv[])
 		case 's':
 			++sloppy;
 			break;
+		case 'i':
+			if (linux_version_code() < MAKE_VERSION(2, 6, 23)) {
+				nfs_error(_("%s: Passing mount options via a"
+					" string is unsupported by this"
+					" kernel\n"), progname);
+				goto out_usage;
+			}
+			if (uid != 0) {
+				nfs_error(_("%s: -i option is restricted to 'root'\n"),
+					progname);
+				goto out_usage;
+			}
+			++string;
+			break;
 		case 'h':
 		default:
 			mount_usage();
-			exit(EX_USAGE);
+			goto out_usage;
 		}
 	}
 
@@ -462,7 +491,7 @@ int main(int argc, char *argv[])
 	 */
 	if (optind != argc - 2) {
 		mount_usage();
-		exit(EX_USAGE);
+		goto out_usage;
 	}
 
 	if (strcmp(progname, "mount.nfs4") == 0)
@@ -481,7 +510,7 @@ int main(int argc, char *argv[])
 		    strcmp(mc->m.mnt_type, fs_type) != 0) {
 			nfs_error(_("%s: permission denied: no match for %s "
 				"found in /etc/fstab"), progname, mount_point);
-			exit(EX_USAGE);
+			goto out_usage;
 		}
 
 		/*
@@ -496,7 +525,7 @@ int main(int argc, char *argv[])
 	mount_point = canonicalize(mount_point);
 	if (!mount_point) {
 		nfs_error(_("%s: no mount point provided"), progname);
-		exit(EX_USAGE);
+		goto out_usage;
 	}
 	if (mount_point[0] != '/') {
 		nfs_error(_("%s: unrecognized mount point %s"),
@@ -523,15 +552,19 @@ int main(int argc, char *argv[])
 	mnt_err = try_mount(spec, mount_point, flags, fs_type, &extra_opts,
 				mount_opts, fake, nomtab, FOREGROUND);
 	if (mnt_err == EX_BG) {
-		printf(_("mount: backgrounding \"%s\"\n"), spec);
+		printf(_("%s: backgrounding \"%s\"\n"),
+			progname, spec);
 		fflush(stdout);
 
 		/*
-		 * Parent exits immediately with success.  Make
-		 * sure not to free "mount_point"
+		 * Parent exits immediately with success.
 		 */
-		if (fork() > 0)
-			exit(0);
+		if (daemon(0, 0)) {
+			nfs_error(_("%s: failed to start "
+					"background process: %s\n"),
+						progname, strerror(errno));
+			exit(EX_FAIL);
+		}
 
 		mnt_err = try_mount(spec, mount_point, flags, fs_type,
 					&extra_opts, mount_opts, fake,
@@ -539,10 +572,15 @@ int main(int argc, char *argv[])
 		if (verbose && mnt_err)
 			printf(_("%s: giving up \"%s\"\n"),
 				progname, spec);
-		exit(0);
 	}
 
 out:
+	free(mount_opts);
+	free(extra_opts);
 	free(mount_point);
 	exit(mnt_err);
+
+out_usage:
+	free(mount_opts);
+	exit(EX_USAGE);
 }

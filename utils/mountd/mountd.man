@@ -123,7 +123,14 @@ has of that path.
 specify a directory in which to place statd state information.
 If this option is not specified the default of
 .BR /var/lib/nfs
-is used. (This is a Debian-specific extension.)
+is used.
+.TP
+.BR "\-t N" " or " "\-\-num\-threads=N"
+This option specifies the number of worker threads that rpc.mountd
+spawns.  The default is 1 thread, which is probably enough.  More
+threads are usually only needed for NFS servers which need to handle
+mount storms of hundreds of NFS mounts in a few seconds, or when
+your DNS server is slow or unreliable.
 .TP
 .B \-V " or " \-\-nfs-version
 This option can be used to request that

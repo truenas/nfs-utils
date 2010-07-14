@@ -105,6 +105,9 @@
 /* Define this if you have Heimdal Kerberos libraries */
 #undef HAVE_HEIMDAL
 
+/* Define to 1 if you have the <ifaddrs.h> header file. */
+#undef HAVE_IFADDRS_H
+
 /* Define to 1 if you have the `inet_ntoa' function. */
 #undef HAVE_INET_NTOA
 

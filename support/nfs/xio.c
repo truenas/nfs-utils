@@ -138,8 +138,6 @@ xgetc(XFILE *xfp)
 		ungetc(c, xfp->x_fp);
 		return ' ';
 	}
-	if (c == '#')
-		c = xskipcomment(xfp);
 	if (c == '\n')
 		xfp->x_line++;
 	return c;
@@ -161,7 +159,12 @@ xskip(XFILE *xfp, char *str)
 {
 	int	c;
 
-	while ((c = xgetc(xfp)) != EOF && strchr(str, c));
+	while ((c = xgetc(xfp)) != EOF) {
+		if (c == '#')
+			c = xskipcomment(xfp);
+		if (strchr(str, c) == NULL)
+			break;
+	}
 	xungetc(c, xfp);
 }
 

@@ -3873,7 +3873,7 @@ fi
 if test "${with_tcp_wrappers+set}" = set; then
   withval=$with_tcp_wrappers; with_tcpw=$withval
 else
-  $with_tcpw=yes
+  with_tcpw=yes
 fi
 
         if test "x$with_tcpw" != "xno" ; then

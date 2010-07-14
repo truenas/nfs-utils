@@ -389,10 +389,6 @@
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
 
-/* Define this if you want to enable various security checks in statd. These
-   checks basically keep anyone but lockd from using this service. */
-#undef RESTRICTED_STATD
-
 /* Define as the return type of signal handlers (`int' or `void'). */
 #undef RETSIGTYPE
 

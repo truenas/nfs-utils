@@ -30,6 +30,25 @@ notify_list *		rtnl = NULL;	/* Run-time notify list. */
 #define LINELEN (4*(8+1)+SM_PRIV_SIZE*2+1)
 
 /*
+ * Reject requests from non-loopback addresses in order
+ * to prevent attack described in CERT CA-99.05.
+ */
+static int
+caller_is_localhost(struct svc_req *rqstp)
+{
+	struct in_addr	caller;
+
+	caller = svc_getcaller(rqstp->rq_xprt)->sin_addr;
+	if (caller.s_addr != htonl(INADDR_LOOPBACK)) {
+		note(N_WARNING,
+			"Call to statd from non-local host %s",
+			inet_ntoa(caller));
+		return 0;
+	}
+	return 1;
+}
+
+/*
  * Services SM_MON requests.
  */
 struct sm_stat_res *
@@ -45,31 +64,18 @@ sm_mon_1_svc(struct mon *argp, struct svc_req *rqstp)
 	notify_list	*clnt;
 	struct in_addr	my_addr;
 	char		*dnsname;
-#ifdef RESTRICTED_STATD
-	struct in_addr	caller;
-#endif
 	struct hostent	*hostinfo = NULL;
 
 	/* Assume that we'll fail. */
 	result.res_stat = STAT_FAIL;
 	result.state = -1;	/* State is undefined for STAT_FAIL. */
 
-	/* Restrict access to statd.
-	 * In the light of CERT CA-99.05, we tighten access to
-	 * statd.			--okir
-	 */
-#ifdef RESTRICTED_STATD
-	/* 1.	Reject anyone not calling from 127.0.0.1.
+	/* 1.	Reject any remote callers.
 	 *	Ignore the my_name specified by the caller, and
 	 *	use "127.0.0.1" instead.
 	 */
-	caller = svc_getcaller(rqstp->rq_xprt)->sin_addr;
-	if (caller.s_addr != htonl(INADDR_LOOPBACK)) {
-		note(N_WARNING,
-			"Call to statd from non-local host %s",
-			inet_ntoa(caller));
+	if (!caller_is_localhost(rqstp))
 		goto failure;
-	}
 	my_addr.s_addr = htonl(INADDR_LOOPBACK);
 
 	/* 2.	Reject any registrations for non-lockd services.
@@ -89,28 +95,6 @@ sm_mon_1_svc(struct mon *argp, struct svc_req *rqstp)
 		goto failure;
 	}
 
-#if 0
-	This is not usable anymore.  Linux-kernel can be configured to use
-	host names with NSM so that multi-homed hosts are handled properly.
-		NeilBrown 15mar2007
-
-	/* 3.	mon_name must be an address in dotted quad.
-	 *	Again, specific to the linux kernel lockd.
-	 */
-	if (!inet_aton(mon_name, &mon_addr)) {
-		note(N_WARNING,
-			"Attempt to register host %s (not a dotted quad)",
-			mon_name);
-		goto failure;
-	}
-#endif
-#else
-	if (!(hostinfo = gethostbyname(my_name))) {
-		note(N_WARNING, "gethostbyname error for %s", my_name);
-		goto failure;
-	} else
-		my_addr = *(struct in_addr *) hostinfo->h_addr;
-#endif
 	/*
 	 * Check hostnames.  If I can't look them up, I won't monitor.  This
 	 * might not be legal, but it adds a little bit of safety and sanity.
@@ -329,25 +313,12 @@ sm_unmon_1_svc(struct mon_id *argp, struct svc_req *rqstp)
 			*my_name  = argp->my_id.my_name;
 	struct my_id	*id = &argp->my_id;
 	char		*cp;
-#ifdef RESTRICTED_STATD
-	struct in_addr	caller;
-#endif
 
 	result.state = MY_STATE;
 
-#ifdef RESTRICTED_STATD
-	/* 1.	Reject anyone not calling from 127.0.0.1.
-	 *	Ignore the my_name specified by the caller, and
-	 *	use "127.0.0.1" instead.
-	 */
-	caller = svc_getcaller(rqstp->rq_xprt)->sin_addr;
-	if (caller.s_addr != htonl(INADDR_LOOPBACK)) {
-		note(N_WARNING,
-			"Call to statd from non-local host %s",
-			inet_ntoa(caller));
+	if (!caller_is_localhost(rqstp))
 		goto failure;
-	}
-#endif
+
 	/* my_name must not have white space */
 	for (cp=my_name ; *cp ; cp++)
 		if (*cp == ' ' || *cp == '\t' || *cp == '\r' || *cp == '\n')
@@ -355,12 +326,13 @@ sm_unmon_1_svc(struct mon_id *argp, struct svc_req *rqstp)
 
 
 	/* Check if we're monitoring anyone. */
-	if (!(clnt = rtnl)) {
+	if (rtnl == NULL) {
 		note(N_WARNING,
 			"Received SM_UNMON request from %s for %s while not "
 			"monitoring any hosts.", my_name, argp->mon_name);
 		return (&result);
 	}
+	clnt = rtnl;
 
 	/*
 	 * OK, we are.  Now look for appropriate entry in run-time list.
@@ -388,9 +360,7 @@ sm_unmon_1_svc(struct mon_id *argp, struct svc_req *rqstp)
 			clnt = NL_NEXT(clnt);
 	}
 
-#ifdef RESTRICTED_STATD
  failure:
-#endif
 	note(N_WARNING, "Received erroneous SM_UNMON request from %s for %s",
 		my_name, mon_name);
 	return (&result);
@@ -404,29 +374,18 @@ sm_unmon_all_1_svc(struct my_id *argp, struct svc_req *rqstp)
 	static sm_stat  result;
 	notify_list	*clnt;
 	char		*my_name = argp->my_name;
-#ifdef RESTRICTED_STATD
-	struct in_addr	caller;
 
-	/* 1.	Reject anyone not calling from 127.0.0.1.
-	 *	Ignore the my_name specified by the caller, and
-	 *	use "127.0.0.1" instead.
-	 */
-	caller = svc_getcaller(rqstp->rq_xprt)->sin_addr;
-	if (caller.s_addr != htonl(INADDR_LOOPBACK)) {
-		note(N_WARNING,
-			"Call to statd from non-local host %s",
-			inet_ntoa(caller));
+	if (!caller_is_localhost(rqstp))
 		goto failure;
-	}
-#endif
 
 	result.state = MY_STATE;
 
-	if (!(clnt = rtnl)) {
+	if (rtnl == NULL) {
 		note(N_WARNING, "Received SM_UNMON_ALL request from %s "
 			"while not monitoring any hosts", my_name);
 		return (&result);
 	}
+	clnt = rtnl;
 
 	while ((clnt = nlist_gethost(clnt, my_name, 1))) {
 		if (NL_MY_PROC(clnt) == argp->my_proc &&
@@ -457,8 +416,7 @@ sm_unmon_all_1_svc(struct my_id *argp, struct svc_req *rqstp)
 		dprintf(N_DEBUG, "SM_UNMON_ALL request from %s with no "
 			"SM_MON requests from it.", my_name);
 	}
-#ifdef RESTRICTED_STATD
+
  failure:
-#endif
 	return (&result);
 }

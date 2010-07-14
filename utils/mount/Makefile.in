@@ -221,7 +221,6 @@ psdir = @psdir@
 # These binaries go in /sbin (not /usr/sbin), and that cannot be
 # overriden at config time.
 sbindir = /sbin
-secure_statd = @secure_statd@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@
 startstatd = @startstatd@

@@ -4,6 +4,10 @@
  * Copyright (C) 2004-2006 Olaf Kirch <okir@suse.de>
  */
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -23,8 +27,6 @@
 #include <netdb.h>
 #include <errno.h>
 #include <grp.h>
-
-#include "config.h"
 
 #ifndef BASEDIR
 # ifdef NFS_STATEDIR
@@ -51,13 +53,11 @@ char *_SM_BAK_PATH = DEFAULT_SM_BAK_PATH;
 #define NSM_MAX_TIMEOUT	120	/* don't make this too big */
 #define MAXMSGSIZE	256
 
-typedef struct sockaddr_storage nsm_address;
-
 struct nsm_host {
 	struct nsm_host *	next;
 	char *			name;
 	char *			path;
-	nsm_address		addr;
+	struct sockaddr_storage	addr;
 	struct addrinfo		*ai;
 	time_t			last_used;
 	time_t			send_next;
@@ -83,16 +83,53 @@ static void		recv_reply(int);
 static void		backup_hosts(const char *, const char *);
 static void		get_hosts(const char *);
 static void		insert_host(struct nsm_host *);
-struct nsm_host *	find_host(uint32_t);
-static int		addr_get_port(nsm_address *);
-static void		addr_set_port(nsm_address *, int);
-static struct addrinfo	*host_lookup(int, const char *);
-void			nsm_log(int fac, const char *fmt, ...);
+static struct nsm_host *find_host(uint32_t);
+static void		nsm_log(int fac, const char *fmt, ...);
 static int		record_pid(void);
 static void		drop_privs(void);
-static void set_kernel_nsm_state(int state);
+static void		set_kernel_nsm_state(int state);
 
 static struct nsm_host *	hosts = NULL;
+
+/*
+ * Address handling utilities
+ */
+
+static unsigned short smn_get_port(const struct sockaddr *sap)
+{
+	switch (sap->sa_family) {
+	case AF_INET:
+		return ntohs(((struct sockaddr_in *)sap)->sin_port);
+	case AF_INET6:
+		return ntohs(((struct sockaddr_in6 *)sap)->sin6_port);
+	}
+	return 0;
+}
+
+static void smn_set_port(struct sockaddr *sap, const unsigned short port)
+{
+	switch (sap->sa_family) {
+	case AF_INET:
+		((struct sockaddr_in *)sap)->sin_port = htons(port);
+		break;
+	case AF_INET6:
+		((struct sockaddr_in6 *)sap)->sin6_port = htons(port);
+		break;
+	}
+}
+
+static struct addrinfo *smn_lookup(const sa_family_t family, const char *name)
+{
+	struct addrinfo	*ai, hint = {
+		.ai_family	= family,
+		.ai_protocol	= IPPROTO_UDP,
+	};
+
+	if (getaddrinfo(name, NULL, &hint, &ai) != 0)
+		return NULL;
+
+	return ai;
+}
 
 int
 main(int argc, char **argv)
@@ -132,7 +169,7 @@ main(int argc, char **argv)
 			    _SM_STATE_PATH == NULL ||
 			    _SM_DIR_PATH == NULL ||
 			    _SM_BAK_PATH == NULL) {
-				nsm_log(LOG_WARNING, "unable to allocate memory");
+				nsm_log(LOG_ERR, "unable to allocate memory");
 				exit(1);
 			}
 			strcat(strcpy(_SM_STATE_PATH, _SM_BASE_PATH), "/state");
@@ -149,12 +186,16 @@ main(int argc, char **argv)
 usage:		fprintf(stderr,
 			"Usage: sm-notify [-dfq] [-m max-retry-minutes] [-p srcport]\n"
 			"            [-P /path/to/state/directory] [-v my_host_name]\n");
-		return 1;
+		exit(1);
 	}
+
+	log_syslog = 1;
+	openlog("sm-notify", LOG_PID, LOG_DAEMON);
 
 	if (strcmp(_SM_BASE_PATH, BASEDIR) == 0) {
 		if (record_pid() == 0 && force == 0 && opt_update_state == 1)
 			/* already run, don't try again */
+			nsm_log(LOG_NOTICE, "Already notifying clients; Exiting!");
 			exit(0);
 	}
 
@@ -162,12 +203,19 @@ usage:		fprintf(stderr,
 		strncpy(nsm_hostname, opt_srcaddr, sizeof(nsm_hostname)-1);
 	} else
 	if (gethostname(nsm_hostname, sizeof(nsm_hostname)) < 0) {
-		perror("gethostname");
-		return 1;
+		nsm_log(LOG_ERR, "Failed to obtain name of local host: %s",
+			strerror(errno));
+		exit(1);
 	}
 
 	backup_hosts(_SM_DIR_PATH, _SM_BAK_PATH);
 	get_hosts(_SM_BAK_PATH);
+
+	/* If there are not hosts to notify, just exit */
+	if (!hosts) {
+		nsm_log(LOG_DEBUG, "No hosts to notify; exiting");
+		return 0;
+	}
 
 	/* Get and update the NSM state. This will call sync() */
 	nsm_state = nsm_get_state(opt_update_state);
@@ -177,13 +225,10 @@ usage:		fprintf(stderr,
 		if (!opt_quiet)
 			printf("Backgrounding to notify hosts...\n");
 
-		openlog("sm-notify", LOG_PID, LOG_DAEMON);
-		log_syslog = 1;
-
 		if (daemon(0, 0) < 0) {
-			nsm_log(LOG_WARNING, "unable to background: %s",
+			nsm_log(LOG_ERR, "unable to background: %s",
 					strerror(errno));
-			return 1;
+			exit(1);
 		}
 
 		close(0);
@@ -202,19 +247,20 @@ usage:		fprintf(stderr,
 				"Unable to notify %s, giving up",
 				hp->name);
 		}
-		return 1;
+		exit(1);
 	}
 
-	return 0;
+	exit(0);
 }
 
 /*
  * Notify hosts
  */
-void
+static void
 notify(void)
 {
-	nsm_address local_addr;
+	struct sockaddr_storage address;
+	struct sockaddr *local_addr = (struct sockaddr *)&address;
 	time_t	failtime = 0;
 	int	sock = -1;
 	int retry_cnt = 0;
@@ -222,38 +268,43 @@ notify(void)
  retry:
 	sock = socket(AF_INET, SOCK_DGRAM, 0);
 	if (sock < 0) {
-		perror("socket");
+		nsm_log(LOG_ERR, "Failed to create RPC socket: %s",
+			strerror(errno));
 		exit(1);
 	}
 	fcntl(sock, F_SETFL, O_NONBLOCK);
 
-	memset(&local_addr, 0, sizeof(local_addr));
-	local_addr.ss_family = AF_INET; /* Default to IPv4 */
+	memset(&address, 0, sizeof(address));
+	local_addr->sa_family = AF_INET;	/* Default to IPv4 */
 
 	/* Bind source IP if provided on command line */
 	if (opt_srcaddr) {
-		struct addrinfo *ai = host_lookup(AF_INET, opt_srcaddr);
+		struct addrinfo *ai = smn_lookup(AF_INET, opt_srcaddr);
 		if (!ai) {
-			nsm_log(LOG_WARNING,
-				"Not a valid hostname or address: \"%s\"\n",
+			nsm_log(LOG_ERR,
+				"Not a valid hostname or address: \"%s\"",
 				opt_srcaddr);
 			exit(1);
 		}
-		memcpy(&local_addr, ai->ai_addr, ai->ai_addrlen);
+
 		/* We know it's IPv4 at this point */
+		memcpy(local_addr, ai->ai_addr, ai->ai_addrlen);
+
+		freeaddrinfo(ai);
 	}
 
 	/* Use source port if provided on the command line,
 	 * otherwise use bindresvport */
 	if (opt_srcport) {
-		addr_set_port(&local_addr, opt_srcport);
-		if (bind(sock, (struct sockaddr *) &local_addr, sizeof(local_addr)) < 0) {
-			perror("bind");
+		smn_set_port(local_addr, opt_srcport);
+		if (bind(sock, local_addr, sizeof(struct sockaddr_in)) < 0) {
+			nsm_log(LOG_ERR, "Failed to bind RPC socket: %s",
+				strerror(errno));
 			exit(1);
 		}
 	} else {
 		struct servent *se;
-		struct sockaddr_in *sin = (struct sockaddr_in *)&local_addr;
+		struct sockaddr_in *sin = (struct sockaddr_in *)local_addr;
 		(void) bindresvport(sock, sin);
 		/* try to avoid known ports */
 		se = getservbyport(sin->sin_port, "udp");
@@ -328,11 +379,13 @@ notify(void)
 /*
  * Send notification to a single host
  */
-int
+static int
 notify_host(int sock, struct nsm_host *host)
 {
+	struct sockaddr_storage address;
+	struct sockaddr *dest = (struct sockaddr *)&address;
+	socklen_t destlen = sizeof(address);
 	static unsigned int	xid = 0;
-	nsm_address		dest;
 	uint32_t		msgbuf[MAXMSGSIZE], *p;
 	unsigned int		len;
 
@@ -342,7 +395,7 @@ notify_host(int sock, struct nsm_host *host)
 		host->xid = xid++;
 
 	if (host->ai == NULL) {
-		host->ai = host_lookup(AF_UNSPEC, host->name);
+		host->ai = smn_lookup(AF_UNSPEC, host->name);
 		if (host->ai == NULL) {
 			nsm_log(LOG_WARNING,
 				"%s doesn't seem to be a valid address,"
@@ -376,16 +429,16 @@ notify_host(int sock, struct nsm_host *host)
 		/* put first entry at end */
 		*next = first;
 		memcpy(&host->addr, first->ai_addr, first->ai_addrlen);
-		addr_set_port(&host->addr, 0);
+		smn_set_port((struct sockaddr *)&host->addr, 0);
 		host->retries = 0;
 	}
 
-	dest = host->addr;
-	if (addr_get_port(&dest) == 0) {
+	memcpy(dest, &host->addr, destlen);
+	if (smn_get_port(dest) == 0) {
 		/* Build a PMAP packet */
 		nsm_log(LOG_DEBUG, "Sending portmap query to %s", host->name);
 
-		addr_set_port(&dest, 111);
+		smn_set_port(dest, 111);
 		*p++ = htonl(100000);
 		*p++ = htonl(2);
 		*p++ = htonl(3);
@@ -419,7 +472,7 @@ notify_host(int sock, struct nsm_host *host)
 	}
 	len = (p - msgbuf) << 2;
 
-	if (sendto(sock, msgbuf, len, 0, (struct sockaddr *) &dest, sizeof(dest)) < 0)
+	if (sendto(sock, msgbuf, len, 0, dest, destlen) < 0)
 		nsm_log(LOG_WARNING, "Sending Reboot Notification to "
 			"'%s' failed: errno %d (%s)", host->name, errno, strerror(errno));
 	
@@ -429,10 +482,11 @@ notify_host(int sock, struct nsm_host *host)
 /*
  * Receive reply from remote host
  */
-void
+static void
 recv_reply(int sock)
 {
 	struct nsm_host	*hp;
+	struct sockaddr *sap;
 	uint32_t	msgbuf[MAXMSGSIZE], *p, *end;
 	uint32_t	xid;
 	int		res;
@@ -458,8 +512,9 @@ recv_reply(int sock)
 	   this reply */
 	if ((hp = find_host(xid)) == NULL)
 		return;
+	sap = (struct sockaddr *)&hp->addr;
 
-	if (addr_get_port(&hp->addr) == 0) {
+	if (smn_get_port(sap) == 0) {
 		/* This was a portmap request */
 		unsigned int	port;
 
@@ -475,7 +530,7 @@ recv_reply(int sock)
 			hp->timeout = NSM_MAX_TIMEOUT;
 			hp->send_next += NSM_MAX_TIMEOUT;
 		} else {
-			addr_set_port(&hp->addr, port);
+			smn_set_port(sap, port);
 			if (hp->timeout >= NSM_MAX_TIMEOUT / 4)
 				hp->timeout = NSM_MAX_TIMEOUT / 4;
 		}
@@ -487,7 +542,8 @@ recv_reply(int sock)
 		 * packet)
 		 */
 		if (p <= end) {
-			nsm_log(LOG_DEBUG, "Host %s notified successfully", hp->name);
+			nsm_log(LOG_DEBUG, "Host %s notified successfully",
+					hp->name);
 			unlink(hp->path);
 			free(hp->name);
 			free(hp->path);
@@ -511,7 +567,8 @@ backup_hosts(const char *dirname, const char *bakname)
 	DIR		*dir;
 
 	if (!(dir = opendir(dirname))) {
-		perror(dirname);
+		nsm_log(LOG_WARNING,
+			"Failed to open %s: %s", dirname, strerror(errno));
 		return;
 	}
 
@@ -543,7 +600,8 @@ get_hosts(const char *dirname)
 	DIR		*dir;
 
 	if (!(dir = opendir(dirname))) {
-		perror(dirname);
+		nsm_log(LOG_WARNING,
+			"Failed to open %s: %s", dirname, strerror(errno));
 		return;
 	}
 
@@ -556,6 +614,10 @@ get_hosts(const char *dirname)
 			continue;
 		if (host == NULL)
 			host = calloc(1, sizeof(*host));
+		if (host == NULL) {
+			nsm_log(LOG_WARNING, "Unable to allocate memory");
+			return;
+		}
 
 		snprintf(path, sizeof(path), "%s/%s", dirname, de->d_name);
 		if (stat(path, &stb) < 0)
@@ -579,7 +641,7 @@ get_hosts(const char *dirname)
 /*
  * Insert host into sorted list
  */
-void
+static void
 insert_host(struct nsm_host *host)
 {
 	struct nsm_host	**where, *p;
@@ -607,7 +669,7 @@ insert_host(struct nsm_host *host)
 /*
  * Find host given the XID
  */
-struct nsm_host *
+static struct nsm_host *
 find_host(uint32_t xid)
 {
 	struct nsm_host	**where, *p;
@@ -627,7 +689,7 @@ find_host(uint32_t xid)
 /*
  * Retrieve the current NSM state
  */
-unsigned int
+static unsigned int
 nsm_get_state(int update)
 {
 	char		newfile[PATH_MAX];
@@ -660,17 +722,17 @@ nsm_get_state(int update)
 		snprintf(newfile, sizeof(newfile),
 				"%s.new", _SM_STATE_PATH);
 		if ((fd = open(newfile, O_CREAT|O_WRONLY, 0644)) < 0) {
-			nsm_log(LOG_WARNING, "Cannot create %s: %m", newfile);
+			nsm_log(LOG_ERR, "Cannot create %s: %m", newfile);
 			exit(1);
 		}
 		if (write(fd, &state, sizeof(state)) != sizeof(state)) {
-			nsm_log(LOG_WARNING,
+			nsm_log(LOG_ERR,
 				"Failed to write state to %s", newfile);
 			exit(1);
 		}
 		close(fd);
 		if (rename(newfile, _SM_STATE_PATH) < 0) {
-			nsm_log(LOG_WARNING,
+			nsm_log(LOG_ERR,
 				"Cannot create %s: %m", _SM_STATE_PATH);
 			exit(1);
 		}
@@ -681,52 +743,9 @@ nsm_get_state(int update)
 }
 
 /*
- * Address handling utilities
- */
-
-int
-addr_get_port(nsm_address *addr)
-{
-	switch (((struct sockaddr *) addr)->sa_family) {
-	case AF_INET:
-		return ntohs(((struct sockaddr_in *) addr)->sin_port);
-	case AF_INET6:
-		return ntohs(((struct sockaddr_in6 *) addr)->sin6_port);
-	}
-	return 0;
-}
-
-static void
-addr_set_port(nsm_address *addr, int port)
-{
-	switch (((struct sockaddr *) addr)->sa_family) {
-	case AF_INET:
-		((struct sockaddr_in *) addr)->sin_port = htons(port);
-		break;
-	case AF_INET6:
-		((struct sockaddr_in6 *) addr)->sin6_port = htons(port);
-	}
-}
-
-static struct addrinfo *
-host_lookup(int af, const char *name)
-{
-	struct addrinfo	hints, *ai;
-
-	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = af;
-	hints.ai_protocol = IPPROTO_UDP;
-
-	if (getaddrinfo(name, NULL, &hints, &ai) != 0)
-		return NULL;
-
-	return ai;
-}
-
-/*
  * Log a message
  */
-void
+static void
 nsm_log(int fac, const char *fmt, ...)
 {
 	va_list	ap;
@@ -779,7 +798,7 @@ static void drop_privs(void)
 
 	if (st.st_uid == 0) {
 		nsm_log(LOG_WARNING,
-			"sm-notify running as root. chown %s to choose different user\n",
+			"sm-notify running as root. chown %s to choose different user",
 		    _SM_DIR_PATH);
 		return;
 	}

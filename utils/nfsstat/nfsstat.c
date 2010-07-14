@@ -30,7 +30,7 @@ static unsigned int	cltproc2info[20], cltproc2info_tmp[20];	/* NFSv2 call counts
 static unsigned int	srvproc3info[24], srvproc3info_tmp[24];	/* NFSv3 call counts ([0] == 22) */
 static unsigned int	cltproc3info[24], cltproc3info_tmp[24];	/* NFSv3 call counts ([0] == 22) */
 static unsigned int	srvproc4info[4], srvproc4info_tmp[4];	/* NFSv4 call counts ([0] == 2) */
-static unsigned int	cltproc4info[34], cltproc4info_tmp[34];	/* NFSv4 call counts ([0] == 32) */
+static unsigned int	cltproc4info[37], cltproc4info_tmp[37];	/* NFSv4 call counts ([0] == 35) */
 static unsigned int	srvproc4opsinfo[42], srvproc4opsinfo_tmp[42];	/* NFSv4 call counts ([0] == 40) */
 static unsigned int	srvnetinfo[5], srvnetinfo_tmp[5];	/* 0  # of received packets
 								 * 1  UDP packets
@@ -93,13 +93,14 @@ static const char *	nfssrvproc4name[2] = {
 	"compound",
 };
 
-static const char *	nfscltproc4name[32] = {
+static const char *	nfscltproc4name[35] = {
 	"null",      "read",      "write",   "commit",      "open",        "open_conf",
 	"open_noat", "open_dgrd", "close",   "setattr",     "fsinfo",      "renew",
 	"setclntid", "confirm",   "lock",
 	"lockt",     "locku",     "access",  "getattr",     "lookup",      "lookup_root",
 	"remove",    "rename",    "link",    "symlink",     "create",      "pathconf",
-	"statfs",    "readlink",  "readdir", "server_caps", "delegreturn",
+	"statfs",    "readlink",  "readdir", "server_caps", "delegreturn", "getacl",
+	"setacl",    "fs_locations"
 };
 
 static const char *     nfssrvproc4opname[40] = {
@@ -206,7 +207,7 @@ void usage(char *name)
   -v, --verbose, --all\tSame as '-o all'\n\
   -r, --rpc\t\tShow RPC statistics\n\
   -n, --nfs\t\tShow NFS statistics\n\
-  -D, --diff-stat\tSaves stats, pauses, diffs current and saved\n\
+  -Z, --sleep\tSaves stats, pauses, diffs current and saved\n\
   --version\t\tShow program version\n\
   --help\t\tWhat you just did\n\
 \n", name);
@@ -227,7 +228,7 @@ static struct option longopts[] =
 	{ "zero", 0, 0, 'z' },
 	{ "help", 0, 0, '\1' },
 	{ "version", 0, 0, '\2' },
-	{ "diff-stat", 0, 0, 'D' },
+	{ "sleep", 0, 0, 'Z' },
 	{ NULL, 0, 0, 0 }
 };
 
@@ -238,7 +239,7 @@ main(int argc, char **argv)
 			opt_srv = 0,
 			opt_clt = 0,
 			opt_prt = 0,
-			opt_diffstat = 0;
+			opt_sleep = 0;
 	int		c;
 	char           *progname;
 
@@ -252,7 +253,7 @@ main(int argc, char **argv)
 	else
 		progname = argv[0];
 
-	while ((c = getopt_long(argc, argv, "234acmno:Dvrsz\1\2", longopts, NULL)) != EOF) {
+	while ((c = getopt_long(argc, argv, "234acmno:Zvrsz\1\2", longopts, NULL)) != EOF) {
 		switch (c) {
 		case 'a':
 			fprintf(stderr, "nfsstat: nfs acls are not yet supported.\n");
@@ -282,8 +283,8 @@ main(int argc, char **argv)
 				return 2;
 			}
 			break;
-		case 'D':
-			opt_diffstat = 1;
+		case 'Z':
+			opt_sleep = 1;
 			break;
 		case '2':
 		case '3':
@@ -346,7 +347,7 @@ main(int argc, char **argv)
 		get_stats(NFSCLTSTAT, cltinfo, &opt_clt, opt_srv, "Client");
 
 	/* save stat snapshots; wait for signal; then diff current and saved stats */
-	if (opt_diffstat) {
+	if (opt_sleep) {
 		starttime = time(NULL);
 		printf("Collecting statistics; press CTRL-C to view results from interval (i.e., from pause to CTRL-C).\n");
 		if (opt_srv)
@@ -570,7 +571,7 @@ parse_statfile(const char *name, struct statinfo *statp)
 			ip->valptr[i] = atoi(sp);
 			total += ip->valptr[i];
 		}
-		ip->valptr[i] = total;
+		ip->valptr[cnt - 1] = total;
 	}
 
 	fclose(fp);
@@ -637,10 +638,16 @@ get_stats(const char *file, statinfo *info, int *opt, int other_opt, const char 
 	}
 }
 
+/*
+ * This is for proc2/3/4-type stats, where, in the /proc files, the first entry's value
+ * denotes the number of subsequent entries.  statinfo value arrays contain an additional
+ * field at the end which contains the sum of all previous elements in the array -- so,
+ * there are stats if the sum's greater than the entry-count.
+ */
 static int
 has_stats(const unsigned int *info)
 {
-	return (info[0] && info[info[0] + 1] != info[0]);
+	return (info[0] && info[info[0] + 1] > info[0]);
 }
 
 /* clone 'src' to 'dest' */
@@ -664,16 +671,37 @@ copy_stats(struct statinfo *dest, struct statinfo *src)
 static void
 diff_stats(struct statinfo *new, struct statinfo *old)
 {
-	int i, j, is_srv, should_diff;
+	int i, j, is_srv, nodiff_first_index, should_diff;
 
+	/*
+	 * Different stat types have different formats in the /proc
+	 * files: for the proc2/3/4-type stats, the first entry has
+	 * the total number of subsequent entries; one does not want
+	 * to diff that first entry.  The other stat types aren't like
+	 * this.  So, we diff a given entry if it's not of one of the
+	 * procX types ("i" < 2 for clt, < 4 for srv), or if it's not
+	 * the first entry ("j" > 0).
+	 */
 	is_srv = (new == srvinfo);
+	nodiff_first_index = 2 + (2 * is_srv);
+
 	for (i = 0; old[i].tag; i++) {
 		for (j = 0; j < new[i].nrvals; j++) {
-			/* skip items in valptr that shouldn't be changed */
-			should_diff = (i < (3 + is_srv) || j > 0);
+			should_diff = (i < nodiff_first_index || j > 0);
 			if (should_diff)
 				new[i].valptr[j] -= old[i].valptr[j];
 		}
+
+		/*
+		 * Make sure that the "totals" entry (last value in
+		 * each stat array) for the procX-type stats has the
+		 * "numentries" entry's (first value in procX-type
+		 * stat arrays) constant value added-back after the
+		 * diff -- i.e., it should always be included in the
+		 * total.
+		 */
+		if (!strncmp("proc", new[i].tag, 4))
+			new[i].valptr[new[i].nrvals - 1] += new[i].valptr[0];
 	}
 }
 

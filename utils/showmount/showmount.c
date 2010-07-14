@@ -37,8 +37,9 @@
 #include <mount.h>
 #include <unistd.h>
 
+#include "nfsrpc.h"
+
 #define TIMEOUT_UDP	3
-#define TIMEOUT_TCP	10
 #define TOTAL_TIMEOUT	20
 
 static char *	version = "showmount for " VERSION;
@@ -77,180 +78,34 @@ static void usage(FILE *fp, int n)
 	exit(n);
 }
 
+static const char *nfs_sm_pgmtbl[] = {
+	"showmount",
+	"mount",
+	"mountd",
+	NULL,
+};
+
 /*
- *  Perform a non-blocking connect on the socket fd.
+ * Generate an RPC client handle connected to the mountd service
+ * at @hostname, or die trying.
  *
- *  tout contains the timeout.  It will be modified to contain the time
- *  remaining (i.e. time provided - time elasped).
- *
- *  Returns zero on success; otherwise, -1 is returned and errno is set
- *  to reflect the nature of the error.
+ * Supports both AF_INET and AF_INET6 server addresses.
  */
-static int connect_nb(int fd, struct sockaddr_in *addr, struct timeval *tout)
+static CLIENT *nfs_get_mount_client(const char *hostname)
 {
-	int flags, ret;
-	socklen_t len;
-	fd_set rset;
-
-	flags = fcntl(fd, F_GETFL, 0);
-	if (flags < 0)
-		return -1;
-
-	ret = fcntl(fd, F_SETFL, flags | O_NONBLOCK);
-	if (ret < 0)
-		return -1;
-
-	/*
-	 * From here on subsequent sys calls could change errno so
-	 * we set ret = -errno to capture it in case we decide to
-	 * use it later.
-	 */
-	len = sizeof(struct sockaddr);
-	ret = connect(fd, (struct sockaddr *)addr, len);
-	if (ret < 0 && errno != EINPROGRESS) {
-		ret = -1;
-		goto done;
-	}
-
-	if (ret == 0)
-		goto done;
-
-	/* now wait */
-	FD_ZERO(&rset);
-	FD_SET(fd, &rset);
-
-	ret = select(fd + 1, NULL, &rset, NULL, tout);
-	if (ret <= 0) {
-		if (ret == 0)
-			errno = ETIMEDOUT;
-		ret = -1;
-		goto done;
-	}
-
-	if (FD_ISSET(fd, &rset)) {
-		int status;
-
-		len = sizeof(ret);
-		status = getsockopt(fd, SOL_SOCKET, SO_ERROR, &ret, &len);
-		if (status < 0) {
-			ret = -1;
-			goto done;
-		}
-
-		/* Oops - something wrong with connect */
-		if (ret != 0) {
-			errno = ret;
-			ret = -1;
-		}
-	}
-
-done:
-	fcntl(fd, F_SETFL, flags);
-	return ret;
-}
-
-static unsigned short getport(struct sockaddr_in *addr,
-			 unsigned long prog, unsigned long vers, int prot)
-{
+	rpcprog_t program = nfs_getrpcbyname(MOUNTPROG, nfs_sm_pgmtbl);
 	CLIENT *client;
-	enum clnt_stat status;
-	struct pmap parms;
-	int ret, sock;
-	struct sockaddr_in laddr, saddr;
-	struct timeval tout = {0, 0};
-	socklen_t len;
-	unsigned int send_sz = 0;
-	unsigned int recv_sz = 0;
-	unsigned short port;
 
-	memset(&laddr, 0, sizeof(laddr));
-	memset(&saddr, 0, sizeof(saddr));
-	memset(&parms, 0, sizeof(parms));
+	client = clnt_create(hostname, program, MOUNTVERS, "tcp");
+	if (client)
+		return client;
 
-	memcpy(&saddr, addr, sizeof(saddr));
-	saddr.sin_port = htons(PMAPPORT);
+	client = clnt_create(hostname, program, MOUNTVERS, "udp");
+	if (client)
+		return client;
 
-	if (prot == IPPROTO_TCP) {
-		sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
-		if (sock == -1) {
-			rpc_createerr.cf_stat = RPC_SYSTEMERROR;
-			rpc_createerr.cf_error.re_errno = errno;
-			return 0;
-		}
-
-		tout.tv_sec = TIMEOUT_TCP;
-
-		ret = connect_nb(sock, &saddr, &tout);
-		if (ret != 0) {
-			rpc_createerr.cf_stat = RPC_SYSTEMERROR;
-			rpc_createerr.cf_error.re_errno = errno;
-			close(sock);
-			return 0;
-		}
-		client = clnttcp_create(&saddr,
-					PMAPPROG, PMAPVERS, &sock,
-					0, 0);
-	} else {
-		/*
-		 * bind to any unused port.  If we left this up to the rpc
-		 * layer, it would bind to a reserved port, which has been shown
-		 * to exhaust the reserved port range in some situations.
-		 */
-		sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
-		if (sock == -1) {
-			rpc_createerr.cf_stat = RPC_SYSTEMERROR;
-			rpc_createerr.cf_error.re_errno = errno;
-			return 0;
-		}
-
-		laddr.sin_family = AF_INET;
-		laddr.sin_port = 0;
-		laddr.sin_addr.s_addr = htonl(INADDR_ANY);
-
-		tout.tv_sec = TIMEOUT_UDP;
-
-		send_sz = RPCSMALLMSGSIZE;
-		recv_sz = RPCSMALLMSGSIZE;
-
-		len = sizeof(struct sockaddr_in);
-		if (bind(sock, (struct sockaddr *)&laddr, len) < 0) {
-			close(sock);
-			sock = RPC_ANYSOCK;
-			/* FALLTHROUGH */
-		}
-		client = clntudp_bufcreate(&saddr, PMAPPROG, PMAPVERS,
-					   tout, &sock, send_sz, recv_sz);
-	}
-
-	if (!client) {
-		close(sock);
-		rpc_createerr.cf_stat = RPC_RPCBFAILURE;
-		return 0;
-	}
-
-	clnt_control(client, CLSET_FD_CLOSE, NULL);
-
-	parms.pm_prog = prog;
-	parms.pm_vers = vers;
-	parms.pm_prot = prot;
-
-	status = clnt_call(client, PMAPPROC_GETPORT,
-			   (xdrproc_t) xdr_pmap, (caddr_t) &parms,
-			   (xdrproc_t) xdr_u_short, (caddr_t) &port,
-			   tout);
-
-	if (status != RPC_SUCCESS) {
-		clnt_geterr(client, &rpc_createerr.cf_error);
-		rpc_createerr.cf_stat = status;
-		clnt_destroy(client);
-		return 0;
-	} else if (port == 0) {
-		rpc_createerr.cf_stat = RPC_PROGNOTREGISTERED;
-	}
-
-	clnt_destroy(client);
-
-	return htons(port);
+	clnt_pcreateerror("clnt_create");
+	exit(1);
 }
 
 int main(int argc, char **argv)
@@ -258,11 +113,7 @@ int main(int argc, char **argv)
 	char hostname_buf[MAXHOSTLEN];
 	char *hostname;
 	enum clnt_stat clnt_stat;
-	struct hostent *hp;
-	struct sockaddr_in server_addr;
-	int ret, msock;
 	struct timeval total_timeout;
-	struct timeval pertry_timeout;
 	int c;
 	CLIENT *mclient;
 	groups grouplist;
@@ -334,54 +185,7 @@ int main(int argc, char **argv)
 		break;
 	}
 
-	if (inet_aton(hostname, &server_addr.sin_addr)) {
-		server_addr.sin_family = AF_INET;
-	}
-	else {
-		if ((hp = gethostbyname(hostname)) == NULL) {
-			fprintf(stderr, "%s: can't get address for %s\n",
-				program_name, hostname);
-			exit(1);
-		}
-		server_addr.sin_family = AF_INET;
-		memcpy(&server_addr.sin_addr, hp->h_addr, hp->h_length);
-	}
-
-	/* create mount deamon client */
-
-	mclient = NULL;
-	msock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
-	if (msock != -1) {
-		server_addr.sin_port = getport(&server_addr,
-					 MOUNTPROG, MOUNTVERS, IPPROTO_TCP);
-		if (server_addr.sin_port) {
-			ret = connect_nb(msock, &server_addr, 0);
-			if (ret == 0) /* success */
-				mclient = clnttcp_create(&server_addr,
-						MOUNTPROG, MOUNTVERS, &msock,
-						0, 0);
-			else
-				close(msock);
-		} else
-			close(msock);
-	}
-
-	if (!mclient) {
-		server_addr.sin_port = getport(&server_addr,
-					 MOUNTPROG, MOUNTVERS, IPPROTO_UDP);
-		if (!server_addr.sin_port) {
-			clnt_pcreateerror("showmount");
-			exit(1);
-		}
-		msock = RPC_ANYSOCK;
-		pertry_timeout.tv_sec = TIMEOUT_UDP;
-		pertry_timeout.tv_usec = 0;
-		if ((mclient = clntudp_create(&server_addr,
-		    MOUNTPROG, MOUNTVERS, pertry_timeout, &msock)) == NULL) {
-			clnt_pcreateerror("mount clntudp_create");
-			exit(1);
-		}
-	}
+	mclient = nfs_get_mount_client(hostname);
 	mclient->cl_auth = authunix_create_default();
 	total_timeout.tv_sec = TOTAL_TIMEOUT;
 	total_timeout.tv_usec = 0;

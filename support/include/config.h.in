@@ -53,14 +53,14 @@
 /* Define to 1 if you have the `clnt_dg_create' function. */
 #undef HAVE_CLNT_DG_CREATE
 
-/* Define to 1 if you have the `clnt_tli_create' function. */
-#undef HAVE_CLNT_TLI_CREATE
-
 /* Define to 1 if you have the `clnt_vc_create' function. */
 #undef HAVE_CLNT_VC_CREATE
 
 /* Define to 1 if you have the <com_err.h> header file. */
 #undef HAVE_COM_ERR_H
+
+/* Define this to 1 if AI_ADDRCONFIG macro is defined */
+#undef HAVE_DECL_AI_ADDRCONFIG
 
 /* Define to 1 if you have the <dirent.h> header file, and it defines `DIR'.
    */
@@ -137,9 +137,6 @@
 
 /* Define to 1 if you have the `inet_ntoa' function. */
 #undef HAVE_INET_NTOA
-
-/* Define to 1 if you have the `inet_ntop' function. */
-#undef HAVE_INET_NTOP
 
 /* Define to 1 if you have the `innetgr' function. */
 #undef HAVE_INNETGR

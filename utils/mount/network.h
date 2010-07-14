@@ -40,6 +40,9 @@ static const struct timeval TIMEOUT = { 20, 0 };
 static const struct timeval RETRY_TIMEOUT = { 3, 0 };
 
 int probe_bothports(clnt_addr_t *, clnt_addr_t *);
+int nfs_probe_bothports(const struct sockaddr *, const socklen_t,
+			struct pmap *, const struct sockaddr *,
+			const socklen_t, struct pmap *);
 int nfs_gethostbyname(const char *, struct sockaddr_in *);
 int nfs_name_to_address(const char *, const sa_family_t,
 		struct sockaddr *, socklen_t *);
@@ -49,15 +52,22 @@ int nfs_present_sockaddr(const struct sockaddr *,
 			 const socklen_t, char *, const size_t);
 int nfs_callback_address(const struct sockaddr *, const socklen_t,
 		struct sockaddr *, socklen_t *);
-int nfs_call_umount(clnt_addr_t *, dirpath *);
 int clnt_ping(struct sockaddr_in *, const unsigned long,
 		const unsigned long, const unsigned int,
 		struct sockaddr_in *);
+
+struct mount_options;
+
+void nfs_options2pmap(struct mount_options *,
+		      struct pmap *, struct pmap *);
 
 int start_statd(void);
 
 unsigned long nfsvers_to_mnt(const unsigned long);
 
+int nfs_call_umount(clnt_addr_t *, dirpath *);
+int nfs_advise_umount(const struct sockaddr *, const socklen_t,
+		      const struct pmap *, const dirpath *);
 CLIENT *mnt_openclnt(clnt_addr_t *, int *);
 void mnt_closeclnt(CLIENT *, int);
 

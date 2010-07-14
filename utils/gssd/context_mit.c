@@ -28,7 +28,9 @@
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include "config.h"
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif	/* HAVE_CONFIG_H */
 
 #ifndef HAVE_LUCID_CONTEXT_SUPPORT
 #ifdef HAVE_KRB5
@@ -150,7 +152,7 @@ typedef struct gss_union_ctx_id_t {
 } gss_union_ctx_id_desc, *gss_union_ctx_id_t;
 
 int
-serialize_krb5_ctx(gss_ctx_id_t ctx, gss_buffer_desc *buf)
+serialize_krb5_ctx(gss_ctx_id_t ctx, gss_buffer_desc *buf, int32_t *endtime)
 {
 	krb5_gss_ctx_id_t kctx = ((gss_union_ctx_id_t)ctx)->internal_ctx_id;
 	char *p, *end;
@@ -180,6 +182,8 @@ serialize_krb5_ctx(gss_ctx_id_t ctx, gss_buffer_desc *buf)
 	if (WRITE_BYTES(&p, end, kctx->signalg)) goto out_err;
 	if (WRITE_BYTES(&p, end, kctx->sealalg)) goto out_err;
 	if (WRITE_BYTES(&p, end, kctx->endtime)) goto out_err;
+	if (endtime)
+		*endtime = kctx->endtime;
 	word_seq_send = kctx->seq_send;
 	if (WRITE_BYTES(&p, end, word_seq_send)) goto out_err;
 	if (write_oid(&p, end, kctx->mech_used)) goto out_err;

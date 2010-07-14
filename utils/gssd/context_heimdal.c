@@ -28,7 +28,9 @@
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include "config.h"
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif	/* HAVE_CONFIG_H */
 
 #ifndef HAVE_LUCID_CONTEXT_SUPPORT
 #ifdef HAVE_HEIMDAL
@@ -198,7 +200,7 @@ int write_heimdal_seq_key(char **p, char *end, gss_ctx_id_t ctx)
  */
 
 int
-serialize_krb5_ctx(gss_ctx_id_t ctx, gss_buffer_desc *buf)
+serialize_krb5_ctx(gss_ctx_id_t ctx, gss_buffer_desc *buf, int32_t *endtime)
 {
 
 	char *p, *end;
@@ -238,6 +240,9 @@ serialize_krb5_ctx(gss_ctx_id_t ctx, gss_buffer_desc *buf)
 
 	/* endtime */
 	if (WRITE_BYTES(&p, end, ctx->lifetime)) goto out_err;
+
+	if (endtime)
+		*endtime = ctx->lifetime;
 
 	/* seq_send */
 	if (WRITE_BYTES(&p, end, ctx->auth_context->local_seqnumber))

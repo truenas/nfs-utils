@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 dnl
-AC_INIT([linux nfs-utils],[1.1.4],[linux-nfs@vger.kernel.org],[nfs-utils])
+AC_INIT([linux nfs-utils],[1.1.5],[linux-nfs@vger.kernel.org],[nfs-utils])
 AC_CANONICAL_BUILD([])
 AC_CANONICAL_HOST([])
 AC_CONFIG_MACRO_DIR(aclocal)
@@ -109,7 +109,7 @@ AC_ARG_WITH(rpcgen,
 	AC_SUBST(RPCGEN_PATH)
 	AM_CONDITIONAL(CONFIG_RPCGEN, [test "$RPCGEN_PATH" == ""])
 AC_ARG_ENABLE(uuid,
-	[AC_HELP_STRING([--without-uuid], [Exclude uuid support and so avoid possibly buggy libblkid])],
+	[AC_HELP_STRING([--disable-uuid], [Exclude uuid support to avoid buggy libblkid])],
 	if test "$enableval" = "yes" ; then choose_blkid=yes; else choose_blkid=no; fi,
 	choose_blkid=default)
 AC_ARG_ENABLE(mount,
@@ -130,6 +130,14 @@ AC_ARG_ENABLE(ipv6,
 	fi
 	AC_SUBST(enable_ipv6)
 	AM_CONDITIONAL(CONFIG_IPV6, [test "$enable_ipv6" = "yes"])
+
+AC_ARG_ENABLE(tirpc,
+	[AC_HELP_STRING([--enable-tirpc],
+                        [enable use of TI-RPC @<:@default=no@:>@])],
+	enable_tirpc=$enableval,
+	enable_tirpc=no)
+	AC_SUBST(enable_tirpc)
+	AM_CONDITIONAL(CONFIG_TIRPC, [test "$enable_tirpc" = "yes"])
 
 # Check whether user wants TCP wrappers support
 AC_TCP_WRAPPERS
@@ -178,6 +186,12 @@ AC_CHECK_FUNC(connect, ,
 AC_CHECK_FUNC(getaddrinfo, , ,
                 AC_MSG_ERROR(Function 'getaddrinfo' not found.))
 
+AC_CHECK_FUNC(getrpcbynumber, , ,
+                AC_MSG_ERROR(Function 'getrpcbynumber' not found.))
+
+AC_CHECK_FUNC(getservbyname, , ,
+                AC_MSG_ERROR(Function 'getservbyname' not found.))
+
 AC_CHECK_LIB(crypt, crypt, [LIBCRYPT="-lcrypt"])
 if test "$enable_nfsv4" = yes; then
     AC_CHECK_LIB(event, event_dispatch, [libevent=1], AC_MSG_ERROR([libevent needed for nfsv4 support]))
@@ -205,9 +219,9 @@ if test "$choose_blkid" != no; then
    AC_BLKID_VERS
    if test $choose_blkid = yes; then
       use_blkid=1
-      test $libblkid_is_recent = no && AC_MSG_WARN([libblkid is old and may cause mountd to leak memory])
+      test $libblkid_cv_is_recent = no && AC_MSG_WARN([libblkid is old and may cause mountd to leak memory])
    else
-      if test $libblkid_is_recent = yes
+      if test $libblkid_cv_is_recent = yes
       then use_blkid=1
       else use_blkid=0
 	   AC_MSG_WARN([uuid support disabled as libblkid is too old])
@@ -240,15 +254,30 @@ if test "$enable_gss" = yes; then
 
 fi
 
+AC_CHECK_DECL([AI_ADDRCONFIG],
+              AC_DEFINE([HAVE_DECL_AI_ADDRCONFIG], 1,
+                         [Define this to 1 if AI_ADDRCONFIG macro is defined]), ,
+              [ #include <netdb.h> ] )
+
+if test "$enable_tirpc" = yes; then
+  AC_CHECK_LIB(tirpc, clnt_tli_create, ,
+           AC_MSG_ERROR([libtirpc not found.]))
+  AC_CHECK_HEADERS(tirpc/netconfig.h, ,
+                   AC_MSG_ERROR([libtirpc headers not found.]))
+  AC_CHECK_FUNCS([bindresvport_sa getnetconfig \
+                  clnt_create clnt_create_timed \
+                  clnt_vc_create clnt_dg_create xdr_rpcb])
+fi
+
 if test "$enable_ipv6" = yes; then
-  AC_CHECK_FUNC(inet_ntop, , ,
-               AC_MSG_ERROR(Function 'inet_ntop' not found.))
+  if test "$enable_tirpc" = no; then
+    AC_MSG_ERROR('--enable-ipv6' requires '--enable-tirpc'.)
+  fi
   AC_CHECK_FUNC(getnameinfo, , ,
                AC_MSG_ERROR(Function 'getnameinfo' not found.))
-  AC_CHECK_LIB(tirpc, clnt_tli_create, ,
-               AC_MSG_ERROR([libtirpc needed for IPv6 support]))
-  AC_CHECK_HEADERS(tirpc/netconfig.h, ,
-               AC_MSG_ERROR([libtirpc-devel needed for IPv6 support]))
+  AC_CHECK_DECL([AI_ADDRCONFIG], ,
+               AC_MSG_ERROR([full getaddrinfo(3) implementation needed for IPv6 support]),
+               [ #include <netdb.h> ] )
 fi
 
 dnl *************************************************************
@@ -259,7 +288,7 @@ AC_CHECK_HEADERS([arpa/inet.h fcntl.h libintl.h limits.h \
                  stdlib.h string.h sys/file.h sys/ioctl.h sys/mount.h \
                  sys/param.h sys/socket.h sys/time.h sys/vfs.h \
                  syslog.h unistd.h com_err.h et/com_err.h \
-                 ifaddrs.h tirpc/netconfig.h])
+                 ifaddrs.h])
 
 dnl *************************************************************
 dnl Checks for typedefs, structures, and compiler characteristics
@@ -295,10 +324,7 @@ AC_FUNC_STAT
 AC_FUNC_VPRINTF
 AC_CHECK_FUNCS([alarm atexit dup2 fdatasync ftruncate getcwd \
                gethostbyaddr gethostbyname gethostname getmntent \
-               inet_ntop getnameinfo getrpcbyname \
-               bindresvport_sa getnetconfig \
-               clnt_create clnt_create_timed \
-               clnt_tli_create clnt_vc_create clnt_dg_create xdr_rpcb \
+               getnameinfo getrpcbyname \
                gettimeofday hasmntopt inet_ntoa innetgr memset mkdir pathconf \
                realpath rmdir select socket strcasecmp strchr strdup \
                strerror strrchr strtol strtoul sigprocmask])
@@ -356,7 +382,6 @@ esac
 
 my_am_cflags="-Wall -Wstrict-prototypes $ARCHFLAGS -pipe"
 
-AC_SUBST([AM_CPPFLAGS], ["-I\${top_srcdir}/support/include"])
 AC_SUBST([AM_CFLAGS], ["$my_am_cflags"])
 
 # Make sure that $ACLOCAL_FLAGS are used during a rebuild

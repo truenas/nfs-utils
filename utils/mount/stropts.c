@@ -99,19 +99,21 @@ struct nfsmount_info {
 static time_t nfs_parse_retry_option(struct mount_options *options,
 				     unsigned int timeout_minutes)
 {
-	char *retry_option, *endptr;
+	long tmp;
 
-	retry_option = po_get(options, "retry");
-	if (retry_option) {
-		long tmp;
-
-		errno = 0;
-		tmp = strtol(retry_option, &endptr, 10);
-		if (errno == 0 && endptr != retry_option && tmp >= 0)
+	switch (po_get_numeric(options, "retry", &tmp)) {
+	case PO_NOT_FOUND:
+		break;
+	case PO_FOUND:
+		if (tmp >= 0) {
 			timeout_minutes = tmp;
-		else if (verbose)
+			break;
+		}
+	case PO_BAD_VALUE:
+		if (verbose)
 			nfs_error(_("%s: invalid retry timeout was specified; "
 					"using default timeout"), progname);
+		break;
 	}
 
 	return time(NULL) + (time_t)(timeout_minutes * 60);
@@ -222,9 +224,15 @@ static int nfs_fix_mounthost_option(const sa_family_t family,
  * Returns zero if the "lock" option is in effect, but statd
  * can't be started.  Otherwise, returns 1.
  */
+static const char *nfs_lock_opttbl[] = {
+	"nolock",
+	"lock",
+	NULL,
+};
+
 static int nfs_verify_lock_option(struct mount_options *options)
 {
-	if (po_rightmost(options, "nolock", "lock") == PO_KEY1_RIGHTMOST)
+	if (po_rightmost(options, nfs_lock_opttbl) == 0)
 		return 1;
 
 	if (!start_statd()) {
@@ -302,6 +310,113 @@ static int nfs_is_permanent_error(int error)
 }
 
 /*
+ * Get NFS/mnt server addresses from mount options
+ *
+ * Returns 1 and fills in @nfs_saddr, @nfs_salen, @mnt_saddr, and @mnt_salen
+ * if all goes well; otherwise zero.
+ */
+static int nfs_extract_server_addresses(struct mount_options *options,
+					struct sockaddr *nfs_saddr,
+					socklen_t *nfs_salen,
+					struct sockaddr *mnt_saddr,
+					socklen_t *mnt_salen)
+{
+	char *option;
+
+	option = po_get(options, "addr");
+	if (option == NULL)
+		return 0;
+	if (!nfs_string_to_sockaddr(option, strlen(option),
+						nfs_saddr, nfs_salen))
+		return 0;
+
+	option = po_get(options, "mountaddr");
+	if (option == NULL) {
+		memcpy(mnt_saddr, nfs_saddr, *nfs_salen);
+		*mnt_salen = *nfs_salen;
+	} else if (!nfs_string_to_sockaddr(option, strlen(option),
+						mnt_saddr, mnt_salen))
+		return 0;
+
+	return 1;
+}
+
+static int nfs_construct_new_options(struct mount_options *options,
+				     struct pmap *nfs_pmap,
+				     struct pmap *mnt_pmap)
+{
+	char new_option[64];
+
+	po_remove_all(options, "nfsprog");
+	po_remove_all(options, "mountprog");
+
+	po_remove_all(options, "v2");
+	po_remove_all(options, "v3");
+	po_remove_all(options, "vers");
+	po_remove_all(options, "nfsvers");
+	snprintf(new_option, sizeof(new_option) - 1,
+		 "vers=%lu", nfs_pmap->pm_vers);
+	if (po_append(options, new_option) == PO_FAILED)
+		return 0;
+
+	po_remove_all(options, "proto");
+	po_remove_all(options, "udp");
+	po_remove_all(options, "tcp");
+	switch (nfs_pmap->pm_prot) {
+	case IPPROTO_TCP:
+		snprintf(new_option, sizeof(new_option) - 1,
+			 "proto=tcp");
+		if (po_append(options, new_option) == PO_FAILED)
+			return 0;
+		break;
+	case IPPROTO_UDP:
+		snprintf(new_option, sizeof(new_option) - 1,
+			 "proto=udp");
+		if (po_append(options, new_option) == PO_FAILED)
+			return 0;
+		break;
+	}
+
+	po_remove_all(options, "port");
+	if (nfs_pmap->pm_port != NFS_PORT) {
+		snprintf(new_option, sizeof(new_option) - 1,
+			 "port=%lu", nfs_pmap->pm_port);
+		if (po_append(options, new_option) == PO_FAILED)
+			return 0;
+	}
+
+	po_remove_all(options, "mountvers");
+	snprintf(new_option, sizeof(new_option) - 1,
+		 "mountvers=%lu", mnt_pmap->pm_vers);
+	if (po_append(options, new_option) == PO_FAILED)
+		return 0;
+
+	po_remove_all(options, "mountproto");
+	switch (mnt_pmap->pm_prot) {
+	case IPPROTO_TCP:
+		snprintf(new_option, sizeof(new_option) - 1,
+			 "mountproto=tcp");
+		if (po_append(options, new_option) == PO_FAILED)
+			return 0;
+		break;
+	case IPPROTO_UDP:
+		snprintf(new_option, sizeof(new_option) - 1,
+			 "mountproto=udp");
+		if (po_append(options, new_option) == PO_FAILED)
+			return 0;
+		break;
+	}
+
+	po_remove_all(options, "mountport");
+	snprintf(new_option, sizeof(new_option) - 1,
+		 "mountport=%lu", mnt_pmap->pm_port);
+	if (po_append(options, new_option) == PO_FAILED)
+		return 0;
+
+	return 1;
+}
+
+/*
  * Reconstruct the mount option string based on a portmapper probe
  * of the server.  Returns one if the server's portmapper returned
  * something we can use, otherwise zero.
@@ -317,10 +432,14 @@ static int nfs_is_permanent_error(int error)
 static struct mount_options *nfs_rewrite_mount_options(char *str)
 {
 	struct mount_options *options;
-	char *option, new_option[64];
-	clnt_addr_t mnt_server = { };
-	clnt_addr_t nfs_server = { };
-	int p;
+	struct sockaddr_storage nfs_address;
+	struct sockaddr *nfs_saddr = (struct sockaddr *)&nfs_address;
+	socklen_t nfs_salen;
+	struct pmap nfs_pmap;
+	struct sockaddr_storage mnt_address;
+	struct sockaddr *mnt_saddr = (struct sockaddr *)&mnt_address;
+	socklen_t mnt_salen;
+	struct pmap mnt_pmap;
 
 	options = po_split(str);
 	if (!options) {
@@ -328,123 +447,30 @@ static struct mount_options *nfs_rewrite_mount_options(char *str)
 		return NULL;
 	}
 
-	errno = EINVAL;
-	option = po_get(options, "addr");
-	if (option) {
-		nfs_server.saddr.sin_family = AF_INET;
-		if (!inet_aton((const char *)option, &nfs_server.saddr.sin_addr))
-			goto err;
-	} else
+	if (!nfs_extract_server_addresses(options, nfs_saddr, &nfs_salen,
+						mnt_saddr, &mnt_salen)) {
+		errno = EINVAL;
 		goto err;
-
-	option = po_get(options, "mountaddr");
-	if (option) {
-		mnt_server.saddr.sin_family = AF_INET;
-		if (!inet_aton((const char *)option, &mnt_server.saddr.sin_addr))
-			goto err;
-	} else
-		memcpy(&mnt_server.saddr, &nfs_server.saddr,
-				sizeof(mnt_server.saddr));
-
-	option = po_get(options, "mountport");
-	if (option)
-		mnt_server.pmap.pm_port = atoi(option);
-	mnt_server.pmap.pm_prog = MOUNTPROG;
-	option = po_get(options, "mountvers");
-	if (option)
-		mnt_server.pmap.pm_vers = atoi(option);
-	option = po_get(options, "mountproto");
-	if (option) {
-		if (strcmp(option, "tcp") == 0) {
-			mnt_server.pmap.pm_prot = IPPROTO_TCP;
-			po_remove_all(options, "mountproto");
-		}
-		if (strcmp(option, "udp") == 0) {
-			mnt_server.pmap.pm_prot = IPPROTO_UDP;
-			po_remove_all(options, "mountproto");
-		}
 	}
 
-	option = po_get(options, "port");
-	if (option) {
-		nfs_server.pmap.pm_port = atoi(option);
-		po_remove_all(options, "port");
-	}
-	nfs_server.pmap.pm_prog = NFS_PROGRAM;
+	nfs_options2pmap(options, &nfs_pmap, &mnt_pmap);
 
-	option = po_get(options, "nfsvers");
-	if (option) {
-		nfs_server.pmap.pm_vers = atoi(option);
-		po_remove_all(options, "nfsvers");
-	}
-	option = po_get(options, "vers");
-	if (option) {
-		nfs_server.pmap.pm_vers = atoi(option);
-		po_remove_all(options, "vers");
-	}
-	option = po_get(options, "proto");
-	if (option) {
-		if (strcmp(option, "tcp") == 0) {
-			nfs_server.pmap.pm_prot = IPPROTO_TCP;
-			po_remove_all(options, "proto");
-		}
-		if (strcmp(option, "udp") == 0) {
-			nfs_server.pmap.pm_prot = IPPROTO_UDP;
-			po_remove_all(options, "proto");
-		}
-	}
-	p = po_rightmost(options, "tcp", "udp");
-	switch (p) {
-	case PO_KEY2_RIGHTMOST:
-		nfs_server.pmap.pm_prot = IPPROTO_UDP;
-		break;
-	case PO_KEY1_RIGHTMOST:
-		nfs_server.pmap.pm_prot = IPPROTO_TCP;
-		break;
-	}
-	po_remove_all(options, "tcp");
-	po_remove_all(options, "udp");
+	/* The kernel NFS client doesn't support changing the RPC program
+	 * number for these services, so reset these fields before probing
+	 * the server's ports.  */
+	nfs_pmap.pm_prog = NFS_PROGRAM;
+	mnt_pmap.pm_prog = MOUNTPROG;
 
-	if (!probe_bothports(&mnt_server, &nfs_server)) {
+	if (!nfs_probe_bothports(mnt_saddr, mnt_salen, &mnt_pmap,
+				 nfs_saddr, nfs_salen, &nfs_pmap)) {
 		errno = ESPIPE;
 		goto err;
 	}
 
-	snprintf(new_option, sizeof(new_option) - 1,
-		 "nfsvers=%lu", nfs_server.pmap.pm_vers);
-	if (po_append(options, new_option) == PO_FAILED)
+	if (!nfs_construct_new_options(options, &nfs_pmap, &mnt_pmap)) {
+		errno = EINVAL;
 		goto err;
-
-	if (nfs_server.pmap.pm_prot == IPPROTO_TCP)
-		snprintf(new_option, sizeof(new_option) - 1,
-			 "proto=tcp");
-	else
-		snprintf(new_option, sizeof(new_option) - 1,
-			 "proto=udp");
-	if (po_append(options, new_option) == PO_FAILED)
-		goto err;
-
-	if (nfs_server.pmap.pm_port != NFS_PORT) {
-		snprintf(new_option, sizeof(new_option) - 1,
-			 "port=%lu", nfs_server.pmap.pm_port);
-		if (po_append(options, new_option) == PO_FAILED)
-			goto err;
-
 	}
-
-	if (mnt_server.pmap.pm_prot == IPPROTO_TCP)
-		snprintf(new_option, sizeof(new_option) - 1,
-			 "mountproto=tcp");
-	else
-		snprintf(new_option, sizeof(new_option) - 1,
-			 "mountproto=udp");
-	if (po_append(options, new_option) == PO_FAILED)
-		goto err;
-
-	snprintf(new_option, sizeof(new_option) - 1,
-		 "mountport=%lu", mnt_server.pmap.pm_port);
-	if (po_append(options, new_option) == PO_FAILED)
-		goto err;
 
 	errno = 0;
 	return options;
@@ -720,12 +746,18 @@ static int nfsmount_bg(struct nfsmount_info *mi)
  *
  * Returns a valid mount command exit code.
  */
+static const char *nfs_background_opttbl[] = {
+	"bg",
+	"fg",
+	NULL,
+};
+
 static int nfsmount_start(struct nfsmount_info *mi)
 {
 	if (!nfs_validate_options(mi))
 		return EX_FAIL;
 
-	if (po_rightmost(mi->options, "bg", "fg") == PO_KEY1_RIGHTMOST)
+	if (po_rightmost(mi->options, nfs_background_opttbl) == 0)
 		return nfsmount_bg(mi);
 	else
 		return nfsmount_fg(mi);

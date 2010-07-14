@@ -28,9 +28,14 @@
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif	/* HAVE_CONFIG_H */
+
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
+
 #include <sys/param.h>
 #include <sys/socket.h>
 #include <sys/poll.h>
@@ -99,12 +104,18 @@ gssd_run()
 	int			ret;
 	struct sigaction	dn_act;
 	int			fd;
+	sigset_t		set;
 
 	/* Taken from linux/Documentation/dnotify.txt: */
 	dn_act.sa_sigaction = dir_notify_handler;
 	sigemptyset(&dn_act.sa_mask);
 	dn_act.sa_flags = SA_SIGINFO;
 	sigaction(DNOTIFY_SIGNAL, &dn_act, NULL);
+
+	/* just in case the signal is blocked... */
+	sigemptyset(&set);
+	sigaddset(&set, DNOTIFY_SIGNAL);
+	sigprocmask(SIG_UNBLOCK, &set, NULL);
 
 	if ((fd = open(pipefs_nfsdir, O_RDONLY)) == -1) {
 		printerr(0, "ERROR: failed to open %s: %s\n",

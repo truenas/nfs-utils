@@ -36,6 +36,10 @@
  */
 
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 #include <ctype.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -366,34 +370,90 @@ char *po_get(struct mount_options *options, char *keyword)
 }
 
 /**
- * po_rightmost - determine the relative position of two options
+ * po_get_numeric - return numeric value of rightmost instance of keyword option
  * @options: pointer to mount options
- * @key1: pointer to a C string containing an option keyword
- * @key2: pointer to a C string containing another option keyword
+ * @keyword: pointer to a C string containing option keyword for which to search
+ * @value: OUT: set to the value of the keyword
+ *
+ * This is specifically for parsing keyword options that take only a numeric
+ * value.  If multiple instances of the same option are present in a mount
+ * option list, the rightmost instance is always the effective one.
+ *
+ * Returns:
+ *	* PO_FOUND if the keyword was found and the value is numeric; @value is
+ *	  set to the keyword's value
+ *	* PO_NOT_FOUND if the keyword was not found
+ *	* PO_BAD_VALUE if the keyword was found, but the value is not numeric
+ *
+ * These last two are separate in case the caller wants to warn about bad mount
+ * options instead of silently using a default.
+ */
+#ifdef HAVE_STRTOL
+po_found_t po_get_numeric(struct mount_options *options, char *keyword, long *value)
+{
+	char *option, *endptr;
+	long tmp;
+
+	option = po_get(options, keyword);
+	if (option == NULL)
+		return PO_NOT_FOUND;
+
+	errno = 0;
+	tmp = strtol(option, &endptr, 10);
+	if (errno == 0 && endptr != option) {
+		*value = tmp;
+		return PO_FOUND;
+	}
+	return PO_BAD_VALUE;
+}
+#else	/* HAVE_STRTOL */
+po_found_t po_get_numeric(struct mount_options *options, char *keyword, long *value)
+{
+	char *option;
+
+	option = po_get(options, keyword);
+	if (option == NULL)
+		return PO_NOT_FOUND;
+
+	*value = atoi(option);
+	return PO_FOUND;
+}
+#endif	/* HAVE_STRTOL */
+
+/**
+ * po_rightmost - determine the relative position of several options
+ * @options: pointer to mount options
+ * @keys: pointer to an array of C strings containing option keywords
+ *
+ * This function can be used to determine which of several similar
+ * options will be the one to take effect.
  *
  * The kernel parses the mount option string from left to right.
  * If an option is specified more than once (for example, "intr"
  * and "nointr", the rightmost option is the last to be parsed,
  * and it therefore takes precedence over previous similar options.
  *
- * This function can be used to determine which of two similar
- * options will be the one to take effect.
+ * This can also distinguish among multiple synonymous options, such
+ * as "proto=," "udp" and "tcp."
+ *
+ * Returns the index into @keys of the option that is rightmost.
+ * If none of the options listed in @keys is present in @options, or
+ * if @options is NULL, returns -1.
  */
-po_rightmost_t po_rightmost(struct mount_options *options,
-			    char *key1, char *key2)
+int po_rightmost(struct mount_options *options, const char *keys[])
 {
 	struct mount_option *option;
+	unsigned int i;
 
 	if (options) {
 		for (option = options->tail; option; option = option->prev) {
-			if (key2 && strcmp(option->keyword, key2) == 0)
-				return PO_KEY2_RIGHTMOST;
-			if (key1 && strcmp(option->keyword, key1) == 0)
-				return PO_KEY1_RIGHTMOST;
+			for (i = 0; keys[i] != NULL; i++)
+				if (strcmp(option->keyword, keys[i]) == 0)
+					return i;
 		}
 	}
 
-	return PO_NEITHER_FOUND;
+	return -1;
 }
 
 /**

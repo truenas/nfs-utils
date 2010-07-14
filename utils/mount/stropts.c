@@ -21,6 +21,10 @@
  *
  */
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 #include <ctype.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -304,9 +308,6 @@ static struct mount_options *rewrite_mount_options(char *str)
 	if (option)
 		mnt_server.pmap.pm_port = atoi(option);
 	mnt_server.pmap.pm_prog = MOUNTPROG;
-	option = po_get(options, "mountprog");
-	if (option)
-		mnt_server.pmap.pm_prog = atoi(option);
 	option = po_get(options, "mountvers");
 	if (option)
 		mnt_server.pmap.pm_vers = atoi(option);
@@ -317,9 +318,6 @@ static struct mount_options *rewrite_mount_options(char *str)
 		po_remove_all(options, "port");
 	}
 	nfs_server.pmap.pm_prog = NFS_PROGRAM;
-	option = po_get(options, "nfsprog");
-	if (option)
-		nfs_server.pmap.pm_prog = atoi(option);
 
 	option = po_get(options, "nfsvers");
 	if (option) {

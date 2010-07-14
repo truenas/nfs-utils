@@ -35,6 +35,10 @@
  * nfsmount.c,v 1.1.1.1 1993/11/18 08:40:51 jrs Exp
  */
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 #include <ctype.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -714,7 +718,7 @@ nfsmount(const char *spec, const char *node, int flags,
 			rpc_mount_errors(*nfs_server.hostname, 1, bg);
 	}
 
-	if (nfs_pmap->pm_vers == 2) {
+	if (mnt_pmap->pm_vers <= 2) {
 		if (mntres.nfsv2.fhs_status != 0) {
 			nfs_error(_("%s: %s:%s failed, reason given by server: %s"),
 					progname, hostname, dirname,
@@ -848,7 +852,7 @@ noauth_flavors:
 		if (!start_statd()) {
 			nfs_error(_("%s: rpc.statd is not running but is "
 				"required for remote locking.\n"
-				"   Either use '-o nolocks' to keep "
+				"   Either use '-o nolock' to keep "
 				"locks local, or start statd."),
 					progname);
 			goto fail;

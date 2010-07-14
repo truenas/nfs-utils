@@ -18,7 +18,10 @@
  *
  */
 
-#include "config.h"
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 #include <unistd.h>
 #include <sys/types.h>
 #include <stdio.h>
@@ -36,6 +39,7 @@
 #include "nls.h"
 #include "mount_constants.h"
 #include "nfs_paths.h"
+#include "nfs_mntent.h"
 
 #include "nfs_mount.h"
 #include "nfs4_mount.h"
@@ -64,7 +68,6 @@ static struct option longopts[] = {
   { "version", 0, 0, 'V' },
   { "read-write", 0, 0, 'w' },
   { "rw", 0, 0, 'w' },
-  { "string", 0, 0, 'i' },
   { "options", 1, 0, 'o' },
   { NULL, 0, 0, 0 }
 };
@@ -130,6 +133,16 @@ static const struct opt_map opt_map[] = {
   { "diratime", 0, 1, MS_NODIRATIME },  /* Update dir access times */
   { "nodiratime", 0, 0, MS_NODIRATIME },/* Do not update dir access times */
 #endif
+#ifdef MS_RELATIME
+  { "relatime", 0, 0, MS_RELATIME },   /* Update access times relative to
+                      mtime/ctime */
+  { "norelatime", 0, 1, MS_RELATIME }, /* Update access time without regard
+                      to mtime/ctime */
+#endif
+  { "noquota", 0, 0, MS_DUMMY },        /* Don't enforce quota */
+  { "quota", 0, 0, MS_DUMMY },          /* Enforce user quota */
+  { "usrquota", 0, 0, MS_DUMMY },       /* Enforce user quota */
+  { "grpquota", 0, 0, MS_DUMMY },       /* Enforce group quota */
   { NULL,	0, 0, 0		}
 };
 
@@ -176,6 +189,9 @@ static void discover_nfs_mount_data_version(void)
 	}
 	if (nfs_mount_data_version > NFS_MOUNT_VERSION)
 		nfs_mount_data_version = NFS_MOUNT_VERSION;
+	else
+		if (kernel_version > MAKE_VERSION(2, 6, 22))
+			string++;
 }
 
 static void print_one(char *spec, char *node, char *type, char *opts)
@@ -225,7 +241,7 @@ static int add_mtab(char *spec, char *mount_point, char *fstype,
 			int flags, char *opts, int freq, int pass)
 {
 	struct mntent ment;
-	FILE *mtab;
+	mntFILE *mtab;
 	int result = EX_FILEIO;
 
 	ment.mnt_fsname = spec;
@@ -243,20 +259,20 @@ static int add_mtab(char *spec, char *mount_point, char *fstype,
 
 	lock_mtab();
 
-	if ((mtab = setmntent(MOUNTED, "a+")) == NULL) {
-		unlock_mtab();
+	mtab = nfs_setmntent(MOUNTED, "a+");
+	if (mtab == NULL || mtab->mntent_fp == NULL) {
 		nfs_error(_("Can't open mtab: %s"),
 				strerror(errno));
 		goto fail_unlock;
 	}
 
-	if (addmntent(mtab, &ment) == 1) {
+	if (nfs_addmntent(mtab, &ment) == 1) {
 		nfs_error(_("Can't write mount entry to mtab: %s"),
 				strerror(errno));
 		goto fail_close;
 	}
 
-	if (fchmod(fileno(mtab), 0644) == -1) {
+	if (fchmod(fileno(mtab->mntent_fp), 0644) == -1) {
 		nfs_error(_("Can't set permissions on mtab: %s"),
 				strerror(errno));
 		goto fail_close;
@@ -265,7 +281,7 @@ static int add_mtab(char *spec, char *mount_point, char *fstype,
 	result = EX_SUCCESS;
 
 fail_close:
-	endmntent(mtab);
+	nfs_endmntent(mtab);
 fail_unlock:
 	unlock_mtab();
 	free(ment.mnt_opts);
@@ -285,7 +301,6 @@ void mount_usage(void)
 	printf(_("\t-f\t\tFake mount, do not actually mount\n"));
 	printf(_("\t-n\t\tDo not update /etc/mtab\n"));
 	printf(_("\t-s\t\tTolerate sloppy mount options rather than fail\n"));
-	printf(_("\t-i\t\tPass mount options to the kernel via a string\n"));
 	printf(_("\t-h\t\tPrint this help\n"));
 	printf(_("\tnfsoptions\tRefer to mount.nfs(8) or nfs(5)\n\n"));
 }
@@ -431,7 +446,7 @@ int main(int argc, char *argv[])
 	mount_point = argv[2];
 
 	argv[2] = argv[0]; /* so that getopt error messages are correct */
-	while ((c = getopt_long(argc - 2, argv + 2, "rvVwfno:hsi",
+	while ((c = getopt_long(argc - 2, argv + 2, "rvVwfno:hs",
 				longopts, NULL)) != -1) {
 		switch (c) {
 		case 'r':
@@ -460,20 +475,6 @@ int main(int argc, char *argv[])
 			break;
 		case 's':
 			++sloppy;
-			break;
-		case 'i':
-			if (linux_version_code() < MAKE_VERSION(2, 6, 23)) {
-				nfs_error(_("%s: Passing mount options via a"
-					" string is unsupported by this"
-					" kernel\n"), progname);
-				goto out_usage;
-			}
-			if (uid != 0) {
-				nfs_error(_("%s: -i option is restricted to 'root'\n"),
-					progname);
-				goto out_usage;
-			}
-			++string;
 			break;
 		case 'h':
 		default:

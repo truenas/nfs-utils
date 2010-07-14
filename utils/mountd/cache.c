@@ -81,6 +81,8 @@ void auth_unix_ip(FILE *f)
 	if (readline(fileno(f), &lbuf, &lbuflen) != 1)
 		return;
 
+	xlog(D_CALL, "auth_unix_ip: inbuf '%s'", lbuf);
+
 	cp = lbuf;
 
 	if (qword_get(&cp, class, 20) <= 0 ||
@@ -109,6 +111,7 @@ void auth_unix_ip(FILE *f)
 	else if (client)
 		qword_print(f, *client?client:"DEFAULT");
 	qword_eol(f);
+	xlog(D_CALL, "auth_unix_ip: client %p '%s'", client, client?client: "DEFAULT");
 
 	if (client) free(client);
 	free(he);
@@ -180,8 +183,6 @@ int get_uuid(char *path, char *uuid, int uuidlen, char *u)
 		const char *type;
 		if (cache == NULL)
 			blkid_get_cache(&cache, NULL);
-
-		blkid_probe_all_new(cache);
 
 		if (stat(path, &stb) != 0)
 			return 0;
@@ -282,8 +283,10 @@ void nfsd_fh(FILE *f)
 	if (readline(fileno(f), &lbuf, &lbuflen) != 1)
 		return;
 
-	cp = lbuf;
+	xlog(D_CALL, "nfsd_fh: inbuf '%s'", lbuf);
 
+	cp = lbuf;
+	
 	dom = malloc(strlen(cp));
 	if (dom == NULL)
 		return;
@@ -508,12 +511,15 @@ void nfsd_fh(FILE *f)
 	 */
 	qword_printint(f, 0x7fffffff);
 	if (found)
-		qword_print(f, found->e_path);
+		qword_print(f, found_path);
 	qword_eol(f);
  out:
-	free(found_path);
-	free(he);
+	if (found_path)
+		free(found_path);
+	if (he)
+		free(he);
 	free(dom);
+	xlog(D_CALL, "nfsd_fh: found %p path %s", found, found ? found->e_path : NULL);
 	return;		
 }
 
@@ -565,20 +571,25 @@ static int dump_to_cache(FILE *f, char *domain, char *path, struct exportent *ex
 	qword_print(f, path);
 	qword_printint(f, time(0)+30*60);
 	if (exp) {
-		qword_printint(f, exp->e_flags);
+		int different_fs = strcmp(path, exp->e_path) != 0;
+		
+		if (different_fs)
+			qword_printint(f, exp->e_flags & ~NFSEXP_FSID);
+		else
+			qword_printint(f, exp->e_flags);
 		qword_printint(f, exp->e_anonuid);
 		qword_printint(f, exp->e_anongid);
 		qword_printint(f, exp->e_fsid);
 		write_fsloc(f, exp, path);
 		write_secinfo(f, exp);
 #if USE_BLKID
- 		if (exp->e_uuid == NULL) {
+ 		if (exp->e_uuid == NULL || different_fs) {
  			char u[16];
  			if (get_uuid(path, NULL, 16, u)) {
  				qword_print(f, "uuid");
  				qword_printhex(f, u, 16);
  			}
- 		} else if (exp->e_uuid) {
+ 		} else {
  			qword_print(f, "uuid");
  			qword_printhex(f, exp->e_uuid, 16);
  		}
@@ -606,6 +617,8 @@ void nfsd_export(FILE *f)
 
 	if (readline(fileno(f), &lbuf, &lbuflen) != 1)
 		return;
+
+	xlog(D_CALL, "nfsd_export: inbuf '%s'", lbuf);
 
 	cp = lbuf;
 	dom = malloc(strlen(cp));
@@ -654,9 +667,9 @@ void nfsd_export(FILE *f)
 			}
 			/* If one is a CROSSMOUNT, then prefer the longest path */
 			if (((found->m_export.e_flags & NFSEXP_CROSSMOUNT) ||
-			     (found->m_export.e_flags & NFSEXP_CROSSMOUNT)) &&
+			     (exp->m_export.e_flags & NFSEXP_CROSSMOUNT)) &&
 			    strlen(found->m_export.e_path) !=
-			    strlen(found->m_export.e_path)) {
+			    strlen(exp->m_export.e_path)) {
 
 				if (strlen(exp->m_export.e_path) >
 				    strlen(found->m_export.e_path)) {
@@ -686,6 +699,7 @@ void nfsd_export(FILE *f)
 		dump_to_cache(f, dom, path, NULL);
 	}
  out:
+	xlog(D_CALL, "nfsd_export: found %p path %s", found, path ? path : NULL);
 	if (dom) free(dom);
 	if (path) free(path);
 	if (he) free(he);

@@ -207,7 +207,7 @@ void usage(char *name)
 {
 	printf("Usage: %s [OPTION]...\n\
 \n\
-  -m, --mounted\t\tShow statistics on mounted NFS filesystems\n\
+  -m, --mounts\t\tShow statistics on mounted NFS filesystems\n\
   -c, --client\t\tShow NFS client statistics\n\
   -s, --server\t\tShow NFS server statistics\n\
   -2\t\t\tShow NFS version 2 statistics\n\
@@ -237,7 +237,7 @@ static struct option longopts[] =
 	{ "all", 0, 0, 'v' },
 	{ "auto", 0, 0, '\3' },
 	{ "client", 0, 0, 'c' },
-	{ "mounts", 0, 0, 'm' },
+	{ "mounted", 0, 0, 'm' },
 	{ "nfs", 0, 0, 'n' },
 	{ "rpc", 0, 0, 'r' },
 	{ "server", 0, 0, 's' },

@@ -37,6 +37,7 @@ static void		usage(const char *, int exitcode);
 static exports		get_exportlist(void);
 static struct nfs_fh_len *get_rootfh(struct svc_req *, dirpath *, mountstat3 *, int v3);
 
+int reverse_resolve = 0;
 int new_cache = 0;
 
 /* PRC: a high-availability callout program can be specified with -H
@@ -66,6 +67,7 @@ static struct option longopts[] =
 	{ "ha-callout", 1, 0, 'H' },
 	{ "state-directory-path", 1, 0, 's' },
 	{ "num-threads", 1, 0, 't' },
+	{ "reverse-lookup", 0, 0, 'r' },
 	{ NULL, 0, 0, 0 }
 };
 
@@ -225,14 +227,11 @@ mount_umnt_1_svc(struct svc_req *rqstp, dirpath *argp, void *resp)
 	if (!(exp = auth_authenticate("unmount", sin, p))) {
 		return 1;
 	}
-	if (new_cache) {
-		if (strcmp(inet_ntoa(exp->m_client->m_addrlist[0]), exp->m_client->m_hostname))
-			mountlist_del(inet_ntoa(exp->m_client->m_addrlist[0]), exp->m_client->m_hostname);
-		mountlist_del(exp->m_client->m_hostname, p);
-	} else {
-		mountlist_del(exp->m_client->m_hostname, p);
+
+	if (!new_cache)
 		export_reset (exp);
-	}
+
+	mountlist_del(inet_ntoa(sin->sin_addr), p);
 	return 1;
 }
 
@@ -421,8 +420,10 @@ get_rootfh(struct svc_req *rqstp, dirpath *path, mountstat3 *error, int v3)
 		fh = cache_get_filehandle(exp, v3?64:32, p);
 		if (fh == NULL) 
 			*error = NFSERR_ACCES;
-		else
+		else {
 			*error = NFS_OK;
+			mountlist_add(inet_ntoa(sin->sin_addr), p);
+		}
 		return fh;
 	} else {
 		struct nfs_fh_len  *fh;
@@ -443,7 +444,7 @@ get_rootfh(struct svc_req *rqstp, dirpath *path, mountstat3 *error, int v3)
 						stb.st_dev, stb.st_ino);
 		}
 		if (fh != NULL) {
-			mountlist_add(exp->m_client->m_hostname, p);
+			mountlist_add(inet_ntoa(sin->sin_addr), p);
 			*error = NFS_OK;
 			export_reset (exp);
 			return fh;
@@ -558,7 +559,7 @@ main(int argc, char **argv)
 
 	/* Parse the command line options and arguments. */
 	opterr = 0;
-	while ((c = getopt_long(argc, argv, "o:n:Fd:f:p:P:hH:N:V:vs:t:", longopts, NULL)) != EOF)
+	while ((c = getopt_long(argc, argv, "o:nFd:f:p:P:hH:N:V:vrs:t:", longopts, NULL)) != EOF)
 		switch (c) {
 		case 'o':
 			descriptors = atoi(optarg);
@@ -597,6 +598,9 @@ main(int argc, char **argv)
 			break;
 		case 'n':
 			_rpcfdtype = SOCK_DGRAM;
+			break;
+		case 'r':
+			reverse_resolve = 1;
 			break;
 		case 's':
 			if ((state_dir = xstrdup(optarg)) == NULL) {

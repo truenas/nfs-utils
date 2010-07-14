@@ -57,8 +57,11 @@ char pipefs_dir[PATH_MAX] = GSSD_PIPEFS_DIR;
 char pipefs_nfsdir[PATH_MAX] = GSSD_PIPEFS_DIR;
 char keytabfile[PATH_MAX] = GSSD_DEFAULT_KEYTAB_FILE;
 char ccachedir[PATH_MAX] = GSSD_DEFAULT_CRED_DIR;
+char *ccachesearch[GSSD_MAX_CCACHE_SEARCH + 1];
 int  use_memcache = 0;
 int  root_uses_machine_creds = 1;
+unsigned int  context_timeout = 0;
+char *preferred_realm = NULL;
 
 void
 sig_die(int signal)
@@ -81,7 +84,7 @@ sig_hup(int signal)
 static void
 usage(char *progname)
 {
-	fprintf(stderr, "usage: %s [-f] [-M] [-n] [-v] [-r] [-p pipefsdir] [-k keytab] [-d ccachedir]\n",
+	fprintf(stderr, "usage: %s [-f] [-M] [-n] [-v] [-r] [-p pipefsdir] [-k keytab] [-d ccachedir] [-t timeout] [-R preferred realm]\n",
 		progname);
 	exit(1);
 }
@@ -93,10 +96,12 @@ main(int argc, char *argv[])
 	int verbosity = 0;
 	int rpc_verbosity = 0;
 	int opt;
+	int i;
 	extern char *optarg;
 	char *progname;
 
-	while ((opt = getopt(argc, argv, "fvrmnMp:k:d:")) != -1) {
+	memset(ccachesearch, 0, sizeof(ccachesearch));
+	while ((opt = getopt(argc, argv, "fvrmnMp:k:d:t:R:")) != -1) {
 		switch (opt) {
 			case 'f':
 				fg = 1;
@@ -131,11 +136,27 @@ main(int argc, char *argv[])
 				if (ccachedir[sizeof(ccachedir)-1] != '\0')
 					errx(1, "ccachedir path name too long");
 				break;
+			case 't':
+				context_timeout = atoi(optarg);
+				break;
+			case 'R':
+				preferred_realm = strdup(optarg);
+				break;
 			default:
 				usage(argv[0]);
 				break;
 		}
 	}
+
+	i = 0;
+	ccachesearch[i++] = strtok(ccachedir, ":");
+	do {
+		ccachesearch[i++] = strtok(NULL, ":");
+	} while (ccachesearch[i-1] != NULL && i < GSSD_MAX_CCACHE_SEARCH);
+
+	if (preferred_realm == NULL)
+		gssd_k5_get_default_realm(&preferred_realm);
+
 	snprintf(pipefs_nfsdir, sizeof(pipefs_nfsdir), "%s/%s",
 		 pipefs_dir, GSSD_SERVICE_NAME);
 	if (pipefs_nfsdir[sizeof(pipefs_nfsdir)-1] != '\0')

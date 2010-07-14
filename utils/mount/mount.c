@@ -29,7 +29,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/mount.h>
-#include <sys/utsname.h>
 #include <getopt.h>
 #include <mntent.h>
 #include <pwd.h>
@@ -45,8 +44,8 @@
 #include "nfs4_mount.h"
 #include "mount.h"
 #include "error.h"
-#include "network.h"
 #include "stropts.h"
+#include "version.h"
 
 char *progname;
 int nfs_mount_data_version;
@@ -146,21 +145,7 @@ static const struct opt_map opt_map[] = {
   { NULL,	0, 0, 0		}
 };
 
-#define MAKE_VERSION(p,q,r)	(65536 * (p) + 256 * (q) + (r))
-
-int linux_version_code(void)
-{
-	struct utsname my_utsname;
-	int p, q, r;
-
-	if (uname(&my_utsname) == 0) {
-		p = atoi(strtok(my_utsname.release, "."));
-		q = atoi(strtok(NULL, "."));
-		r = atoi(strtok(NULL, "."));
-		return MAKE_VERSION(p,q,r);
-	}
-	return 0;
-}
+static void parse_opts(const char *options, int *flags, char **extra_opts);
 
 /*
  * Choose the version of the nfs_mount_data structure that is appropriate
@@ -237,12 +222,59 @@ static char *fix_opts_string(int flags, const char *extra_opts)
 	return new_opts;
 }
 
+/* Create mtab with a root entry.  */
+static void
+create_mtab (void) {
+	struct mntentchn *fstab;
+	struct mntent mnt;
+	int flags;
+	mntFILE *mfp;
+
+	lock_mtab();
+
+	mfp = nfs_setmntent (MOUNTED, "a+");
+	if (mfp == NULL || mfp->mntent_fp == NULL) {
+		int errsv = errno;
+		die (EX_FILEIO, _("mount: can't open %s for writing: %s"),
+		     MOUNTED, strerror (errsv));
+	}
+
+	/* Find the root entry by looking it up in fstab */
+	if ((fstab = getfsfile ("/")) || (fstab = getfsfile ("root"))) {
+		char *extra_opts;
+		parse_opts (fstab->m.mnt_opts, &flags, &extra_opts);
+		mnt.mnt_dir = "/";
+		mnt.mnt_fsname = xstrdup(fstab->m.mnt_fsname);
+		mnt.mnt_type = fstab->m.mnt_type;
+		mnt.mnt_opts = fix_opts_string (flags, extra_opts);
+		mnt.mnt_freq = mnt.mnt_passno = 0;
+		free(extra_opts);
+
+		if (nfs_addmntent (mfp, &mnt) == 1) {
+			int errsv = errno;
+			die (EX_FILEIO, _("mount: error writing %s: %s"),
+			     _PATH_MOUNTED, strerror (errsv));
+		}
+	}
+	if (fchmod (fileno (mfp->mntent_fp), 0644) < 0)
+		if (errno != EROFS) {
+			int errsv = errno;
+			die (EX_FILEIO,
+			     _("mount: error changing mode of %s: %s"),
+			     _PATH_MOUNTED, strerror (errsv));
+		}
+	nfs_endmntent (mfp);
+
+	unlock_mtab();
+
+	reset_mtab_info();
+}
+
 static int add_mtab(char *spec, char *mount_point, char *fstype,
 			int flags, char *opts, int freq, int pass)
 {
 	struct mntent ment;
-	mntFILE *mtab;
-	int result = EX_FILEIO;
+	int result = EX_SUCCESS;
 
 	ment.mnt_fsname = spec;
 	ment.mnt_dir = mount_point;
@@ -251,39 +283,37 @@ static int add_mtab(char *spec, char *mount_point, char *fstype,
 	ment.mnt_freq = freq;
 	ment.mnt_passno = pass;
 
-	if (flags & MS_REMOUNT) {
-		update_mtab(ment.mnt_dir, &ment);
-		free(ment.mnt_opts);
-		return EX_SUCCESS;
+	if (!nomtab && mtab_does_not_exist()) {
+		if (verbose > 1)
+			printf(_("mount: no %s found - creating it..\n"),
+			       MOUNTED);
+		create_mtab ();
 	}
 
-	lock_mtab();
-
-	mtab = nfs_setmntent(MOUNTED, "a+");
-	if (mtab == NULL || mtab->mntent_fp == NULL) {
-		nfs_error(_("Can't open mtab: %s"),
-				strerror(errno));
-		goto fail_unlock;
+	if (!nomtab && mtab_is_writable()) {
+		if (flags & MS_REMOUNT)
+			update_mtab(ment.mnt_dir, &ment);
+		else {
+			mntFILE *mtab;
+			
+			lock_mtab();
+			mtab = nfs_setmntent(MOUNTED, "a+");
+			if (mtab == NULL || mtab->mntent_fp == NULL) {
+				nfs_error(_("Can't open mtab: %s"),
+						strerror(errno));
+				result = EX_FILEIO;
+			} else {
+				if (nfs_addmntent(mtab, &ment) == 1) {
+					nfs_error(_("Can't write mount entry to mtab: %s"),
+							strerror(errno));
+					result = EX_FILEIO;
+				}
+			}
+			nfs_endmntent(mtab);
+			unlock_mtab();
+		}
 	}
 
-	if (nfs_addmntent(mtab, &ment) == 1) {
-		nfs_error(_("Can't write mount entry to mtab: %s"),
-				strerror(errno));
-		goto fail_close;
-	}
-
-	if (fchmod(fileno(mtab->mntent_fp), 0644) == -1) {
-		nfs_error(_("Can't set permissions on mtab: %s"),
-				strerror(errno));
-		goto fail_close;
-	}
-
-	result = EX_SUCCESS;
-
-fail_close:
-	nfs_endmntent(mtab);
-fail_unlock:
-	unlock_mtab();
 	free(ment.mnt_opts);
 
 	return result;
@@ -409,9 +439,8 @@ static int try_mount(char *spec, char *mount_point, int flags,
 	if (!fake)
 		print_one(spec, mount_point, fs_type, mount_opts);
 
-	if (!nomtab)
-		ret = add_mtab(spec, mount_point, fs_type, flags, *extra_opts,
-				0, 0 /* these are always zero for NFS */ );
+	ret = add_mtab(spec, mount_point, fs_type, flags, *extra_opts,
+			0, 0 /* these are always zero for NFS */ );
 	return ret;
 }
 
@@ -538,6 +567,12 @@ int main(int argc, char *argv[])
 			nfs_error(_("%s: permission denied"), progname);
 			mnt_err = EX_USAGE;
 			goto out;
+		}
+
+		if (geteuid() != 0) {
+			nfs_error(_("%s: not installed setuid - "
+				    "\"user\" NFS mounts not supported."), progname);
+			exit(EX_FAIL);
 		}
 	}
 

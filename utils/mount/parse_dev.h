@@ -1,8 +1,7 @@
 /*
- * token.h -- tokenize strings, a la strtok(3)
+ * parse_dev.c -- parse device name into hostname and export path
  *
- * Copyright (C) 2007 Oracle.  All rights reserved.
- * Copyright (C) 2007 Chuck Lever <chuck.lever@oracle.com>
+ * Copyright (C) 2008 Oracle.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public
@@ -21,14 +20,9 @@
  *
  */
 
-#ifndef _NFS_UTILS_MOUNT_TOKEN_H
-#define _NFS_UTILS_MOUNT_TOKEN_H
+#ifndef __NFS_UTILS_PARSE_DEV_HEADER
+#define __NFS_UTILS_PARSE_DEV_HEADER
 
-struct tokenizer_state;
+extern int	nfs_parse_devname(const char *, char **, char **);
 
-char *next_token(struct tokenizer_state *);
-struct tokenizer_state *init_tokenizer(char *, char);
-int tokenizer_error(struct tokenizer_state *);
-void end_tokenizer(struct tokenizer_state *);
-
-#endif	/* _NFS_UTILS_MOUNT_TOKEN_H */
+#endif	/* __NFS_UTILS_PARSE_DEV */

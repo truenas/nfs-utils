@@ -34,6 +34,7 @@
 #include "mount.h"
 #include "error.h"
 #include "network.h"
+#include "parse_dev.h"
 
 #if !defined(MNT_FORCE)
 /* dare not try to include <linux/mount.h> -- lots of errors */
@@ -150,21 +151,11 @@ static int do_nfs_umount23(const char *spec, char *opts)
 	struct mntent mnt = { .mnt_opts = opts };
 	struct pmap *pmap = &mnt_server.pmap;
 	char *p;
+	int result = EX_USAGE;
 
-	if (spec == NULL) {
-		nfs_error(_("%s: No NFS export name was provided"),
-				progname);
-		return EX_USAGE;
-	}
-	
-	p = strchr(spec, ':');
-	if (p == NULL) {
-		nfs_error(_("%s: '%s' is not a legal NFS export name"),
-				progname, spec);
-		return EX_USAGE;
-	}
-	hostname = xstrndup(spec, p - spec);
-	dirname = xstrdup(p + 1);
+	if (!nfs_parse_devname(spec, &hostname, &dirname))
+		return result;
+
 #ifdef NFS_MOUNT_DEBUG
 	printf(_("host: %s, directory: %s\n"), hostname, dirname);
 #endif
@@ -203,24 +194,36 @@ static int do_nfs_umount23(const char *spec, char *opts)
 		pmap->pm_vers = nfsvers_to_mnt(atoi(p+5));
 	if (opts && (p = strstr(opts, "mountvers=")) && isdigit(*(p+10)))
 		pmap->pm_vers = atoi(p+10);
-	if (opts && (hasmntopt(&mnt, "udp") || hasmntopt(&mnt, "proto=udp")))
+	if (opts && (hasmntopt(&mnt, "udp")
+		     || hasmntopt(&mnt, "proto=udp")
+		     || hasmntopt(&mnt, "mountproto=udp")
+		    ))
 		pmap->pm_prot = IPPROTO_UDP;
-	if (opts && (hasmntopt(&mnt, "tcp") || hasmntopt(&mnt, "proto=tcp")))
+	if (opts && (hasmntopt(&mnt, "tcp")
+		     || hasmntopt(&mnt, "proto=tcp")
+		     || hasmntopt(&mnt, "mountproto=tcp")
+		    ))
 		pmap->pm_prot = IPPROTO_TCP;
 
 	if (!nfs_gethostbyname(hostname, &mnt_server.saddr)) {
-		nfs_error(_("%s: '%s' does not contain a recognized hostname"),
-				progname, spec);
-		return EX_USAGE;
+		nfs_error(_("%s: DNS resolution of '%s' failed"),
+				progname, hostname);
+		goto out;
 	}
 
 	if (!nfs_call_umount(&mnt_server, &dirname)) {
 		nfs_error(_("%s: Server failed to unmount '%s'"),
 				progname, spec);
-		return EX_USAGE;
+		result = EX_FAIL;
+		goto out;
 	}
 
-	return EX_SUCCESS;
+	result = EX_SUCCESS;
+
+out:
+	free(hostname);
+	free(dirname);
+	return result;
 }
 
 static struct option umount_longopts[] =
@@ -347,8 +350,13 @@ int nfsumount(int argc, char *argv[])
 	ret = 0;
 	if (mc) {
 		if (!lazy && strcmp(mc->m.mnt_type, "nfs4") != 0)
-			ret = do_nfs_umount23(mc->m.mnt_fsname, mc->m.mnt_opts);
-		ret = del_mtab(mc->m.mnt_fsname, mc->m.mnt_dir) ?: ret;
+			/* We ignore the error from do_nfs_umount23.
+			 * If the actual umount succeeds (in del_mtab),
+			 * we don't want to signal an error, as that
+			 * could cause /sbin/mount to retry!
+			 */
+			do_nfs_umount23(mc->m.mnt_fsname, mc->m.mnt_opts);
+		ret = del_mtab(mc->m.mnt_fsname, mc->m.mnt_dir);
 	} else if (*spec != '/') {
 		if (!lazy)
 			ret = do_nfs_umount23(spec, "tcp,v3");

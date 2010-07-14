@@ -33,10 +33,13 @@
 #include <errno.h>
 #include <netdb.h>
 #include <time.h>
+
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
 #include <rpc/rpc.h>
 #include <rpc/pmap_prot.h>
 #include <rpc/pmap_clnt.h>
-#include <sys/socket.h>
 
 #include "xcommon.h"
 #include "mount.h"
@@ -44,17 +47,6 @@
 #include "nfs_mount.h"
 #include "mount_constants.h"
 #include "network.h"
-
-#ifdef HAVE_RPCSVC_NFS_PROT_H
-#include <rpcsvc/nfs_prot.h>
-#else
-#include <linux/nfs.h>
-#define nfsstat nfs_stat
-#endif
-
-#ifndef NFS_PORT
-#define NFS_PORT 2049
-#endif
 
 #define PMAP_TIMEOUT	(10)
 #define CONNECT_TIMEOUT	(20)
@@ -144,32 +136,164 @@ static const unsigned long probe_mnt3_first[] = {
 };
 
 /**
+ * nfs_name_to_address - resolve hostname to an IPv4 or IPv6 socket address
+ * @hostname: pointer to C string containing DNS hostname to resolve
+ * @sap: pointer to buffer to fill with socket address
+ * @len: IN: size of buffer to fill; OUT: size of socket address
+ *
+ * Returns 1 and places a socket address at @sap if successful;
+ * otherwise zero.
+ */
+int nfs_name_to_address(const char *hostname,
+			const sa_family_t af_hint,
+			struct sockaddr *sap, socklen_t *salen)
+{
+	struct addrinfo *gai_results;
+	struct addrinfo gai_hint = {
+		.ai_family	= af_hint,
+		.ai_flags	= AI_ADDRCONFIG,
+	};
+	socklen_t len = *salen;
+	int error, ret = 0;
+
+	if (af_hint == AF_INET6)
+		gai_hint.ai_flags |= AI_V4MAPPED|AI_ALL;
+
+	*salen = 0;
+
+	error = getaddrinfo(hostname, NULL, &gai_hint, &gai_results);
+	if (error) {
+		nfs_error(_("%s: DNS resolution failed for %s: %s"),
+			progname, hostname, (error == EAI_SYSTEM ?
+				strerror(errno) : gai_strerror(error)));
+		return ret;
+	}
+
+	switch (gai_results->ai_addr->sa_family) {
+	case AF_INET:
+	case AF_INET6:
+		if (len >= gai_results->ai_addrlen) {
+			*salen = gai_results->ai_addrlen;
+			memcpy(sap, gai_results->ai_addr, *salen);
+			ret = 1;
+		}
+		break;
+	default:
+		/* things are really broken if we get here, so warn */
+		nfs_error(_("%s: unrecognized DNS resolution results for %s"),
+				progname, hostname);
+		break;
+	}
+
+	freeaddrinfo(gai_results);
+	return ret;
+}
+
+/**
  * nfs_gethostbyname - resolve a hostname to an IPv4 address
  * @hostname: pointer to a C string containing a DNS hostname
  * @saddr: returns an IPv4 address 
  *
  * Returns 1 if successful, otherwise zero.
  */
-int nfs_gethostbyname(const char *hostname, struct sockaddr_in *saddr)
+int nfs_gethostbyname(const char *hostname, struct sockaddr_in *sin)
 {
-	struct hostent *hp;
+	socklen_t len = sizeof(*sin);
 
-	saddr->sin_family = AF_INET;
-	if (!inet_aton(hostname, &saddr->sin_addr)) {
-		if ((hp = gethostbyname(hostname)) == NULL) {
-			nfs_error(_("%s: can't get address for %s\n"),
-					progname, hostname);
-			return 0;
-		} else {
-			if (hp->h_length > sizeof(*saddr)) {
-				nfs_error(_("%s: got bad hp->h_length\n"),
-						progname);
-				hp->h_length = sizeof(*saddr);
+	return nfs_name_to_address(hostname, AF_INET,
+					(struct sockaddr *)sin, &len);
+}
+
+/**
+ * nfs_string_to_sockaddr - convert string address to sockaddr
+ * @address:	pointer to presentation format address to convert
+ * @addrlen:	length of presentation address
+ * @sap:	pointer to socket address buffer to fill in
+ * @salen:	IN: length of address buffer
+ *		OUT: length of converted socket address
+ *
+ * Convert a presentation format address string to a socket address.
+ * Similar to nfs_name_to_address(), but the DNS query is squelched,
+ * and won't make any noise if the getaddrinfo() call fails.
+ *
+ * Returns 1 and fills in @sap and @salen if successful; otherwise zero.
+ *
+ * See RFC 4038 section 5.1 or RFC 3513 section 2.2 for more details
+ * on presenting IPv6 addresses as text strings.
+ */
+int nfs_string_to_sockaddr(const char *address, const size_t addrlen,
+			   struct sockaddr *sap, socklen_t *salen)
+{
+	struct addrinfo *gai_results;
+	struct addrinfo gai_hint = {
+		.ai_flags	= AI_NUMERICHOST,
+	};
+	socklen_t len = *salen;
+	int ret = 0;
+
+	*salen = 0;
+
+	if (getaddrinfo(address, NULL, &gai_hint, &gai_results) == 0) {
+		switch (gai_results->ai_addr->sa_family) {
+		case AF_INET:
+		case AF_INET6:
+			if (len >= gai_results->ai_addrlen) {
+				*salen = gai_results->ai_addrlen;
+				memcpy(sap, gai_results->ai_addr, *salen);
+				ret = 1;
 			}
-			memcpy(&saddr->sin_addr, hp->h_addr, hp->h_length);
+			break;
+		}
+		freeaddrinfo(gai_results);
+	}
+
+	return ret;
+}
+
+/**
+ * nfs_present_sockaddr - convert sockaddr to string
+ * @sap: pointer to socket address to convert
+ * @salen: length of socket address
+ * @buf: pointer to buffer to fill in
+ * @buflen: length of buffer
+ *
+ * Convert the passed-in sockaddr-style address to presentation format.
+ * The presentation format address is placed in @buf and is
+ * '\0'-terminated.
+ *
+ * Returns 1 if successful; otherwise zero.
+ *
+ * See RFC 4038 section 5.1 or RFC 3513 section 2.2 for more details
+ * on presenting IPv6 addresses as text strings.
+ */
+int nfs_present_sockaddr(const struct sockaddr *sap, const socklen_t salen,
+			 char *buf, const size_t buflen)
+{
+#ifdef HAVE_GETNAMEINFO
+	int result;
+
+	result = getnameinfo(sap, salen, buf, buflen,
+					NULL, 0, NI_NUMERICHOST);
+	if (!result)
+		return 1;
+
+	nfs_error(_("%s: invalid server address: %s"), progname,
+			gai_strerror(result));
+	return 0;
+#else	/* HAVE_GETNAMEINFO */
+	char *addr;
+
+	if (sap->sa_family == AF_INET) {
+		addr = inet_ntoa(((struct sockaddr_in *)sap)->sin_addr);
+		if (addr && strlen(addr) < buflen) {
+			strcpy(buf, addr);
+			return 1;
 		}
 	}
-	return 1;
+
+	nfs_error(_("%s: invalid server address"), progname);
+	return 0;
+#endif	/* HAVE_GETNAMEINFO */
 }
 
 /*
@@ -408,11 +532,10 @@ static int probe_port(clnt_addr_t *server, const unsigned long *versions,
                                 }
 				if (clnt_ping(saddr, prog, *p_vers, *p_prot, NULL))
 					goto out_ok;
-				if (rpc_createerr.cf_stat == RPC_TIMEDOUT)
-					goto out_bad;
 			}
 		}
 		if (rpc_createerr.cf_stat != RPC_PROGNOTREGISTERED &&
+		    rpc_createerr.cf_stat != RPC_TIMEDOUT &&
 		    rpc_createerr.cf_stat != RPC_PROGVERSMISMATCH)
 			goto out_bad;
 
@@ -421,6 +544,9 @@ static int probe_port(clnt_addr_t *server, const unsigned long *versions,
 				continue;
 			p_prot = protos;
 		}
+		if (rpc_createerr.cf_stat == RPC_TIMEDOUT)
+			goto out_bad;
+
 		if (vers || !*++p_vers)
 			break;
 	}
@@ -751,35 +877,120 @@ int clnt_ping(struct sockaddr_in *saddr, const unsigned long prog,
 		return 0;
 }
 
-/**
- * get_client_address - acquire our local network address
- * @saddr: server's address
- * @caddr: filled in with our network address
+/*
+ * Try a getsockname() on a connected datagram socket.
  *
- * Discover a network address that the server will use to call us back.
+ * Returns 1 and fills in @buf if successful; otherwise, zero.
+ *
+ * A connected datagram socket prevents leaving a socket in TIME_WAIT.
+ * This conserves the ephemeral port number space, helping reduce failed
+ * socket binds during mount storms.
+ */
+static int nfs_ca_sockname(const struct sockaddr *sap, const socklen_t salen,
+			   struct sockaddr *buf, socklen_t *buflen)
+{
+	struct sockaddr_in sin = {
+		.sin_family		= AF_INET,
+		.sin_addr.s_addr	= htonl(INADDR_ANY),
+	};
+	struct sockaddr_in6 sin6 = {
+		.sin6_family		= AF_INET6,
+		.sin6_addr		= IN6ADDR_ANY_INIT,
+	};
+	int sock;
+
+	sock = socket(sap->sa_family, SOCK_DGRAM, IPPROTO_UDP);
+	if (sock < 0)
+		return 0;
+
+	switch (sap->sa_family) {
+	case AF_INET:
+		if (bind(sock, (struct sockaddr *)&sin, sizeof(sin)) < 0) {
+			close(sock);
+			return 0;
+		}
+		break;
+	case AF_INET6:
+		if (bind(sock, (struct sockaddr *)&sin6, sizeof(sin6)) < 0) {
+			close(sock);
+			return 0;
+		}
+		break;
+	default:
+		errno = EAFNOSUPPORT;
+		return 0;
+	}
+
+	if (connect(sock, sap, salen) < 0) {
+		close(sock);
+		return 0;
+	}
+
+	return !getsockname(sock, buf, buflen);
+}
+
+/*
+ * Try to generate an address that prevents the server from calling us.
+ *
+ * Returns 1 and fills in @buf if successful; otherwise, zero.
+ */
+static int nfs_ca_gai(const struct sockaddr *sap, const socklen_t salen,
+		      struct sockaddr *buf, socklen_t *buflen)
+{
+	struct addrinfo *gai_results;
+	struct addrinfo gai_hint = {
+		.ai_family	= sap->sa_family,
+		.ai_flags	= AI_PASSIVE,	/* ANYADDR */
+	};
+
+	if (getaddrinfo(NULL, "", &gai_hint, &gai_results))
+		return 0;
+
+	*buflen = gai_results->ai_addrlen;
+	memcpy(buf, gai_results->ai_addr, *buflen);
+
+	freeaddrinfo(gai_results);
+
+	return 1;
+}
+
+/**
+ * nfs_callback_address - acquire our local network address
+ * @sap: pointer to address of remote
+ * @sap_len: length of address
+ * @buf: pointer to buffer to be filled in with local network address
+ * @buflen: IN: length of buffer to fill in; OUT: length of filled-in address
+ *
+ * Discover a network address that an NFSv4 server can use to call us back.
  * On multi-homed clients, this address depends on which NIC we use to
  * route requests to the server.
  *
- * Use a connected datagram socket so as not to leave a socket in TIME_WAIT.
- *
- * Returns one if successful, otherwise zero.
+ * Returns 1 and fills in @buf if an unambiguous local address is
+ * available; returns 1 and fills in an appropriate ANYADDR address
+ * if a local address isn't available; otherwise, returns zero.
  */
-int get_client_address(struct sockaddr_in *saddr, struct sockaddr_in *caddr)
+int nfs_callback_address(const struct sockaddr *sap, const socklen_t salen,
+			 struct sockaddr *buf, socklen_t *buflen)
 {
-	socklen_t len = sizeof(*caddr);
-	int socket, err;
+	struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)buf;
 
-	socket = get_socket(saddr, IPPROTO_UDP, CONNECT_TIMEOUT, FALSE, TRUE);
-	if (socket == RPC_ANYSOCK)
-		return 0;
+	if (nfs_ca_sockname(sap, salen, buf, buflen) == 0)
+		if (nfs_ca_gai(sap, salen, buf, buflen) == 0)
+			goto out_failed;
 
-	err = getsockname(socket, caddr, &len);
-	close(socket);
+	/*
+	 * The server can't use an interface ID that was generated
+	 * here on the client, so always clear sin6_scope_id.
+	 */
+	if (sin6->sin6_family == AF_INET6)
+		sin6->sin6_scope_id = 0;
 
-	if (err && verbose) {
-		nfs_error(_("%s: getsockname failed: %s"),
-				progname, strerror(errno));
-		return 0;
-	}
 	return 1;
+
+out_failed:
+	*buflen = 0;
+	if (verbose)
+		nfs_error(_("%s: failed to construct callback address"));
+	return 0;
+
 }

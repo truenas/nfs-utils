@@ -34,6 +34,7 @@
 #include <arpa/inet.h>
 #include <rpc/auth.h>
 #include <rpc/rpc.h>
+
 #ifdef HAVE_RPCSVC_NFS_PROT_H
 #include <rpcsvc/nfs_prot.h>
 #else
@@ -45,6 +46,7 @@
 #include "nls.h"
 #include "xcommon.h"
 
+#include "mount.h"
 #include "mount_constants.h"
 #include "nfs4_mount.h"
 #include "nfs_mount.h"
@@ -188,10 +190,9 @@ int nfs4mount(const char *spec, const char *node, int flags,
 	int bg, soft, intr;
 	int nocto, noac, unshared;
 	int retry;
-	int retval;
+	int retval = EX_FAIL;
 	time_t timeout, t;
 
-	retval = EX_FAIL;
 	if (strlen(spec) >= sizeof(hostdir)) {
 		nfs_error(_("%s: excessively long host:dir argument\n"),
 				progname);
@@ -238,7 +239,7 @@ int nfs4mount(const char *spec, const char *node, int flags,
 	nocto = 0;
 	noac = 0;
 	unshared = 0;
-	retry = 10000;		/* 10000 minutes ~ 1 week */
+	retry = -1;
 
 	/*
 	 * NFSv4 specifies that the default port should be 2049
@@ -330,6 +331,14 @@ int nfs4mount(const char *spec, const char *node, int flags,
 				goto fail;
 			}
 		}
+	}
+
+	/* if retry is still -1, then it wasn't set via an option */
+	if (retry == -1) {
+		if (bg)
+			retry = 10000;	/* 10000 mins == ~1 week */
+		else
+			retry = 2;	/* 2 min default on fg mounts */
 	}
 
 	data.flags = (soft ? NFS4_MOUNT_SOFT : 0)
@@ -435,6 +444,13 @@ int nfs4mount(const char *spec, const char *node, int flags,
 			rpc_mount_errors(hostname, 0, bg);
 			goto fail;
 		}
+
+		if (bg && !running_bg) {
+			if (retry > 0)
+				retval = EX_BG;
+			goto fail;
+		}
+
 		t = time(NULL);
 		if (t >= timeout) {
 			rpc_mount_errors(hostname, 0, bg);

@@ -1,5 +1,5 @@
-#ifndef _NFS_FSTAB_H
-#define _NFS_FSTAB_H
+#ifndef _NFS_UTILS_MOUNT_FSTAB_H
+#define _NFS_UTILS_MOUNT_FSTAB_H
 
 #include "nfs_mntent.h"
 
@@ -9,6 +9,7 @@
 
 int mtab_is_writable(void);
 int mtab_does_not_exist(void);
+void reset_mtab_info(void);
 
 struct mntentchn {
 	struct mntentchn *nxt, *prev;
@@ -26,5 +27,4 @@ void lock_mtab (void);
 void unlock_mtab (void);
 void update_mtab (const char *special, struct mntent *with);
 
-#endif /* _NFS_FSTAB_H */
-
+#endif	/* _NFS_UTILS_MOUNT_FSTAB_H */

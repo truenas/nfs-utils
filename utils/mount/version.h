@@ -1,8 +1,7 @@
 /*
- * token.h -- tokenize strings, a la strtok(3)
+ * version.h -- get running kernel version
  *
- * Copyright (C) 2007 Oracle.  All rights reserved.
- * Copyright (C) 2007 Chuck Lever <chuck.lever@oracle.com>
+ * Copyright (C) 2008 Oracle.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public
@@ -21,14 +20,32 @@
  *
  */
 
-#ifndef _NFS_UTILS_MOUNT_TOKEN_H
-#define _NFS_UTILS_MOUNT_TOKEN_H
+#ifndef _NFS_UTILS_MOUNT_VERSION_H
+#define _NFS_UTILS_MOUNT_VERSION_H
 
-struct tokenizer_state;
+#include <stdlib.h>
+#include <string.h>
 
-char *next_token(struct tokenizer_state *);
-struct tokenizer_state *init_tokenizer(char *, char);
-int tokenizer_error(struct tokenizer_state *);
-void end_tokenizer(struct tokenizer_state *);
+#include <sys/utsname.h>
 
-#endif	/* _NFS_UTILS_MOUNT_TOKEN_H */
+static inline unsigned int MAKE_VERSION(unsigned int p, unsigned int q,
+					unsigned int r)
+{
+	return (65536 * p) + (256 * q) + r;
+}
+
+static inline unsigned int linux_version_code(void)
+{
+	struct utsname my_utsname;
+	unsigned int p, q, r;
+
+	if (uname(&my_utsname))
+		return 0;
+
+	p = atoi(strtok(my_utsname.release, "."));
+	q = atoi(strtok(NULL, "."));
+	r = atoi(strtok(NULL, "."));
+	return MAKE_VERSION(p, q, r);
+}
+
+#endif	/* _NFS_UTILS_MOUNT_VERSION_H */

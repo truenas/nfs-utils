@@ -38,8 +38,26 @@
    authgss_set_debug_level */
 #undef HAVE_AUTHGSS_SET_DEBUG_LEVEL
 
+/* Define to 1 if you have the `bindresvport_sa' function. */
+#undef HAVE_BINDRESVPORT_SA
+
 /* Define this if you want to use BSD signal semantics */
 #undef HAVE_BSD_SIGNALS
+
+/* Define to 1 if you have the `clnt_create' function. */
+#undef HAVE_CLNT_CREATE
+
+/* Define to 1 if you have the `clnt_create_timed' function. */
+#undef HAVE_CLNT_CREATE_TIMED
+
+/* Define to 1 if you have the `clnt_dg_create' function. */
+#undef HAVE_CLNT_DG_CREATE
+
+/* Define to 1 if you have the `clnt_tli_create' function. */
+#undef HAVE_CLNT_TLI_CREATE
+
+/* Define to 1 if you have the `clnt_vc_create' function. */
+#undef HAVE_CLNT_VC_CREATE
 
 /* Define to 1 if you have the <com_err.h> header file. */
 #undef HAVE_COM_ERR_H
@@ -93,6 +111,15 @@
 /* Define to 1 if you have the `getmntent' function. */
 #undef HAVE_GETMNTENT
 
+/* Define to 1 if you have the `getnameinfo' function. */
+#undef HAVE_GETNAMEINFO
+
+/* Define to 1 if you have the `getnetconfig' function. */
+#undef HAVE_GETNETCONFIG
+
+/* Define to 1 if you have the `getrpcbyname' function. */
+#undef HAVE_GETRPCBYNAME
+
 /* Define to 1 if you have the `gettimeofday' function. */
 #undef HAVE_GETTIMEOFDAY
 
@@ -110,6 +137,9 @@
 
 /* Define to 1 if you have the `inet_ntoa' function. */
 #undef HAVE_INET_NTOA
+
+/* Define to 1 if you have the `inet_ntop' function. */
+#undef HAVE_INET_NTOP
 
 /* Define to 1 if you have the `innetgr' function. */
 #undef HAVE_INNETGR
@@ -129,6 +159,9 @@
 
 /* Define to 1 if you have the <libintl.h> header file. */
 #undef HAVE_LIBINTL_H
+
+/* Define to 1 if you have the `tirpc' library (-ltirpc). */
+#undef HAVE_LIBTIRPC
 
 /* tcp-wrapper */
 #undef HAVE_LIBWRAP
@@ -280,6 +313,9 @@
 /* tcp-wrapper */
 #undef HAVE_TCP_WRAPPER
 
+/* Define to 1 if you have the <tirpc/netconfig.h> header file. */
+#undef HAVE_TIRPC_NETCONFIG_H
+
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
 
@@ -297,6 +333,12 @@
 
 /* Define to 1 if `vfork' works. */
 #undef HAVE_WORKING_VFORK
+
+/* Define to 1 if you have the `xdr_rpcb' function. */
+#undef HAVE_XDR_RPCB
+
+/* Define this if you want IPv6 support compiled in */
+#undef IPV6_SUPPORTED
 
 /* Define this as the Kerberos version number */
 #undef KRB5_VERSION

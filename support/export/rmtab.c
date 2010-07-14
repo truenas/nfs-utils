@@ -23,7 +23,7 @@ int
 rmtab_read(void)
 {
 	struct rmtabent		*rep;
-	nfs_export		*exp;
+	nfs_export		*exp = NULL;
 
 	setrmtabent("r");
 	while ((rep = getrmtabent(1, NULL)) != NULL) {
@@ -31,7 +31,7 @@ rmtab_read(void)
 		int			htype;
 		
 		htype = client_gettype(rep->r_client);
-		if (htype == MCL_FQDN || htype == MCL_SUBNETWORK
+		if ((htype == MCL_FQDN || htype == MCL_SUBNETWORK)
 		    && (hp = gethostbyname (rep->r_client))
 		    && (hp = hostent_dup (hp),
 			exp = export_allowed (hp, rep->r_path))) {

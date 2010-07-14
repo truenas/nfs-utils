@@ -41,6 +41,7 @@ static struct option longopts[] =
 };
 unsigned int protobits = NFSCTL_ALLBITS;
 unsigned int versbits = NFSCTL_ALLBITS;
+int minorvers4 = NFSD_MAXMINORVERS4;		/* nfsv4 minor version */
 char *haddr = NULL;
 
 int
@@ -49,6 +50,7 @@ main(int argc, char **argv)
 	int	count = 1, c, error, port, fd, found_one;
 	struct servent *ent;
 	struct hostent *hp;
+	char *p;
 
 	ent = getservbyname ("nfs", "udp");
 	if (ent != NULL)
@@ -79,10 +81,14 @@ main(int argc, char **argv)
 			}
 			break;
 		case 'N':
-			switch((c = atoi(optarg))) {
-			case 2:
-			case 3:
+			switch((c = strtol(optarg, &p, 0))) {
 			case 4:
+				if (*p == '.') {
+					minorvers4 = -atoi(p + 1);
+					break;
+				}
+			case 3:
+			case 2:
 				NFSCTL_VERUNSET(versbits, c);
 				break;
 			default:
@@ -158,7 +164,7 @@ main(int argc, char **argv)
 	closeall(3);
 
 	openlog("nfsd", LOG_PID, LOG_DAEMON);
-	if ((error = nfssvc(port, count, versbits, protobits, haddr)) < 0) {
+	if ((error = nfssvc(port, count, versbits, minorvers4, protobits, haddr)) < 0) {
 		int e = errno;
 		syslog(LOG_ERR, "nfssvc: %s", strerror(e));
 		closelog();

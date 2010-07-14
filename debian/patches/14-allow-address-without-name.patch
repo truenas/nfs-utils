@@ -1,0 +1,11 @@
+--- nfs-utils-1.2.2.orig/utils/statd/hostname.c
++++ nfs-utils-1.2.2/utils/statd/hostname.c
+@@ -212,7 +212,7 @@
+ 					buf, (socklen_t)sizeof(buf));
+ 		freeaddrinfo(ai);
+ 		if (!result)
+-			return NULL;
++			return strdup(hostname);
+ 		return strdup(buf);
+ 	}
+ 

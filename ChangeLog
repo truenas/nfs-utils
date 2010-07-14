@@ -1,3 +1,612 @@
+2006-04-12 NeilBrown <neilb@suse.de>
+	Set version to 1.0.8, 
+	aclocal -I aclocal ; autoheader ; automake ; autoconf
+
+2006-04-10 NeilBrown <neilb@suse.de>
+	Various paranoia checks:
+	gssd_proc.c: pass max_field sizes to sscanf to avoid buffer
+	  overflow
+	svcgssd_proc.c: range_check name.length, to ensure name.length+1
+	  doesn't wrap
+	idmapd.c(nfsdcb): make sure at least one byte is read before
+	 zeroing the last byte that was read, otherwise memory corruption
+	 is possible.
+
+	Found by SuSE security audit.
+	
+2006-04-10 "Kevin Coffman" <kwc@citi.umich.edu>
+	Check for sufficient version of librpcsecgss and libgssapi
+	in configure.in
+
+2006-04-10 "Kevin Coffman" <kwc@citi.umich.edu>
+	Update aclocal/tcp-wrappers.m4 to define HAVE_LIBWRAP and
+	HAVE_TCP_WRAPPERS as appropriate.	
+
+2006-04-10 NeilBrown <neilb@suse.de>
+	Add checking for innetgr back to configure.in
+	
+2006-04-10 kwc@citi.umich.edu
+	Update calls to gss_export_lucid_sec_context()
+	
+	Change the calls to gss_export_lucid_sec_context() to match the corrected
+	interface definition in libgssapi-0.9.
+	
+2006-04-10 kwc@citi.umich.edu
+	Plug memory leaks in svcgssd
+	
+	Various memory leaks in the svcgssd context processing are eliminated.
+	
+2006-04-10 kwc@citi.umich.edu
+	Fix memory leak of the AUTH structure on context negotiations
+	
+	Free AUTH structure after completing context negotiation and sending
+	context information to the kernel.
+	
+2006-04-10 kwc@citi.umich.edu
+	Fix support/include/config.h.in such as would be done be running autoheader.
+	
+2006-03-28 NeilBrown <neilb@suse.de>
+	1.0.8-pre3, aclocal/autoconf/automake
+	
+2006-03-28 kwc@citi.umich.edu
+	Use PKGCONFIG to locate gssapi and rpcsecgss header files
+	
+	Instead of having separate copies of the gssapi and rpcsecgss
+	header files, or depending on the Kerberos gssapi header,
+	locate the headers now installed with the libgssapi and librpcsecgss
+	libraries.
+	
+	Remove local copies of the gssapi and rpcsecgss header files.
+	
+	This depends on the configure_use_autotools patch.
+	
+2006-03-28 kwc@citi.umich.edu
+	Add debugging to better detect negotiation of enctype not supported by kernel
+	
+	Print debugging message indicating the type of encryption keys being sent
+	down to the kernel.  This should make it easier to detect cases where
+	unsupported encryption types are being negotiated.
+	(really this time)
+	
+2006-03-28 kwc@citi.umich.edu
+	
+	Don't close and reopen all pipes on every DNOTIFY signal.
+	
+	From: Vince Busam <vbusam@google.com>
+	Signed-off-by: Kevin Coffman <kwc@citi.umich.edu>
+	
+	Don't unnecessarily close and re-open all pipes after every DNOTIFY
+	signal.  These unnecessary closes were triggering a kernel Oops.
+	Original patch modified to correct segfault when unmounting last
+	NFSv4 mount.
+	
+2006-03-28 kwc@citi.umich.edu
+	Add option to specify directory to search for credentials cache files
+	
+	
+	From: Vince Busam <vbusam@google.com>
+	Signed-off-by: Kevin Coffman <kwc@citi.umich.edu>
+	
+	Add command line option to specify which directory should be searched
+	to find credentials caches.
+	(really this time)	
+	
+2006-03-28 kwc@citi.umich.edu
+	Must still use knowledge of the glue context for pre-1.4 versions of MIT krb5
+	
+	We need to get access to the internal krb5 context pointer for
+	older (pre-1.4) versions of MIT Kerberos.  We get a pointer to
+	the gss glue's context.  Get the right pointer before accessing
+	the context information.
+	(really this time)
+	
+2006-03-28 kwc@citi.umich.edu
+	
+	Remove unused groups variable from get_ids() which was causing a compiler warning.
+	(really this time)
+	
+2006-03-28 kwc@citi.umich.edu
+	Update krb5 code to use glue routine lucid context functions
+	
+	
+	
+	The gssd code should not know about the glue layer's context structure.
+	A previous patch added gss_export_lucid_sec_context() and
+	gss_free_lucid_sec_context() functions to the gssapi glue layer.
+	Use these functions rather than calling directly to the Kerberos
+	gssapi code (which requires the Kerberos context handle rather
+	than the glue's context handle).
+	
+	(really this time)
+	
+2006-03-28 kwc@citi.umich.edu
+	
+	Separate out context handling code for MIT Kerberos and SPKM3
+	into their own file.
+	(Really this time)
+	
+2006-03-28 Kevin Coffman <kwc@citi.umich.edu>
+	User-selectable idmapping cache lifetime
+	
+	Read and process new configuration option, Cache-Expiration, and use
+	the value to determine how long idmapping entries are cached.
+	(Really this time)
+	
+2006-03-27 NeilBrown <neilb@suse.de>
+	1.0.8-rc3
+
+2006-03-27 kwc@citi.umich.edu
+	Add debugging to better detect negotiation of enctype not supported by kernel
+
+	Print debugging message indicating the type of encryption keys being sent
+	down to the kernel.  This should make it easier to detect cases where
+	unsupported encryption types are being negotiated.
+	
+2006-03-27
+	Don't close and reopen all pipes on every DNOTIFY signal.
+	
+	Don't unnecessarily close and re-open all pipes after every DNOTIFY
+	signal.  These unnecessary closes were triggering a kernel Oops.
+	Original patch modified to correct segfault when unmounting last
+	NFSv4 mount.
+	
+2006-03-27
+	Add option to specify directory to search for credentials cache files
+	
+	Add command line option to specify which directory should be searched
+	to find credentials caches.
+	
+2006-03-27 kwc@citi.umich.edu
+	Must still use knowledge of the glue context for pre-1.4 versions of MIT krb5
+	
+	We need to get access to the internal krb5 context pointer for
+	older (pre-1.4) versions of MIT Kerberos.  We get a pointer to
+	the gss glue's context.  Get the right pointer before accessing
+	the context information.
+	
+2006-03-27 Kevin Coffman <kwc@citi.umich.edu>
+	Remove unused variable causing compile warning
+	
+	Remove unused groups variable from get_ids() which was causing a compiler warning.
+	
+2006-03-27 kwc@citi.umich.edu
+	Update krb5 code to use glue routine lucid context functions
+	
+	The gssd code should not know about the glue layer's context structure.
+	A previous patch added gss_export_lucid_sec_context() and
+	gss_free_lucid_sec_context() functions to the gssapi glue layer.
+	Use these functions rather than calling directly to the Kerberos
+	gssapi code (which requires the Kerberos context handle rather
+	than the glue's context handle).
+	
+2006-03-27 Kevin Coffman <kwc@citi.umich.edu>
+	Separate out context handling code for MIT Kerberos and SPKM3
+	into their own file.
+	
+2006-03-27 Kevin Coffman <kwc@citi.umich.edu>
+	Consolidate gssd and svcgssd since they share much code
+	
+	Remove directory svcgssd which was only created because the old
+	build system could not handle building two daemons in the same
+	directory.  This eliminates build complications since gssd and
+	svcgssd also share many source files.
+	
+	This patch effectively removes the utils/svcgssd directory, moving
+	all its files to the utils/gssd directory.  File utils/gssd/Makefile.am
+	is modified with directions to build both gssd and svcgssd.
+	
+2006-03-27 Kevin Coffman <kwc@citi.umich.edu>
+	Use PKGCONFIG to locate gssapi and rpcsecgss header files
+	
+	Instead of having separate copies of the gssapi and rpcsecgss
+	header files, or depending on the Kerberos gssapi header,
+	locate the headers now installed with the libgssapi and librpcsecgss
+	libraries.
+	
+	Remove local copies of the gssapi and rpcsecgss header files.
+	
+	This depends on the configure_use_autotools patch.
+	
+2006-03-27 Kevin Coffman <kwc@citi.umich.edu>
+	User-selectable idmapping cache lifetime
+	
+	Read and process new configuration option, Cache-Expiration, and use
+	the value to determine how long idmapping entries are cached.
+	
+2006-03-27 Steve Dickson <steved@redhat.com>
+	Set libnfsidmap library debugging level and logging function.
+
+	This patch adds a call to the new libnfsidmap library function 
+	nfs4_set_debug(), which defines the verbosity level libnfsidmap
+	should use as well as the logging function.
+
+2006-03-27 Kevin Coffman <kwc@citi.umich.edu>
+	Don't close file descriptor until after calling event_del().
+
+	Delete event processing for a file descriptor before closing it.
+	This was causing hangs when used in combination with libevent-1.0b.
+
+2006-03-27 kwc@citi.umich.edu
+	Find krb5-config on SuSE 10
+
+	SuSE 10.0 puts krb5-config in yet another obscure location.
+	Look for it there and use it if found.
+
+2006-03-27 Kevin Coffman <kwc@citi.umich.edu>
+	Update debian package information.
+
+2006-03-27 Kevin Coffman <kwc@citi.umich.edu>
+	Install /var/lib/nfs files using DESTDIR and add rpcsec headers to distribution
+
+	Add "$(DESTDIR)" to the paths for the "$(statedir)" files so they are
+	put in the right place when DESTDIR is defined.
+
+	Add the rpcsec header files to EXTRA_DIST list.
+
+2005-12-21 NeilBrown <neilb@suse.de>
+	*utils/rquotad/rquota_server.c: Detect and handle both old-style
+	(2.4) and new-style(2.6) quotactl.
+	*utils/gssd/gss_destroy_cred: remove dependence on "head -1" which
+	might need to be "head -n 1"
+	*utils/nhfsstone/nhfsrun: convert "tail -1" to "tail -n 1"
+	
+2005-12-20 Kevin Coffman <kwc@citi.umich.edu> NeilBrown <neilb@suse.de>
+	Substantial Makefile/configure rewrite.  
+	Run 'autogen.sh' to create "Makefile.in" etc.
+
+	Also add -D_FILE_OFFSET_BITS=64 to CPP_FLAGS so that mountd can
+	stat and export files larger than 2Gig.
+
+	1.0.8-rc2 released
+
+2005-12-20 NeilBrown <neilb@suse.de>
+	support/nfs/exports.c(getexportent): is a null host name is given,
+	replace it with '*' so we have a non-empty host name for messages
+	etc.
+	utils/exportfs/exportfs.man: Correct documentation about default
+	export options.
+
+2005-12-20 Kevin Coffman <kwc@citi.umich.edu>
+	utils/gssd/gssd_proc.c(create_auth_rpc_client): Use service
+	  portion of clp->servicename rather than hard-coding "nfs". 
+
+2005-12-16 NeilBrown <neilb@suse.de>
+	1.0.8-rc1 released
+
+2005-12-16 Kevin Coffman <kwc@citi.umich.edu>
+	svcgssd needs -lnfs when using new function closeall().
+	
+	---
+	Remove unused argument from nfsdopen()
+	
+	After previous changes, the arguement to nfsdopen() has become unused.
+	Remove it.
+	
+	---
+	Fix idmapd error reporting after call to mydaemon()
+	
+	After call to mydaemon(), calls to err[x] and warn[x] result
+	in the message going nowhere.  Change to using idmapd_*
+	versions of these routines which write to syslog.
+	Original problem reported by Vincent Roqueta <vincent.roqueta@ext.bull.net>
+	with a different patch.
+	
+	---
+	Don't add @domain to names that cannot be mapped.
+	
+	Per rfc3530 section 5.8: when unable to map a uid to a name, don't
+	add the @domain to the "nobody" name.
+	
+	---
+	Fix idmapd for systems where sizeof(uid_t)!=4 and sizeof(gid_t)!=4
+	
+	Fix conversion cases where uid_t and gid_t are not 32 bits.
+	
+	---
+	Don't segfault because mech wasn't filled in because of an error
+	
+	From Kevin Coffman <kwc@citi.umich.edu>
+	
+	Initialize mech to null to avoid segfault if an error occurs
+	and mech is never returned from gss_accept_sec_context.
+	
+	---
+	Remove use of static buffer in do_downcall
+	
+	Signed-off-by: Kevin Coffman <kwc@citi.umich.edu>
+	
+	Dynamically allocate buffer of the correct length rather
+	than using fixed-length buffer.
+	
+	---
+	Print better error message if rpc routine clnt_create() fails.
+	
+	---
+	Print appropriate error messages after gss calls.
+	
+	Print gss error messages after calls to gss functions, even if they
+	are for Kerberos only.
+	
+	---
+	Update gssd and svcgssd to use the new gss mech glue lucid context calls.
+	
+	Signed-off-by: Kevin Coffman <kwc@citi.umich.edu>
+	
+	Update gssd and svcgssd to use a lucid context from SPKM3 to send down
+	to the kernel.
+	Update gssd and svcgssd to use the new gss mech glue lucid context calls.
+	Add configure check to see if spkm3 support is available.
+	
+	---
+	Add support for CONTINUE_NEEDED return from gss_accept_sec_context.
+	
+	Signed-off-by: Kevin Coffman <kwc@citi.umich.edu>
+	
+	Add CONTINUE_INIT handling to svcgssd. Store the partially complete spkm
+	context handle in the out_handle of CONTINUE_INIT messages so that it is
+	returned in the in_handle of subsequent messages.
+	
+	---
+	Replace GSS_C_ANON_FLAG with GSS_C_MUTUAL_FLAG.
+	
+	Signed-off-by: Kevin Coffman <kwc@citi.umich.edu>
+	
+	Specify GSS_C_MUTUAL_FLAG rather than GSS_C_ANON_FLAG for
+	spkm3.
+	
+	NOTE: we need a way to pass the appropriate value rather than
+	hard-coding this flag.
+	
+	---
+	Increase size of rpc send/receive buffers
+	
+	Change the clnt_create() to use routines which allow us to set the
+	send and receive buffer size.  This is needed for larger spkm3
+	exchanges including certificate chains.
+	
+	This has the side-effect of skipping the portmap call since
+	we specify the port (by specifying the service) when getting
+	the server's address information.
+	
+	---
+	Define _LINUX_QUOTA_VERSION to 1
+	
+	The rquotad code is written against the "old" kernel quota interface.
+	Fedora Core 4 is the only platform known to check for different
+	versions, so this should not have any affect on other platforms
+	and fixes the build for FC4.
+	
+	---
+
+2005-12-12 Usha Ketineni <ketineni@us.ibm.com>, NeilBrown <neilb@suse.de>
+	*support/nfs/rpcmisc.c(rpc_init): is stdin is a socket, but
+	is already connected (as e.g. from ssh), don't assume we
+	were started by inetd.
+
+2005-11-03 Steve Dickson <SteveD@redhat.com> NeilBrown <neilb@suse.de>
+	*utils/idmapd/idmaps.c:
+	
+	I've recently updated the nfs-utils in rawhide with the
+	latest patches from the SourceForge CVS tree and the
+	latest CITI patches (1.0.7-4).
+	
+	In testing these patches, I notice that when the server was started
+	and a SIGHUP was sent to rpc.idmapd to open the nfs4.nametoid/channel
+	and nfs4.idtoname/channel files, the second open (the nfs4.idtoname one)
+	failed because the path (i.e. ic->ic_path) was NULL.
+	
+	Now the reason the ic_path was NULL was because it was never set
+	during the call to nfsdopen(). nfsdopen() looks like:
+	nfsdopen(char *path)
+	{
+	     return ((nfsdopenone(&nfsd_ic[IC_NAMEID], IC_NAMEID, path) == 0 &&
+             nfsdopenone(&nfsd_ic[IC_IDNAME], IC_IDNAME, path) == 0) ? 0 
+	       : -1);
+	}
+
+	Note: the call to nfsdopenone() is how the path is set in each nfsd_ic[]
+	entry and nfsdopen() is only called once.
+	
+	So when rpc.idmap comes up and the first call to nfsdopenone() fails
+	(because the server is not running) the path in nfsd_ic[IC_IDNAME] is
+	never filled in because the second nfsdopenone() never happen...
+	
+	Now there was a CITI patche (idmapd_revert_fix_reopen_on_sighup.dif)
+	that tried to address this problem but did seem to fix it.. The
+	attached patch fix the problem by initializing both nfsd_ic[IC_IDNAME]
+	and nfsd_ic[IC_NAMEID] structures with the needed info...
+	I figured since there is no way of changing these paths or filenames
+	by command line args, why not just set them during compile time...
+	so that's what this patch does.
+	
+	This patch also changes how nfsdreopen_one() handles the
+	case where the event has already been set. Unlike the CITI
+	patch (idmapd_revert_fix_reopen_on_sighup.dif) which just
+	just does not register the second event, my patch deletes
+	the old event and the registers the new one. It just seems like
+	the right thing to do since a SIGHUP means a new server just
+	started so we probably should create a new event as well...
+	
+	steved.
+	
+2005-10-14 NeilBrown <neilb@suse.de>
+	*utils/mountd/cache.c(nfsd_fh): Understand type 2 and type 3
+	filesystem identifiers, which are used with device numbers
+	That don't fit into 16 bits.
+
+2005-10-07 Olaf Kirch <okir@suse.de>
+	* utils/mountd/mountd.c(get_exportlist): Without this patch,
+	showmount -e would sometimes display host names that should really
+	have been subsumed under a wildcard entry.
+
+	The problem was that the code in get_exportlist would always
+	skip the next group entry after removing one FQDN.
+
+2005-10-06 Steve Dickson <SteveD@redhat.com> NeilBrown <neilb@suse.de>
+	* support/nfs/export.c: don't warn about sync/async for readonly
+	exports
+	* support/nfs/closeall.c: new file with function to close all 
+	file descriptors from a give minimum upwards.
+	* nfsd/mountd/statd/idmapd/gsssvcd: use closeall.
+	* utils/mountd/mountd.c: Eliminate 3 syslog message that are
+	logged for successful events. 
+	* utils/mountd/mountd.c: make sure the correct hostname is used in
+	the SM_NOTIFY message that is sent from a rebooted server which
+	has multiple network interfaces. (bz 139101)
+
+	Details can be found in:
+	https://bugzilla.redhat.com/bugzilla/show_bug.cgi?id=139101
+
+	*utils/idmapd/idmapd.c:Fixed subscripting problem in idmapd (bz
+	158188) This fixes the following problem: 
+         rpc.idmapd: nfsdreopen: Opening '' failed: errno 2 (No such file or directory)
+
+	 Details can be found in:
+	 https://bugzilla.redhat.com/bugzilla/show_bug.cgi?id=158188
+
+	*utils/statd/statd.c(drop_privs): clear st_gid as well as st_uid
+	of stat fails.
+	*utils/statd/svc_run.c(my_svc_run): remove usage of undocumented
+	%m format specifier.
+	*utils/statd/montor.c(sm_mon_1_svc): as above
+	*support/nfs/xlog.c(xlog): Changed xlog to use LOG_INFO instead of
+	LOG_DEBUG so debug messages will appear w/out any config changes
+	to syslog.conf. 
+
+	
+2005-09-02 Mike Frysinger <vapier@gentoo.org>
+	* utils/rquotad/rquota_server.c(getquotainfo): use explicit
+	struture-member copying rather than memcpy, as the element
+	sizes are the same on all architectures.
+
+2005-08-26 Kevin Coffman <kwc@citi.umich.edu>
+	Add option to set rpcsec_gss debugging level (if available)
+
+	Changes to allow gssd/svcgssd to build when using Hiemdal Kerberos
+	libraries.  Note that there are still run-time issues preventing
+	this from working when shared libraries for libgssapi and librpcsecgss
+	are used.
+	
+2005-08-26 Kevin Coffman <kwc@citi.umich.edu>
+	Remove the rpcsec_gss code and rely on an external library instead.
+
+2005-08-26 Kevin Coffman <kwc@citi.umich.edu>
+	*utils/mountd/mountd.c:
+	mountd currently always returns AUTH_NULL and AUTH_SYS as the
+	allowable flavors in mount replies.  We want it to also return gss
+	flavors when appropriate. For now as a hack we just have it always
+	return the KRB5 flavors as well. 
+
+	*utils/mountd/cache.c:
+	
+	When attempting to mount an NFSv4 pseudofilesystem (fsid=0) and the
+	actual exported directory does not exist on the server, rpc.mountd
+	doesn't check the directory exists (when fsidtype=1, i.e. using fsid,
+	but does check for fsidtype=0, i.e. using dev/ino).  The non-existent
+	exported directory path with fsid=0 is written to the kernel via
+	/proc/net/rpc/nfsd.export/channel, which leads to path_lookup() to
+	return ENOENT (seems appropriate).  Unfortunately, the new_cache
+	approach ignores errors returned when writing via the channel file so
+	that particular error is lost and the mount request is silently ignored.
+	
+	Assuming it doesn't make sense to revamp the new_cache/up-call method to
+	not ignore returned errors, it seems appropriate to fix the case where
+	rpc.mountd doesn't check for the existence of an exported directory with
+	fsid= semantics.  The following patch does this by moving the stat() up
+	so it is done for both fsidtype's.  I'm not certain whether the other
+	tests need to be executed for fsidtype=1, but it doesn't appear to hurt
+	[Not exactly true: the comparison of inode numbers caused problems so
+	now it's kept for fsidtype=0 only].
+	
+	Would it be also desirable to log a warning for every error, if any,
+	returned by a write to any of the /proc/net/rpc/*/channel files which
+	would otherwise be ignored (maybe under a debug flag)?
+
+	* gssd/mountd/svcgssd: Changes gssd, svcgssd, and mountd to ignore a
+	SIGHUP rather than dying.
+
+	* many: Remove the gssapi code and rely on an external library instead.
+
+2005-08-26 Kevin Coffman <kwc@citi.umich.edu>
+	* utils/exportfs/exports.man: Document the "crossmnt" export export option
+	* utils/gssd/krb5_util.c: 
+	Add better debugging and partially revert the function
+	check for gss_krb5_ccache_name.
+	
+	For MIT Kerberos releases up to and including 1.3.1, we *must*
+	use the routine gss_krb5_ccache_name to get the K5 gssapi code
+	to use a different credentials cache.
+	
+	For releases 1.3.2 and on, we want to use the KRB5CCNAME
+	environment variable to tell it what to use.
+	(A problem was reported where 1.3.5 was being used, our
+	code was using gss_krb5_ccache_name, but the underlying
+	code continued to use the first (or default?) credentials
+	cache.  Switching to using the env variable fixed the problem.
+	I cannot recreate this problem.
+
+	*utils/gssd/krb5_util.c:
+	Andrew Mahone <andrew.mahone@gmail.com> reported that reiser4
+	always has DT_UNKNOWN.  He supplied patch to move the check
+	for regular files after the stat() call to correctly find
+	ccache files in reiser4 filesystem.
+	
+	Also change the name comparison so that the wrong file is
+	not selected when the substring comparison is done.
+
+	*utils/gssd/krb5_util.c:
+	Limit the set of encryption types that can be negotiated by
+	the Kerberos library to those that the kernel code currently
+	supports.
+	
+	This should eventually query the kernel for the list of
+	supported enctypes.
+
+	*utils/gssd/gss_util.c, utils/svcgssd/svcgssd_main_loop.c:
+	Print more information in error messages to help debugging failures.
+
+	*utils/svcgssd/svcgssd_proc.c: Increase token buffer size and
+	update error handling so that a response is always sent.
+
+	*utils/svcgssd/svcgssd_proc.c: Add support to retrieve
+	supplementary groups. 
+	
+	
+2005-08-26 Kevin Coffman <kwc@citi.umich.edu>
+	* configure.in etc
+	Consolidate some of the Kerberos checking instead of repeating
+	the same things for MIT and Heimdal.
+	Also adds more checks to distinguish 32-bit from 64-bit
+	(mainly for gssapi.h)
+	Fix svcgssd Makefile so make TOP=../../ works correctly there.
+	Enable running a modern autoheader.
+	* utils/gssd/gss_oids.c: Use correct OID value for SPKM-3
+	* utils/gssd/gss_util.c: Fix build with older MIT releases that do not define GSS_C_NT_HOSTBASED_SERVICE
+	* utils/gssd/write_bytes.h, support/include/gssapi/gssapi.h:
+	Length of gss_buffer_desc is a size_t which is 64-bits on a
+	64-bit machine.  Kernel code expects 32-bit integer for length.
+	Coerce length value into a 32-bit value when reading from or
+	writing to the kernel.
+	Change gssapi.h to use datatype size values obtained from
+	configure rather than hard-coded values.
+	* utils/idmapd/idmapd.c: The EV_INIT check here was wrong, and was
+	causing idmapd to become unresponsive to server requests after
+	receiving a sighup. 
+	* utils/idmapd/idmapd.c: Idmapd should flush the server id<->name
+	caches when its started. 
+
+2005-04-12  G. Allen Morris III <gam3@gam3.net>
+
+	* All Makefile: added TOP as needed for easier compile.
+
+	* utils/nfsstat/nfsstat.c: added NFS V4 support; added the -m
+	  option; Added -2, -3, and -4 options; changed -a option to -v
+	  option; added long options; changed default output to not
+	  show V2 NFS statistics unless used.
+
+	* utils/nfsstat/nfsstat.man: Documented above changes; changed
+	  authors email address; added BUGS section.
+
 2005-04-07  Chip Salzenberg  <chip@pobox.com>
 
 	* debian/changelog: Version 1.0.7-2.

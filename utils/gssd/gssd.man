@@ -6,7 +6,7 @@
 .SH NAME
 rpc.gssd \- rpcsec_gss daemon
 .SH SYNOPSIS
-.B "rpc.gssd [-f] [-k keytab] [-p pipefsdir] [-v]"
+.B "rpc.gssd [-f] [-k keytab] [-p pipefsdir] [-v] [-r] [-d ccachedir]"
 .SH DESCRIPTION
 The rpcsec_gss protocol gives a means of using the gss-api generic security
 api to provide security for protocols using rpc (in particular, nfs).  Before
@@ -48,8 +48,17 @@ Tells
 where to look for the rpc_pipefs filesystem.  The default value is
 "/var/lib/nfs/rpc_pipefs".
 .TP
+.B -d directory
+Tells
+.B rpc.gssd
+where to look for kerberos credential files.  The default value is "/tmp".
+.TP
 .B -v
 Increases the verbosity of the output (can be specified multiple times).
+.TP
+.B -r
+If the rpcsec_gss library supports setting debug level,
+increases the verbosity of the output (can be specified multiple times).
 .SH SEE ALSO
 .BR rpc.svcgssd(8)
 .SH AUTHORS

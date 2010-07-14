@@ -7,7 +7,11 @@
  * NSM for Linux.
  */
 
-#include "config.h"
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
+#include <sys/stat.h>
 #include <limits.h>
 #include <signal.h>
 #include <unistd.h>
@@ -22,6 +26,7 @@
 #include <grp.h>
 #include "statd.h"
 #include "version.h"
+#include "nfslib.h"
 
 /* Socket operations */
 #include <sys/types.h>
@@ -194,8 +199,10 @@ static void drop_privs(void)
 	struct stat st;
 
 	if (stat(SM_DIR, &st) == -1 &&
-	    stat(DIR_BASE, &st) == -1)
+	    stat(DIR_BASE, &st) == -1) {
 		st.st_uid = 0;
+		st.st_gid = 0;
+	}
 
 	if (st.st_uid == 0) {
 		note(N_WARNING, "statd running as root. chown %s to choose different user\n",
@@ -285,6 +292,7 @@ int main (int argc, char **argv)
 			}
 			break;
 		case 'n':	/* Specify local hostname */
+			run_mode |= STATIC_HOSTNAME;
 			MY_NAME = xstrdup(optarg);
 			break;
 		case 'P':
@@ -400,14 +408,12 @@ int main (int argc, char **argv)
 			}
 		}
 		tempfd = open("/dev/null", O_RDWR);
-		close(0); dup2(tempfd, 0);
-		close(1); dup2(tempfd, 1);
-		close(2); dup2(tempfd, 2);
-		fdmax = sysconf (_SC_OPEN_MAX);
-		for (filedes = 3; filedes < fdmax; filedes++) 
-			if (filedes != pipefds[1])
-				close (filedes);
-
+		dup2(tempfd, 0);
+		dup2(tempfd, 1);
+		dup2(tempfd, 2);
+		dup2(pipefds[1], 3);
+		pipefds[1] = 3;
+		closeall(4);
 	}
 
 	/* Child. */

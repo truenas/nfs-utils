@@ -6,7 +6,9 @@
  * Copyright (C) 1995, 1996 Olaf Kirch <okir@monad.swb.de>
  */
 
-#include "config.h"
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
 
 #include <signal.h>
 #include <sys/stat.h>
@@ -75,6 +77,14 @@ killer (int sig)
   xlog (L_FATAL, "Caught signal %d, un-registering and exiting.", sig);
 }
 
+static void
+sig_hup (int sig)
+{
+  /* don't exit on SIGHUP */
+  xlog (L_NOTICE, "Received SIGHUP... Ignoring.\n", sig);
+  return;
+}
+
 bool_t
 mount_null_1_svc(struct svc_req *rqstp, void *argp, void *resp)
 {
@@ -97,10 +107,11 @@ mount_dump_1_svc(struct svc_req *rqstp, void *argp, mountlist *res)
 {
 	struct sockaddr_in *addr =
 		(struct sockaddr_in *) svc_getcaller(rqstp->rq_xprt);
-	xlog(L_NOTICE, "dump request from %s",
-		inet_ntoa(addr->sin_addr));
 
-	*res = mountlist_list();
+	if ((*res = mountlist_list()) == NULL)
+		xlog(L_WARNING, "dump request from %s failed.",
+			inet_ntoa(addr->sin_addr));
+
 	return 1;
 }
 
@@ -150,9 +161,11 @@ mount_export_1_svc(struct svc_req *rqstp, void *argp, exports *resp)
 {
 	struct sockaddr_in *addr =
 		(struct sockaddr_in *) svc_getcaller(rqstp->rq_xprt);
-	xlog(L_NOTICE, "export request from %s",
-		inet_ntoa(addr->sin_addr));
-	*resp = get_exportlist();
+
+	if ((*resp = get_exportlist()) == NULL)
+		xlog(L_WARNING, "export request from %s failed.",
+			inet_ntoa(addr->sin_addr));
+		
 	return 1;
 }
 
@@ -161,9 +174,10 @@ mount_exportall_1_svc(struct svc_req *rqstp, void *argp, exports *resp)
 {
 	struct sockaddr_in *addr =
 		(struct sockaddr_in *) svc_getcaller(rqstp->rq_xprt);
-	xlog(L_NOTICE, "exportall request from %s",
-		inet_ntoa(addr->sin_addr));
-	*resp = get_exportlist();
+
+	if ((*resp = get_exportlist()) == NULL)
+		xlog(L_WARNING, "exportall request from %s failed.",
+			inet_ntoa(addr->sin_addr));
 	return 1;
 }
 
@@ -235,7 +249,10 @@ mount_pathconf_2_svc(struct svc_req *rqstp, dirpath *path, ppathcnf *res)
 bool_t
 mount_mnt_3_svc(struct svc_req *rqstp, dirpath *path, mountres3 *res)
 {
-	static int	flavors[] = { AUTH_NULL, AUTH_UNIX };
+#define AUTH_GSS_KRB5 390003
+#define AUTH_GSS_KRB5I 390004
+#define AUTH_GSS_KRB5P 390005
+	static int	flavors[] = { AUTH_NULL, AUTH_UNIX, AUTH_GSS_KRB5, AUTH_GSS_KRB5I, AUTH_GSS_KRB5P};
 	struct nfs_fh_len *fh;
 
 	xlog(D_CALL, "MNT3(%s) called", *path);
@@ -244,7 +261,8 @@ mount_mnt_3_svc(struct svc_req *rqstp, dirpath *path, mountres3 *res)
 
 		ok->fhandle.fhandle3_len = fh->fh_size;
 		ok->fhandle.fhandle3_val = fh->fh_handle;
-		ok->auth_flavors.auth_flavors_len = 2;
+		ok->auth_flavors.auth_flavors_len
+			= sizeof(flavors)/sizeof(flavors[0]);
 		ok->auth_flavors.auth_flavors_val = flavors;
 	}
 	return 1;
@@ -410,11 +428,9 @@ get_exportlist(void)
 				xfree(c->gr_name);
 				xfree(c);
 				xfree (hp);
-				if ((c = *cp) == NULL)
-				  break;
+				continue;
 			      }
-			      else
-				xfree (hp);
+			      xfree (hp);
 			    }
 			    cp = &(c->gr_next);
 			  }
@@ -554,11 +570,8 @@ main(int argc, char **argv)
 	sigaction(SIGCHLD, &sa, NULL);
 
 	/* Daemons should close all extra filehandles ... *before* RPC init. */
-	if (!foreground) {
-		int fd = sysconf (_SC_OPEN_MAX);
-		while (--fd > 2)
-			(void) close(fd);
-	}
+	if (!foreground)
+		closeall(3);
 
 	new_cache = check_new_cache();
 	if (new_cache)
@@ -575,9 +588,10 @@ main(int argc, char **argv)
 			 mount_dispatch, port);
 
 	sa.sa_handler = killer;
-	sigaction(SIGHUP, &sa, NULL);
 	sigaction(SIGINT, &sa, NULL);
 	sigaction(SIGTERM, &sa, NULL);
+	sa.sa_handler = sig_hup;
+	sigaction(SIGHUP, &sa, NULL);
 
 	auth_init(export_file);
 

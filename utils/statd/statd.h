@@ -5,7 +5,10 @@
  * NSM for Linux.
  */
 
-#include "config.h"
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 #include "sm_inter.h"
 #include "system.h"
 #include "log.h"
@@ -78,6 +81,7 @@ extern int run_mode;
 /* LH - notify_only mode would be for notifying hosts on an IP alias
  * that just came back up, for ex, when failing over a HA service to
  * another host.... */
+#define STATIC_HOSTNAME 8	/* Always use the hostname set by -n */
 
 /*
  * Program name and version pointers -- See statd.c for the reasoning

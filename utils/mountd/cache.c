@@ -6,7 +6,10 @@
  * and listen for requests (using my_svc_run)
  * 
  */
-#include "config.h"
+
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
 
 #include <sys/types.h>
 #include <sys/select.h>
@@ -119,7 +122,7 @@ void nfsd_fh(FILE *f)
 		goto out;
 	if (qword_get_int(&cp, &fsidtype) != 0)
 		goto out;
-	if (fsidtype < 0 || fsidtype > 1)
+	if (fsidtype < 0 || fsidtype > 3)
 		goto out; /* unknown type */
 	if ((fsidlen = qword_get(&cp, fsid, 32)) <= 0)
 		goto out;
@@ -138,6 +141,30 @@ void nfsd_fh(FILE *f)
 			goto out;
 		memcpy(&fsidnum, fsid, 4);
 		break;
+
+	case 2: /* 12 bytes: 4 major, 4 minor, 4 inode 
+		 * This format is never actually used but was
+		 * an historical accident
+		 */
+		if (fsidlen != 12)
+			goto out;
+		memcpy(&dev, fsid, 4); major = ntohl(dev);
+		memcpy(&dev, fsid+4, 4); minor = ntohl(dev);
+		memcpy(&inode, fsid+8, 4);
+		break;
+
+	case 3: /* 8 bytes: 4 byte packed device number, 4 inode */
+		/* This is *host* endian, not net-byte-order, because
+		 * no-one outside this host has any business interpreting it
+		 */
+		if (fsidlen != 8)
+			goto out;
+		memcpy(&dev, fsid, 4);
+		memcpy(&inode, fsid+4, 4);
+		major = (dev & 0xfff00) >> 8;
+		minor = (dev & 0xff) | ((dev >> 12) & 0xfff00);
+		break;
+
 	}
 
 	auth_reload();
@@ -145,21 +172,22 @@ void nfsd_fh(FILE *f)
 	/* Now determine export point for this fsid/domain */
 	for (i=0 ; i < MCL_MAXTYPES; i++) {
 		for (exp = exportlist[i]; exp; exp = exp->m_next) {
+			struct stat stb;
+
 			if (!client_member(dom, exp->m_client->m_hostname))
+				continue;
+			if (exp->m_export.e_mountpoint &&
+			    !is_mountpoint(exp->m_export.e_mountpoint[0]?
+					   exp->m_export.e_mountpoint:
+					   exp->m_export.e_path))
+				dev_missing ++;
+			if (stat(exp->m_export.e_path, &stb) != 0)
 				continue;
 			if (fsidtype == 1 &&
 			    ((exp->m_export.e_flags & NFSEXP_FSID) == 0 ||
 			     exp->m_export.e_fsid != fsidnum))
 				continue;
-			if (fsidtype == 0) {
-				struct stat stb;
-				if (exp->m_export.e_mountpoint &&
-				    !is_mountpoint(exp->m_export.e_mountpoint[0]?
-						   exp->m_export.e_mountpoint:
-						   exp->m_export.e_path))
-					dev_missing ++;
-				if (stat(exp->m_export.e_path, &stb) != 0)
-					continue;
+			if (fsidtype != 1) {
 				if (stb.st_ino != inode)
 					continue;
 				if (major != major(stb.st_dev) ||

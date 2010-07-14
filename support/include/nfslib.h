@@ -9,7 +9,9 @@
 #ifndef NFSLIB_H
 #define NFSLIB_H
 
-#include "config.h"
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -57,7 +59,7 @@ enum cle_maptypes {
 
 /*
  * Data related to a single exports entry as returned by getexportent.
- * FIXME: export options should probably be parsed at a later time to 
+ * FIXME: export options should probably be parsed at a later time to
  * allow overrides when using exportfs.
  */
 struct exportent {
@@ -136,6 +138,8 @@ int qword_get(char **bpp, char *dest, int bufsize);
 int qword_get_int(char **bpp, int *anint);
 void cache_flush(int force);
 int check_new_cache(void);
+
+void closeall(int min);
 
 /* lockd. */
 int			lockdsvc();

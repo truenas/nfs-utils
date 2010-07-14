@@ -36,6 +36,8 @@
 
 */
 
+#include "config.h"
+
 #include <sys/param.h>
 #include <sys/socket.h>
 #include <rpc/rpc.h>
@@ -53,6 +55,7 @@
 
 char pipefsdir[PATH_MAX] = GSSD_PIPEFS_DIR;
 char keytabfile[PATH_MAX] = GSSD_DEFAULT_KEYTAB_FILE;
+char ccachedir[PATH_MAX] = GSSD_DEFAULT_CRED_DIR;
 
 void
 sig_die(int signal)
@@ -63,10 +66,18 @@ sig_die(int signal)
 	exit(1);
 }
 
+void
+sig_hup(int signal)
+{
+	/* don't exit on SIGHUP */
+	printerr(1, "Received SIGHUP... Ignoring.\n");
+	return;
+}
+
 static void
 usage(char *progname)
 {
-	fprintf(stderr, "usage: %s [-f] [-v] [-p pipefsdir] [-k keytab]\n",
+	fprintf(stderr, "usage: %s [-f] [-v] [-r] [-p pipefsdir] [-k keytab] [-d ccachedir]\n",
 		progname);
 	exit(1);
 }
@@ -76,11 +87,12 @@ main(int argc, char *argv[])
 {
 	int fg = 0;
 	int verbosity = 0;
+	int rpc_verbosity = 0;
 	int opt;
 	extern char *optarg;
 	char *progname;
 
-	while ((opt = getopt(argc, argv, "fvmp:k:")) != -1) {
+	while ((opt = getopt(argc, argv, "fvrmp:k:d:")) != -1) {
 		switch (opt) {
 			case 'f':
 				fg = 1;
@@ -91,6 +103,9 @@ main(int argc, char *argv[])
 			case 'v':
 				verbosity++;
 				break;
+			case 'r':
+				rpc_verbosity++;
+				break;
 			case 'p':
 				strncpy(pipefsdir, optarg, sizeof(pipefsdir));
 				if (pipefsdir[sizeof(pipefsdir)-1] != '\0')
@@ -100,6 +115,11 @@ main(int argc, char *argv[])
 				strncpy(keytabfile, optarg, sizeof(keytabfile));
 				if (keytabfile[sizeof(keytabfile)-1] != '\0')
 					errx(1, "keytab path name too long");
+				break;
+			case 'd':
+				strncpy(ccachedir, optarg, sizeof(ccachedir));
+				if (ccachedir[sizeof(ccachedir-1)] != '\0')
+					errx(1, "ccachedir path name too long");
 				break;
 			default:
 				usage(argv[0]);
@@ -117,13 +137,20 @@ main(int argc, char *argv[])
 		progname = argv[0];
 
 	initerr(progname, verbosity, fg);
+#ifdef HAVE_AUTHGSS_SET_DEBUG_LEVEL
+	authgss_set_debug_level(rpc_verbosity);
+#else
+        if (rpc_verbosity > 0)
+		printerr(0, "Warning: rpcsec_gss library does not "
+			    "support setting debug level\n");
+#endif
 
 	if (!fg && daemon(0, 0) < 0)
 		errx(1, "fork");
 
 	signal(SIGINT, sig_die);
 	signal(SIGTERM, sig_die);
-	signal(SIGHUP, sig_die);
+	signal(SIGHUP, sig_hup);
 
 	/* Process keytab file and get machine credentials */
 	gssd_refresh_krb5_machine_creds();

@@ -47,7 +47,11 @@
  * This is the RPC server side idle loop.
  * Wait for input, call server program.
  */
-#include "config.h"
+
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 #include <errno.h>
 #include <time.h>
 #include "statd.h"
@@ -123,7 +127,8 @@ my_svc_run(void)
 			if (errno == EINTR || errno == ECONNREFUSED
 			 || errno == ENETUNREACH || errno == EHOSTUNREACH)
 				continue;
-			note(N_ERROR, "my_svc_run() - select: %m");
+			note(N_ERROR, "my_svc_run() - select: %s",
+				strerror (errno));
 			return;
 
 		case 0:

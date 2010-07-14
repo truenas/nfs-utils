@@ -123,6 +123,10 @@
 /* Define this if the function krb5_get_error_message is available */
 #undef HAVE_KRB5_GET_ERROR_MESSAGE
 
+/* Define this if the function krb5_get_init_creds_opt_set_addressless is
+   available */
+#undef HAVE_KRB5_GET_INIT_CREDS_OPT_SET_ADDRESSLESS
+
 /* Define to 1 if you have the <libintl.h> header file. */
 #undef HAVE_LIBINTL_H
 

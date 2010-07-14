@@ -31,15 +31,15 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-@CONFIG_RQUOTAD_TRUE@am__append_1 = rquotad
-@CONFIG_NFSV4_TRUE@am__append_2 = idmapd
-@CONFIG_GSS_TRUE@am__append_3 = gssd
-@CONFIG_MOUNT_TRUE@am__append_4 = mount
+@CONFIG_NFSV4_TRUE@am__append_1 = idmapd
+@CONFIG_GSS_TRUE@am__append_2 = gssd
+@CONFIG_MOUNT_TRUE@am__append_3 = mount
 subdir = utils
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/aclocal/bsdsignals.m4 \
 	$(top_srcdir)/aclocal/kerberos5.m4 \
+	$(top_srcdir)/aclocal/libblkid.m4 \
 	$(top_srcdir)/aclocal/nfs-utils.m4 \
 	$(top_srcdir)/aclocal/tcp-wrappers.m4 \
 	$(top_srcdir)/configure.ac
@@ -61,8 +61,8 @@ RECURSIVE_CLEAN_TARGETS = mostlyclean-recursive clean-recursive	\
   distclean-recursive maintainer-clean-recursive
 ETAGS = etags
 CTAGS = ctags
-DIST_SUBDIRS = exportfs mountd nfsd nfsstat showmount statd rquotad \
-	idmapd gssd mount
+DIST_SUBDIRS = exportfs mountd nfsd nfsstat showmount statd idmapd \
+	gssd mount
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 ACLOCAL = @ACLOCAL@
 ACLOCAL_AMFLAGS = @ACLOCAL_AMFLAGS@
@@ -211,8 +211,7 @@ sysconfdir = @sysconfdir@
 target_alias = @target_alias@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-OPTDIRS = $(am__append_1) $(am__append_2) $(am__append_3) \
-	$(am__append_4)
+OPTDIRS = $(am__append_1) $(am__append_2) $(am__append_3)
 SUBDIRS = \
 	exportfs \
 	mountd \

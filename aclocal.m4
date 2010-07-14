@@ -7452,5 +7452,6 @@ AC_SUBST([am__untar])
 
 m4_include([aclocal/bsdsignals.m4])
 m4_include([aclocal/kerberos5.m4])
+m4_include([aclocal/libblkid.m4])
 m4_include([aclocal/nfs-utils.m4])
 m4_include([aclocal/tcp-wrappers.m4])

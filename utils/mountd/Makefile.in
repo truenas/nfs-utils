@@ -52,7 +52,7 @@ PROGRAMS = $(sbin_PROGRAMS)
 am_mountd_OBJECTS = mountd-mountd.$(OBJEXT) \
 	mountd-mount_dispatch.$(OBJEXT) mountd-auth.$(OBJEXT) \
 	mountd-rmtab.$(OBJEXT) mountd-cache.$(OBJEXT) \
-	mountd-svc_run.$(OBJEXT)
+	mountd-svc_run.$(OBJEXT) mountd-fsloc.$(OBJEXT)
 mountd_OBJECTS = $(am_mountd_OBJECTS)
 am__DEPENDENCIES_1 =
 mountd_DEPENDENCIES = ../../support/export/libexport.a \
@@ -229,7 +229,7 @@ EXTRA_DIST = $(man8_MANS)
 RPCPREFIX = rpc.
 KPREFIX = @kprefix@
 mountd_SOURCES = mountd.c mount_dispatch.c auth.c rmtab.c cache.c \
-		 svc_run.c mountd.h
+		 svc_run.c fsloc.c mountd.h
 
 mountd_LDADD = ../../support/export/libexport.a \
 	       ../../support/nfs/libnfs.a \
@@ -314,6 +314,7 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mountd-auth.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mountd-cache.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mountd-fsloc.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mountd-mount_dispatch.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mountd-mountd.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mountd-rmtab.Po@am__quote@
@@ -423,6 +424,20 @@ mountd-svc_run.obj: svc_run.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='svc_run.c' object='mountd-svc_run.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(mountd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o mountd-svc_run.obj `if test -f 'svc_run.c'; then $(CYGPATH_W) 'svc_run.c'; else $(CYGPATH_W) '$(srcdir)/svc_run.c'; fi`
+
+mountd-fsloc.o: fsloc.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(mountd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT mountd-fsloc.o -MD -MP -MF $(DEPDIR)/mountd-fsloc.Tpo -c -o mountd-fsloc.o `test -f 'fsloc.c' || echo '$(srcdir)/'`fsloc.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/mountd-fsloc.Tpo $(DEPDIR)/mountd-fsloc.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='fsloc.c' object='mountd-fsloc.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(mountd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o mountd-fsloc.o `test -f 'fsloc.c' || echo '$(srcdir)/'`fsloc.c
+
+mountd-fsloc.obj: fsloc.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(mountd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT mountd-fsloc.obj -MD -MP -MF $(DEPDIR)/mountd-fsloc.Tpo -c -o mountd-fsloc.obj `if test -f 'fsloc.c'; then $(CYGPATH_W) 'fsloc.c'; else $(CYGPATH_W) '$(srcdir)/fsloc.c'; fi`
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/mountd-fsloc.Tpo $(DEPDIR)/mountd-fsloc.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='fsloc.c' object='mountd-fsloc.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(mountd_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o mountd-fsloc.obj `if test -f 'fsloc.c'; then $(CYGPATH_W) 'fsloc.c'; else $(CYGPATH_W) '$(srcdir)/fsloc.c'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo

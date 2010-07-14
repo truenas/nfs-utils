@@ -8,7 +8,7 @@
 #include <config.h>
 #endif
 
-#define NFSSVCSTAT	"/proc/net/rpc/nfsd"
+#define NFSSRVSTAT	"/proc/net/rpc/nfsd"
 #define NFSCLTSTAT	"/proc/net/rpc/nfs"
 
 #define MOUNTSFILE	"/proc/mounts"
@@ -20,58 +20,60 @@
 #include <string.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <signal.h>
+#include <time.h>
 
 #define MAXNRVALS	32
 
-static unsigned int	svcv2info[20];	/* NFSv2 call counts ([0] == 18) */
-static unsigned int	cltv2info[20];	/* NFSv2 call counts ([0] == 18) */
-static unsigned int	svcv3info[24];	/* NFSv3 call counts ([0] == 22) */
-static unsigned int	cltv3info[24];	/* NFSv3 call counts ([0] == 22) */
-static unsigned int	svcv4info[4];	/* NFSv4 call counts ([0] == 2) */
-static unsigned int	cltv4info[34];	/* NFSv4 call counts ([0] == 32) */
-static unsigned int	svcv4opinfo[42];/* NFSv4 call counts ([0] == 40) */
-static unsigned int	svcnetinfo[5];	/* 0  # of received packets
-					 * 1  UDP packets
-					 * 2  TCP packets
-					 * 3  TCP connections
-					 */
-static unsigned int	cltnetinfo[5];	/* 0  # of received packets
-					 * 1  UDP packets
-					 * 2  TCP packets
-					 * 3  TCP connections
-					 */
+static unsigned int	srvproc2info[20], srvproc2info_tmp[20];	/* NFSv2 call counts ([0] == 18) */
+static unsigned int	cltproc2info[20], cltproc2info_tmp[20];	/* NFSv2 call counts ([0] == 18) */
+static unsigned int	srvproc3info[24], srvproc3info_tmp[24];	/* NFSv3 call counts ([0] == 22) */
+static unsigned int	cltproc3info[24], cltproc3info_tmp[24];	/* NFSv3 call counts ([0] == 22) */
+static unsigned int	srvproc4info[4], srvproc4info_tmp[4];	/* NFSv4 call counts ([0] == 2) */
+static unsigned int	cltproc4info[34], cltproc4info_tmp[34];	/* NFSv4 call counts ([0] == 32) */
+static unsigned int	srvproc4opsinfo[42], srvproc4opsinfo_tmp[42];	/* NFSv4 call counts ([0] == 40) */
+static unsigned int	srvnetinfo[5], srvnetinfo_tmp[5];	/* 0  # of received packets
+								 * 1  UDP packets
+								 * 2  TCP packets
+								 * 3  TCP connections
+								 */
+static unsigned int	cltnetinfo[5], cltnetinfo_tmp[5];	/* 0  # of received packets
+								 * 1  UDP packets
+								 * 2  TCP packets
+								 * 3  TCP connections
+								 */
 
-static unsigned int	svcrpcinfo[6];	/* 0  total # of RPC calls
-					 * 1  total # of bad calls
-					 * 2  bad format
-					 * 3  authentication failed
-					 * 4  unknown client
-					 */
-static unsigned int	cltrpcinfo[4];	/* 0  total # of RPC calls
-					 * 1  retransmitted calls
-					 * 2  cred refreshs
-					 */
+static unsigned int	srvrpcinfo[6], srvrpcinfo_tmp[6];	/* 0  total # of RPC calls
+								 * 1  total # of bad calls
+								 * 2  bad format
+								 * 3  authentication failed
+								 * 4  unknown client
+								 */
+static unsigned int	cltrpcinfo[4], cltrpcinfo_tmp[4];	/* 0  total # of RPC calls
+								 * 1  retransmitted calls
+								 * 2  cred refreshs
+								 */
 
-static unsigned int	svcrcinfo[9];	/* 0  repcache hits
-					 * 1  repcache hits
-					 * 2  uncached reqs
-					 * (for pre-2.4 kernels:)
-					 * 3  FH lookups
-					 * 4  'anon' FHs
-					 * 5  noncached non-directories
-					 * 6  noncached directories
-					 * 7  stale
-					 */
+static unsigned int	srvrcinfo[9], srvrcinfo_tmp[9];		/* 0  repcache hits
+								 * 1  repcache hits
+								 * 2  uncached reqs
+								 * (for pre-2.4 kernels:)
+								 * 3  FH lookups
+								 * 4  'anon' FHs
+								 * 5  noncached non-directories
+								 * 6  noncached directories
+								 * 7  stale
+								 */
 
-static unsigned int	svcfhinfo[7];	/* (for kernels >= 2.4.0)
-					 * 0  stale
-					 * 1  FH lookups
-					 * 2  'anon' FHs
-					 * 3  noncached directories
-					 * 4  noncached non-directories
-					 * leave hole to relocate stale for order
-					 *    compatability.
-					 */
+static unsigned int	srvfhinfo[7], srvfhinfo_tmp[7];		/* (for kernels >= 2.4.0)
+								 * 0  stale
+								 * 1  FH lookups
+								 * 2  'anon' FHs
+								 * 3  noncached directories
+								 * 4  noncached non-directories
+								 * leave hole to relocate stale for order
+								 *    compatability.
+								 */
 
 static const char *	nfsv2name[18] = {
 	"null", "getattr", "setattr", "root",   "lookup",  "readlink",
@@ -86,12 +88,12 @@ static const char *	nfsv3name[22] = {
 	"fsstat", "fsinfo",  "pathconf", "commit"
 };
 
-static const char *	nfssvrv4name[2] = {
+static const char *	nfssrvproc4name[2] = {
 	"null",
 	"compound",
 };
 
-static const char *	nfscltv4name[32] = {
+static const char *	nfscltproc4name[32] = {
 	"null",      "read",      "write",   "commit",      "open",        "open_conf",
 	"open_noat", "open_dgrd", "close",   "setattr",     "fsinfo",      "renew",
 	"setclntid", "confirm",   "lock",
@@ -100,7 +102,7 @@ static const char *	nfscltv4name[32] = {
 	"statfs",    "readlink",  "readdir", "server_caps", "delegreturn",
 };
 
-static const char *     nfssvrv4opname[40] = {
+static const char *     nfssrvproc4opname[40] = {
         "op0-unused",   "op1-unused", "op2-future",  "access",     "close",       "commit",
         "create",       "delegpurge", "delegreturn", "getattr",    "getfh",       "link",
         "lock",         "lockt",      "locku",       "lookup",     "lookup_root", "nverify",
@@ -116,28 +118,38 @@ typedef struct statinfo {
 	unsigned int *	valptr;
 } statinfo;
 
-#define STRUCTSIZE(x)   sizeof(x)/sizeof(*x)
-
-static statinfo		svcinfo[] = {
-	{ "net",        STRUCTSIZE(svcnetinfo), svcnetinfo },
-	{ "rpc",        STRUCTSIZE(svcrpcinfo), svcrpcinfo },
-	{ "rc",         STRUCTSIZE(svcrcinfo),  svcrcinfo  },
-	{ "fh",         STRUCTSIZE(svcfhinfo),  svcfhinfo  },
-	{ "proc2",      STRUCTSIZE(svcv2info),  svcv2info  },
-	{ "proc3",      STRUCTSIZE(svcv3info),  svcv3info  },
-	{ "proc4",      STRUCTSIZE(svcv4info),  svcv4info  },
-	{ "proc4ops",   STRUCTSIZE(svcv4opinfo),svcv4opinfo},
-	{ NULL,         0,                      NULL       }
-};
-
-static statinfo		cltinfo[] = {
-	{ "net",        STRUCTSIZE(cltnetinfo), cltnetinfo },
-	{ "rpc",        STRUCTSIZE(cltrpcinfo), cltrpcinfo },
-	{ "proc2",      STRUCTSIZE(cltv2info),  cltv2info  },
-	{ "proc3",      STRUCTSIZE(cltv3info),  cltv3info  },
-	{ "proc4",      STRUCTSIZE(cltv4info),  cltv4info  },
-	{ NULL,         0,                      NULL       }
-};
+/*
+ * We now build the arrays of statinfos using macros, which will make it easier
+ * to add new variables for --diff-stat.
+ * e.g., SRV(net) expands into the struct statinfo:  { "net", 5, srvnetinfo }
+ */
+#define ARRAYSIZE(x)		sizeof(x)/sizeof(*x)
+#define STATINFO(k, t, s...)	{ #t, ARRAYSIZE(k##t##info##s), k##t##info##s }
+#define SRV(t, s...)		STATINFO(srv, t, s)
+#define CLT(t, s...)		STATINFO(clt, t, s)
+#define DECLARE_SRV(n, s...)	static statinfo n##s[] = { \
+					SRV(net,s), \
+					SRV(rpc,s), \
+					SRV(rc,s), \
+					SRV(fh,s), \
+					SRV(proc2,s), \
+					SRV(proc3,s),\
+					SRV(proc4,s), \
+					SRV(proc4ops,s),\
+					{ NULL, 0, NULL }\
+				}
+#define DECLARE_CLT(n, s...)  	static statinfo n##s[] = { \
+					CLT(net,s), \
+					CLT(rpc,s), \
+					CLT(proc2,s),\
+					CLT(proc3,s), \
+					CLT(proc4,s),\
+					{ NULL, 0, NULL }\
+				}
+DECLARE_SRV(srvinfo);
+DECLARE_SRV(srvinfo, _tmp);
+DECLARE_CLT(cltinfo);
+DECLARE_CLT(cltinfo, _tmp);
 
 static void		print_numbers(const char *, unsigned int *,
 					unsigned int);
@@ -147,7 +159,15 @@ static int		parse_statfile(const char *, struct statinfo *);
 
 static statinfo		*get_stat_info(const char *, struct statinfo *);
 
-static int             mounts(const char *);
+static int		mounts(const char *);
+
+static void		get_stats(const char *, statinfo *, int *, int, const char *);
+static int		has_stats(const unsigned int *);
+static void 		copy_stats(statinfo *, statinfo *);
+static void 		diff_stats(statinfo *, statinfo *);
+static void 		unpause(int);
+
+static time_t		starttime;
 
 #define PRNT_CALLS	0x0001
 #define PRNT_RPC	0x0002
@@ -186,6 +206,7 @@ void usage(char *name)
   -v, --verbose, --all\tSame as '-o all'\n\
   -r, --rpc\t\tShow RPC statistics\n\
   -n, --nfs\t\tShow NFS statistics\n\
+  -D, --diff-stat\tSaves stats, pauses, diffs current and saved\n\
   --version\t\tShow program version\n\
   --help\t\tWhat you just did\n\
 \n", name);
@@ -206,6 +227,7 @@ static struct option longopts[] =
 	{ "zero", 0, 0, 'z' },
 	{ "help", 0, 0, '\1' },
 	{ "version", 0, 0, '\2' },
+	{ "diff-stat", 0, 0, 'D' },
 	{ NULL, 0, 0, 0 }
 };
 
@@ -215,18 +237,22 @@ main(int argc, char **argv)
 	int		opt_all = 0,
 			opt_srv = 0,
 			opt_clt = 0,
-			srv_info = 0,
-			clt_info = 0,
-			opt_prt = 0;
+			opt_prt = 0,
+			opt_diffstat = 0;
 	int		c;
 	char           *progname;
- 
+
+	struct sigaction act = {
+		.sa_handler = unpause,
+		.sa_flags = SA_ONESHOT,
+	};
+
 	if ((progname = strrchr(argv[0], '/')))
 		progname++;
 	else
 		progname = argv[0];
 
-	while ((c = getopt_long(argc, argv, "234acmno:vrsz\1\2", longopts, NULL)) != EOF) {
+	while ((c = getopt_long(argc, argv, "234acmno:Dvrsz\1\2", longopts, NULL)) != EOF) {
 		switch (c) {
 		case 'a':
 			fprintf(stderr, "nfsstat: nfs acls are not yet supported.\n");
@@ -255,6 +281,9 @@ main(int argc, char **argv)
 						"%s\n", optarg);
 				return 2;
 			}
+			break;
+		case 'D':
+			opt_diffstat = 1;
 			break;
 		case '2':
 		case '3':
@@ -311,24 +340,32 @@ main(int argc, char **argv)
 			"server.\n");
 	}
 
-	if (opt_srv) {
-		srv_info = parse_statfile(NFSSVCSTAT, svcinfo);
-		if (srv_info == 0 && opt_clt == 0) {
-			fprintf(stderr, "Warning: No Server Stats (%s: %m).\n", NFSSVCSTAT);
-			return 2;
-		}
-		if (srv_info == 0)
-			opt_srv = 0;
-	}
+	if (opt_srv)
+		get_stats(NFSSRVSTAT, srvinfo, &opt_srv, opt_clt, "Server");
+	if (opt_clt)
+		get_stats(NFSCLTSTAT, cltinfo, &opt_clt, opt_srv, "Client");
 
-	if (opt_clt) {
-		clt_info = parse_statfile(NFSCLTSTAT, cltinfo);
-		if (opt_srv == 0 && clt_info == 0) {
-			fprintf(stderr, "Warning: No Client Stats (%s: %m).\n", NFSCLTSTAT);
-			return 2;
+	/* save stat snapshots; wait for signal; then diff current and saved stats */
+	if (opt_diffstat) {
+		starttime = time(NULL);
+		printf("Collecting statistics; press CTRL-C to view results from interval (i.e., from pause to CTRL-C).\n");
+		if (opt_srv)
+			copy_stats(srvinfo_tmp, srvinfo);
+		if (opt_clt)
+			copy_stats(cltinfo_tmp, cltinfo);
+		if (sigaction(SIGINT, &act, NULL) != 0) {
+			fprintf(stderr, "Error: couldn't register for signal and pause.\n");
+			return 1;
 		}
-		if (clt_info == 0)
-			opt_clt = 0;
+		pause();
+		if (opt_srv) {
+			get_stats(NFSSRVSTAT, srvinfo, &opt_srv, opt_clt, "Server");
+			diff_stats(srvinfo, srvinfo_tmp);
+		}
+		if (opt_clt) {
+			get_stats(NFSCLTSTAT, cltinfo, &opt_clt, opt_srv, "Client");
+			diff_stats(cltinfo, cltinfo_tmp);
+		}
 	}
 
 	if (opt_srv) {
@@ -336,7 +373,7 @@ main(int argc, char **argv)
 			print_numbers(
 			"Server packet stats:\n"
 			"packets    udp        tcp        tcpconn\n",
-			svcnetinfo, 4
+			srvnetinfo, 4
 			);
 			printf("\n");
 		}
@@ -344,7 +381,7 @@ main(int argc, char **argv)
 			print_numbers(
 			"Server rpc stats:\n"
 			"calls      badcalls   badauth    badclnt    xdrcall\n",
-			svcrpcinfo, 5
+			srvrpcinfo, 5
 			);
 			printf("\n");
 		}
@@ -352,7 +389,7 @@ main(int argc, char **argv)
 			print_numbers(
 			"Server reply cache:\n"
 			"hits       misses     nocache\n",
-			svcrcinfo, 3
+			srvrcinfo, 3
 			);
 			printf("\n");
 		}
@@ -364,43 +401,43 @@ main(int argc, char **argv)
 		 *     We preseve the 2.2 order
 		 */
 		if (opt_prt & PRNT_FH) {
-			if (get_stat_info("fh", svcinfo)) {	/* >= 2.4 */
-				int t = svcfhinfo[3];
-				svcfhinfo[3]=svcfhinfo[4];
-				svcfhinfo[4]=t;
+			if (get_stat_info("fh", srvinfo)) {	/* >= 2.4 */
+				int t = srvfhinfo[3];
+				srvfhinfo[3]=srvfhinfo[4];
+				srvfhinfo[4]=t;
 				
-				svcfhinfo[5]=svcfhinfo[0]; /* relocate 'stale' */
+				srvfhinfo[5]=srvfhinfo[0]; /* relocate 'stale' */
 				
 				print_numbers(
 					"Server file handle cache:\n"
 					"lookup     anon       ncachedir  ncachedir  stale\n",
-					svcfhinfo + 1, 5);
+					srvfhinfo + 1, 5);
 			} else					/* < 2.4 */
 				print_numbers(
 					"Server file handle cache:\n"
 					"lookup     anon       ncachedir  ncachedir  stale\n",
-					svcrcinfo + 3, 5);
+					srvrcinfo + 3, 5);
 			printf("\n");
 		}
 		if (opt_prt & PRNT_CALLS) {
-			if ((opt_prt & PRNT_V2) || ((opt_prt & PRNT_AUTO) && svcv2info[0] && svcv2info[svcv2info[0]+1] != svcv2info[0]))
+			if ((opt_prt & PRNT_V2) || ((opt_prt & PRNT_AUTO) && has_stats(srvproc2info)))
 				print_callstats(
 				"Server nfs v2:\n",
-				    nfsv2name, svcv2info + 1, sizeof(nfsv2name)/sizeof(char *)
+				    nfsv2name, srvproc2info + 1, sizeof(nfsv2name)/sizeof(char *)
 				);
-			if ((opt_prt & PRNT_V3) || ((opt_prt & PRNT_AUTO) && svcv3info[0] && svcv3info[svcv3info[0]+1] != svcv3info[0]))
+			if ((opt_prt & PRNT_V3) || ((opt_prt & PRNT_AUTO) && has_stats(srvproc3info)))
 				print_callstats(
 				"Server nfs v3:\n",
-				nfsv3name, svcv3info + 1, sizeof(nfsv3name)/sizeof(char *)
+				nfsv3name, srvproc3info + 1, sizeof(nfsv3name)/sizeof(char *)
 				);
-			if ((opt_prt & PRNT_V4) || ((opt_prt & PRNT_AUTO) && svcv4info[0] && svcv4info[svcv4info[0]+1] != svcv4info[0])) {
+			if ((opt_prt & PRNT_V4) || ((opt_prt & PRNT_AUTO) && has_stats(srvproc4info))) {
 				print_callstats(
 				"Server nfs v4:\n",
-				nfssvrv4name, svcv4info + 1, sizeof(nfssvrv4name)/sizeof(char *)
+				nfssrvproc4name, srvproc4info + 1, sizeof(nfssrvproc4name)/sizeof(char *)
 				);
 				print_callstats(
 				"Server nfs v4 operations:\n",
-				nfssvrv4opname, svcv4opinfo + 1, sizeof(nfssvrv4opname)/sizeof(char *)
+				nfssrvproc4opname, srvproc4opsinfo + 1, sizeof(nfssrvproc4opname)/sizeof(char *)
 				);
 			}
 		}
@@ -424,20 +461,20 @@ main(int argc, char **argv)
 			printf("\n");
 		}
 		if (opt_prt & PRNT_CALLS) {
-			if ((opt_prt & PRNT_V2) || ((opt_prt & PRNT_AUTO) && cltv2info[0] && cltv2info[cltv2info[0]+1] != cltv2info[0]))
+			if ((opt_prt & PRNT_V2) || ((opt_prt & PRNT_AUTO) && has_stats(cltproc2info)))
 				print_callstats(
 				"Client nfs v2:\n",
-				nfsv2name, cltv2info + 1,  sizeof(nfsv2name)/sizeof(char *)
+				nfsv2name, cltproc2info + 1,  sizeof(nfsv2name)/sizeof(char *)
 				);
-			if ((opt_prt & PRNT_V3) || ((opt_prt & PRNT_AUTO) && cltv3info[0] && cltv3info[cltv3info[0]+1] != cltv3info[0]))
+			if ((opt_prt & PRNT_V3) || ((opt_prt & PRNT_AUTO) && has_stats(cltproc3info)))
 				print_callstats(
 				"Client nfs v3:\n",
-				nfsv3name, cltv3info + 1, sizeof(nfsv3name)/sizeof(char *)
+				nfsv3name, cltproc3info + 1, sizeof(nfsv3name)/sizeof(char *)
 				);
-			if ((opt_prt & PRNT_V4) || ((opt_prt & PRNT_AUTO) && cltv4info[0] && cltv4info[cltv4info[0]+1] != cltv4info[0]))
+			if ((opt_prt & PRNT_V4) || ((opt_prt & PRNT_AUTO) && has_stats(cltproc4info)))
 				print_callstats(
 				"Client nfs v4:\n",
-				nfscltv4name, cltv4info + 1,  sizeof(nfscltv4name)/sizeof(char *)
+				nfscltproc4name, cltproc4info + 1,  sizeof(nfscltproc4name)/sizeof(char *)
 				);
 		}
 	}
@@ -586,4 +623,70 @@ mounts(const char *name)
 
 	fclose(fp);
 	return 1;
+}
+
+static void
+get_stats(const char *file, statinfo *info, int *opt, int other_opt, const char *label)
+{
+	if (!parse_statfile(file, info)) {
+		if (!other_opt) {
+			fprintf(stderr, "Warning: No %s Stats (%s: %m). \n", label, file);
+			exit(2);
+		}
+		*opt = 0;
+	}
+}
+
+static int
+has_stats(const unsigned int *info)
+{
+	return (info[0] && info[info[0] + 1] != info[0]);
+}
+
+/* clone 'src' to 'dest' */
+static void
+copy_stats(struct statinfo *dest, struct statinfo *src)
+{
+	int i, j;
+
+	for (i = 0; src[i].tag; i++) {
+		dest[i].tag = src[i].tag;
+		dest[i].nrvals = src[i].nrvals;
+		for (j = 0; j < dest[i].nrvals; j++)
+			dest[i].valptr[j] = src[i].valptr[j];
+	}
+}
+
+/*
+ * take the difference of each individual stat value in 'new' and 'old'
+ * and store the results back into 'new'
+ */
+static void
+diff_stats(struct statinfo *new, struct statinfo *old)
+{
+	int i, j, is_srv, should_diff;
+
+	is_srv = (new == srvinfo);
+	for (i = 0; old[i].tag; i++) {
+		for (j = 0; j < new[i].nrvals; j++) {
+			/* skip items in valptr that shouldn't be changed */
+			should_diff = (i < (3 + is_srv) || j > 0);
+			if (should_diff)
+				new[i].valptr[j] -= old[i].valptr[j];
+		}
+	}
+}
+
+static void
+unpause(int sig)
+{
+	double time_diff;
+	int minutes, seconds;
+	time_t endtime;
+
+	endtime = time(NULL);
+	time_diff = difftime(endtime, starttime);
+	minutes = time_diff / 60;
+	seconds = (int)time_diff % 60;
+	printf("Signal received; displaying (only) statistics gathered over the last %d minutes, %d seconds:\n\n", minutes, seconds);
 }

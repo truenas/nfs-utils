@@ -25,6 +25,7 @@
 #include <netdb.h>
 #include <time.h>
 #include <sys/stat.h>
+#include <sys/mount.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <rpc/auth.h>
@@ -36,12 +37,15 @@
 #define nfsstat nfs_stat
 #endif
 
+#include "pseudoflavors.h"
 #include "nls.h"
-#include "conn.h"
 #include "xcommon.h"
 
+#include "mount_constants.h"
 #include "nfs4_mount.h"
 #include "nfs_mount.h"
+#include "error.h"
+#include "network.h"
 
 #if defined(VAR_LOCK_DIR)
 #define DEFAULT_DIR VAR_LOCK_DIR
@@ -49,6 +53,7 @@
 #define DEFAULT_DIR "/var/lock/subsys"
 #endif
 
+extern char *progname;
 extern int verbose;
 extern int sloppy;
 
@@ -65,32 +70,12 @@ char *GSSDLCK = DEFAULT_DIR "/rpcgssd";
 		if (access(GSSDLCK, F_OK)) { \
 			printf(_("Warning: rpc.gssd appears not to be running.\n")); \
 		} \
-} while(0); 
+} while(0);
 
 #ifndef NFS_PORT
 #define NFS_PORT 2049
 #endif
 
-struct {
-	char    *flavour;
-	int     fnum;
-} flav_map[] = {
-	{ "krb5",	RPC_AUTH_GSS_KRB5	},
-	{ "krb5i",	RPC_AUTH_GSS_KRB5I	},
-	{ "krb5p",	RPC_AUTH_GSS_KRB5P	},
-	{ "lipkey",	RPC_AUTH_GSS_LKEY	},
-	{ "lipkey-i",	RPC_AUTH_GSS_LKEYI	},
-	{ "lipkey-p",	RPC_AUTH_GSS_LKEYP	},
-	{ "spkm3",	RPC_AUTH_GSS_SPKM	},
-	{ "spkm3i",	RPC_AUTH_GSS_SPKMI	},
-	{ "spkm3p",	RPC_AUTH_GSS_SPKMP	},
-	{ "unix",	AUTH_UNIX		},
-	{ "sys",	AUTH_SYS		},
-	{ "null",	AUTH_NULL		},
-	{ "none",	AUTH_NONE		},
-};
-
-#define FMAPSIZE		(sizeof(flav_map)/sizeof(flav_map[0]))
 #define MAX_USER_FLAVOUR	16
 
 static int parse_sec(char *sec, int *pseudoflavour)
@@ -99,26 +84,25 @@ static int parse_sec(char *sec, int *pseudoflavour)
 
 	for (sec = strtok(sec, ":"); sec; sec = strtok(NULL, ":")) {
 		if (num_flavour >= MAX_USER_FLAVOUR) {
-			fprintf(stderr,
-				_("mount: maximum number of security flavors "
-				  "exceeded\n"));
+			nfs_error(_("%s: maximum number of security flavors "
+				  "exceeded"), progname);
 			return 0;
 		}
-		for (i = 0; i < FMAPSIZE; i++) {
+		for (i = 0; i < flav_map_size; i++) {
 			if (strcmp(sec, flav_map[i].flavour) == 0) {
 				pseudoflavour[num_flavour++] = flav_map[i].fnum;
 				break;
 			}
 		}
-		if (i == FMAPSIZE) {
-			fprintf(stderr,
-				_("mount: unknown security type %s\n"), sec);
+		if (i == flav_map_size) {
+			nfs_error(_("%s: unknown security type %s\n"),
+					progname, sec);
 			return 0;
 		}
 	}
 	if (!num_flavour)
-		fprintf(stderr,
-			_("mount: no security flavors passed to sec= option\n"));
+		nfs_error(_("%s: no security flavors passed to sec= option"),
+				progname);
 	return num_flavour;
 }
 
@@ -127,9 +111,8 @@ static int parse_devname(char *hostdir, char **hostname, char **dirname)
 	char *s;
 
 	if (!(s = strchr(hostdir, ':'))) {
-		fprintf(stderr,
-			_("mount: "
-			  "directory to mount not in host:dir format\n"));
+		nfs_error(_("%s: directory to mount not in host:dir format"),
+				progname);
 		return -1;
 	}
 	*hostname = hostdir;
@@ -139,9 +122,8 @@ static int parse_devname(char *hostdir, char **hostname, char **dirname)
 	   until they can be fully supported. (mack@sgi.com) */
 	if ((s = strchr(hostdir, ','))) {
 		*s = '\0';
-		fprintf(stderr,
-			_("mount: warning: "
-			  "multiple hostnames not supported\n"));
+		nfs_error(_("%s: warning: multiple hostnames not supported"),
+				progname);
 	}
 	return 0;
 }
@@ -154,13 +136,12 @@ static int fill_ipv4_sockaddr(const char *hostname, struct sockaddr_in *addr)
 	if (inet_aton(hostname, &addr->sin_addr))
 		return 0;
 	if ((hp = gethostbyname(hostname)) == NULL) {
-		fprintf(stderr, _("mount: can't get address for %s\n"),
-			hostname);
+		nfs_error(_("%s: can't get address for %s\n"),
+				progname, hostname);
 		return -1;
 	}
 	if (hp->h_length > sizeof(struct in_addr)) {
-		fprintf(stderr,
-			_("mount: got bad hp->h_length\n"));
+		nfs_error(_("%s: got bad hp->h_length"), progname);
 		hp->h_length = sizeof(struct in_addr);
 	}
 	memcpy(&addr->sin_addr, hp->h_addr, hp->h_length);
@@ -173,7 +154,8 @@ static int get_my_ipv4addr(char *ip_addr, int len)
 	struct sockaddr_in myaddr;
 
 	if (gethostname(myname, sizeof(myname))) {
-		fprintf(stderr, _("mount: can't determine client address\n"));
+		nfs_error(_("%s: can't determine client address\n"),
+				progname);
 		return -1;
 	}
 	if (fill_ipv4_sockaddr(myname, &myaddr))
@@ -183,9 +165,8 @@ static int get_my_ipv4addr(char *ip_addr, int len)
 	return 0;
 }
 
-int nfs4mount(const char *spec, const char *node, int *flags,
-	      char **extra_opts, char **mount_opts,
-	      int running_bg)
+int nfs4mount(const char *spec, const char *node, int flags,
+	      char **extra_opts, int fake, int running_bg)
 {
 	static struct nfs4_mount_data data;
 	static char hostdir[1024];
@@ -201,15 +182,15 @@ int nfs4mount(const char *spec, const char *node, int *flags,
 	char *s;
 	int val;
 	int bg, soft, intr;
-	int nocto, noac;
+	int nocto, noac, unshared;
 	int retry;
 	int retval;
 	time_t timeout, t;
 
 	retval = EX_FAIL;
 	if (strlen(spec) >= sizeof(hostdir)) {
-		fprintf(stderr, _("mount: "
-				  "excessively long host:dir argument\n"));
+		nfs_error(_("%s: excessively long host:dir argument\n"),
+				progname);
 		goto fail;
 	}
 	strcpy(hostdir, spec);
@@ -227,8 +208,8 @@ int nfs4mount(const char *spec, const char *node, int *flags,
 	if (!old_opts)
 		old_opts = "";
 	if (strlen(old_opts) + strlen(s) + 10 >= sizeof(new_opts)) {
-		fprintf(stderr, _("mount: "
-				  "excessively long option argument\n"));
+		nfs_error(_("%s: excessively long option argument\n"),
+				progname);
 		goto fail;
 	}
 	snprintf(new_opts, sizeof(new_opts), "%s%saddr=%s",
@@ -252,6 +233,7 @@ int nfs4mount(const char *spec, const char *node, int *flags,
 	intr = NFS4_MOUNT_INTR;
 	nocto = 0;
 	noac = 0;
+	unshared = 0;
 	retry = 10000;		/* 10000 minutes ~ 1 week */
 
 	/*
@@ -322,9 +304,9 @@ int nfs4mount(const char *spec, const char *node, int *flags,
 				val = 0;
 				opt += 2;
 			}
-			if (!strcmp(opt, "bg")) 
+			if (!strcmp(opt, "bg"))
 				bg = val;
-			else if (!strcmp(opt, "fg")) 
+			else if (!strcmp(opt, "fg"))
 				bg = !val;
 			else if (!strcmp(opt, "soft"))
 				soft = val;
@@ -336,9 +318,11 @@ int nfs4mount(const char *spec, const char *node, int *flags,
 				nocto = !val;
 			else if (!strcmp(opt, "ac"))
 				noac = !val;
+			else if (!strcmp(opt, "sharecache"))
+				unshared = !val;
 			else if (!sloppy) {
-				printf(_("unknown nfs mount option: "
-					 "%s%s\n"), val ? "" : "no", opt);
+				printf(_("unknown nfs mount option: %s%s\n"),
+						val ? "" : "no", opt);
 				goto fail;
 			}
 		}
@@ -347,7 +331,8 @@ int nfs4mount(const char *spec, const char *node, int *flags,
 	data.flags = (soft ? NFS4_MOUNT_SOFT : 0)
 		| (intr ? NFS4_MOUNT_INTR : 0)
 		| (nocto ? NFS4_MOUNT_NOCTO : 0)
-		| (noac ? NFS4_MOUNT_NOAC : 0);
+		| (noac ? NFS4_MOUNT_NOAC : 0)
+		| (unshared ? NFS4_MOUNT_UNSHARED : 0);
 
 	/*
 	 * Give a warning if the rpc.idmapd daemon is not running
@@ -382,24 +367,26 @@ int nfs4mount(const char *spec, const char *node, int *flags,
 	data.host_addrlen = sizeof(server_addr);
 
 #ifdef NFS_MOUNT_DEBUG
-	printf("rsize = %d, wsize = %d, timeo = %d, retrans = %d\n",
+	printf(_("rsize = %d, wsize = %d, timeo = %d, retrans = %d\n"),
 	       data.rsize, data.wsize, data.timeo, data.retrans);
-	printf("acreg (min, max) = (%d, %d), acdir (min, max) = (%d, %d)\n",
+	printf(_("acreg (min, max) = (%d, %d), acdir (min, max) = (%d, %d)\n"),
 	       data.acregmin, data.acregmax, data.acdirmin, data.acdirmax);
-	printf("port = %d, bg = %d, retry = %d, flags = %.8x\n",
+	printf(_("port = %d, bg = %d, retry = %d, flags = %.8x\n"),
 	       ntohs(server_addr.sin_port), bg, retry, data.flags);
-	printf("soft = %d, intr = %d, nocto = %d, noac = %d\n",
+	printf(_("soft = %d, intr = %d, nocto = %d, noac = %d, "
+	       "nosharecache = %d\n"),
 	       (data.flags & NFS4_MOUNT_SOFT) != 0,
 	       (data.flags & NFS4_MOUNT_INTR) != 0,
 	       (data.flags & NFS4_MOUNT_NOCTO) != 0,
-	       (data.flags & NFS4_MOUNT_NOAC) != 0);
+	       (data.flags & NFS4_MOUNT_NOAC) != 0,
+	       (data.flags & NFS4_MOUNT_UNSHARED) != 0);
 
 	if (num_flavour > 0) {
 		int pf_cnt, i;
 
-		printf("sec = ");
+		printf(_("sec = "));
 		for (pf_cnt = 0; pf_cnt < num_flavour; pf_cnt++) {
-			for (i = 0; i < FMAPSIZE; i++) {
+			for (i = 0; i < flav_map_size; i++) {
 				if (flav_map[i].fnum == pseudoflavour[pf_cnt]) {
 					printf("%s", flav_map[i].flavour);
 					break;
@@ -408,16 +395,16 @@ int nfs4mount(const char *spec, const char *node, int *flags,
 			printf("%s", (pf_cnt < num_flavour-1) ? ":" : "\n");
 		}
 	}
-	printf("proto = %s\n", (data.proto == IPPROTO_TCP) ? "tcp" : "udp");
+	printf(_("proto = %s\n"), (data.proto == IPPROTO_TCP) ? _("tcp") : _("udp"));
 #endif
 
 	timeout = time(NULL) + 60 * retry;
 	data.version = NFS4_MOUNT_VERSION;
 	for (;;) {
 		if (verbose) {
-			fprintf(stderr, 
-				"mount: pinging: prog %d vers %d prot %s port %d\n", 
-				NFS_PROGRAM, 4, data.proto == IPPROTO_UDP ? "udp" : "tcp", 
+			printf(_("%s: pinging: prog %d vers %d prot %s port %d\n"),
+				progname, NFS_PROGRAM, 4,
+				data.proto == IPPROTO_UDP ? "udp" : "tcp",
 				ntohs(server_addr.sin_port));
 		}
 		client_addr.sin_family = 0;
@@ -453,8 +440,14 @@ int nfs4mount(const char *spec, const char *node, int *flags,
 		continue;
 	}
 
-	*mount_opts = (char *) &data;
-	/* clean up */
+	if (!fake) {
+		if (mount(spec, node, "nfs4",
+				flags & ~(MS_USER|MS_USERS), &data)) {
+			mount_error(spec, node, errno);
+			goto fail;
+		}
+	}
+
 	return 0;
 
 fail:

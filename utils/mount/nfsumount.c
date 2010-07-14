@@ -29,11 +29,11 @@
 #include "xcommon.h"
 #include "fstab.h"
 #include "nls.h"
-#include "conn.h"
 
 #include "mount_constants.h"
 #include "mount.h"
-#include "nfsumount.h"
+#include "error.h"
+#include "network.h"
 
 #if !defined(MNT_FORCE)
 /* dare not try to include <linux/mount.h> -- lots of errors */
@@ -45,79 +45,13 @@
 #endif
 
 extern char *progname;
-extern int nfs_mount_version;
 extern int nomtab;
 extern int verbose;
 int force;
 int lazy;
 int remount;
 
-extern int find_kernel_nfs_mount_version(void);
-extern int probe_mntport(clnt_addr_t *);
-extern int nfs_gethostbyname(const char *, struct sockaddr_in *);
-
-static inline enum clnt_stat
-nfs_umount(dirpath *argp, CLIENT *clnt)
-{
-	return clnt_call(clnt, MOUNTPROC_UMNT,
-			 (xdrproc_t) xdr_dirpath, (caddr_t)argp,
-			 (xdrproc_t) xdr_void, NULL,
-			 TIMEOUT);
-}
-
-int nfs_call_umount(clnt_addr_t *mnt_server, dirpath *argp)
-{
-	CLIENT *clnt;
-	enum clnt_stat res = 0;
-	int msock;
-
-	switch (mnt_server->pmap.pm_vers) {
-	case 3:
-	case 2:
-	case 1:
-		if (!probe_mntport(mnt_server))
-			goto out_bad;
-		clnt = mnt_openclnt(mnt_server, &msock);
-		if (!clnt)
-			goto out_bad;
-		res = nfs_umount(argp, clnt);
-		mnt_closeclnt(clnt, msock);
-		if (res == RPC_SUCCESS)
-			return 1;
-		break;
-	default:
-		res = 1;
-		break;
-	}
- out_bad:
-	return res;
-}
-
-/* complain about a failed umount */
-static void complain(int err, const char *dev) {
-  switch (err) {
-    case ENXIO:
-      nfs_error (_("umount: %s: invalid block device"), dev); break;
-    case EINVAL:
-      nfs_error (_("umount: %s: not mounted"), dev); break;
-    case EIO:
-      nfs_error (_("umount: %s: can't write superblock"), dev); break;
-    case EBUSY:
-     /* Let us hope fstab has a line "proc /proc ..."
-        and not "none /proc ..."*/
-      nfs_error (_("umount: %s: device is busy"), dev); break;
-    case ENOENT:
-      nfs_error (_("umount: %s: not found"), dev); break;
-    case EPERM:
-      nfs_error (_("umount: %s: must be superuser to umount"), dev); break;
-    case EACCES:
-      nfs_error (_("umount: %s: block devices not permitted on fs"), dev); break;
-    default:
-      nfs_error (_("umount: %s: %s"), dev, strerror (err)); break;
-  }
-}
-
-int del_mtab(const char *spec, const char *node)
+static int del_mtab(const char *spec, const char *node)
 {
 	int umnt_err, res;
 
@@ -133,7 +67,7 @@ int del_mtab(const char *spec, const char *node)
                 res = umount2 (node, MNT_FORCE);
                 if (res == -1) {
                         int errsv = errno;
-                        perror("umount2");
+                        perror(_("umount2"));
                         errno = errsv;
                         if (errno == ENOSYS) {
                                 if (verbose)
@@ -150,9 +84,8 @@ int del_mtab(const char *spec, const char *node)
                             MS_MGC_VAL | MS_REMOUNT | MS_RDONLY, NULL);
                 if (res == 0) {
                         struct mntent remnt;
-                        fprintf(stderr,
-                                _("umount: %s busy - remounted read-only\n"),
-                                spec);
+                        nfs_error(_("%s: %s busy - remounted read-only"),
+                                	progname, spec);
                         remnt.mnt_type = remnt.mnt_fsname = NULL;
                         remnt.mnt_dir = xstrdup(node);
                         remnt.mnt_opts = xstrdup("ro");
@@ -160,17 +93,16 @@ int del_mtab(const char *spec, const char *node)
                                 update_mtab(node, &remnt);
                         return 0;
                 } else if (errno != EBUSY) {    /* hmm ... */
-                        perror("remount");
-                        fprintf(stderr,
-                                _("umount: could not remount %s read-only\n"),
-                                spec);
+                        perror(_("remount"));
+                        nfs_error(_("%s: could not remount %s read-only"),
+                                	progname, spec);
                 }
         }
 
         if (res >= 0) {
                 /* Umount succeeded */
                 if (verbose)
-                        printf (_("%s umounted\n"), spec ? spec : node);
+                        printf(_("%s umounted\n"), spec ? spec : node);
         }
 
  writemtab:
@@ -183,14 +115,21 @@ int del_mtab(const char *spec, const char *node)
                 return 0;
 
         if (umnt_err)
-                complain(umnt_err, node);
-        return 1;
+                umount_error(umnt_err, node);
+        return EX_FILEIO;
 }
 
 /*
- * Returns 1 if everything went well, else 0.
+ * Pick up certain mount options used during the original mount
+ * from /etc/mtab.  The basics include the server's IP address and
+ * the server pathname of the share to unregister.
+ *
+ * These options might also describe the mount port, mount protocol
+ * version, and transport protocol used to punch through a firewall.
+ * We will need this information to get through the firewall again
+ * to do the umount.
  */
-int _nfsumount(const char *spec, char *opts)
+static int do_nfs_umount(const char *spec, char *opts)
 {
 	char *hostname;
 	char *dirname;
@@ -199,11 +138,20 @@ int _nfsumount(const char *spec, char *opts)
 	struct pmap *pmap = &mnt_server.pmap;
 	char *p;
 
-	nfs_mount_version = find_kernel_nfs_mount_version();
-	if (spec == NULL || (p = strchr(spec,':')) == NULL)
-		goto out_bad;
-	hostname = xstrndup(spec, p-spec);
-	dirname = xstrdup(p+1);
+	if (spec == NULL) {
+		nfs_error(_("%s: No NFS export name was provided"),
+				progname);
+		return EX_USAGE;
+	}
+	
+	p = strchr(spec, ':');
+	if (p == NULL) {
+		nfs_error(_("%s: '%s' is not a legal NFS export name"),
+				progname, spec);
+		return EX_USAGE;
+	}
+	hostname = xstrndup(spec, p - spec);
+	dirname = xstrdup(p + 1);
 #ifdef NFS_MOUNT_DEBUG
 	printf(_("host: %s, directory: %s\n"), hostname, dirname);
 #endif
@@ -230,7 +178,6 @@ int _nfsumount(const char *spec, char *opts)
 
 	pmap->pm_prog = MOUNTPROG;
 	pmap->pm_vers = MOUNTVERS_NFSV3;
-	pmap->pm_prot = IPPROTO_TCP;
 	if (opts && (p = strstr(opts, "mountprog=")) && isdigit(*(p+10)))
 		pmap->pm_prog = atoi(p+10);
 	if (opts && (p = strstr(opts, "mountport=")) && isdigit(*(p+10)))
@@ -247,12 +194,21 @@ int _nfsumount(const char *spec, char *opts)
 		pmap->pm_vers = atoi(p+10);
 	if (opts && (hasmntopt(&mnt, "udp") || hasmntopt(&mnt, "proto=udp")))
 		pmap->pm_prot = IPPROTO_UDP;
+	if (opts && (hasmntopt(&mnt, "tcp") || hasmntopt(&mnt, "proto=tcp")))
+		pmap->pm_prot = IPPROTO_TCP;
 
-	if (!nfs_gethostbyname(hostname, &mnt_server.saddr))
-		goto out_bad;
-	return nfs_call_umount(&mnt_server, &dirname);
- out_bad:
-	fprintf(stderr, "%s: %s: not found or not mounted\n", progname, spec);
+	if (!nfs_gethostbyname(hostname, &mnt_server.saddr)) {
+		nfs_error(_("%s: '%s' does not contain a recognized hostname"),
+				progname, spec);
+		return EX_USAGE;
+	}
+
+	if (!nfs_call_umount(&mnt_server, &dirname)) {
+		nfs_error(_("%s: Server failed to unmount '%s'"),
+				progname, spec);
+		return EX_USAGE;
+	}
+
 	return 0;
 }
 
@@ -266,15 +222,15 @@ static struct option umount_longopts[] =
   { NULL, 0, 0, 0 }
 };
 
-void umount_usage()
+static void umount_usage(void)
 {
-	printf("usage: %s dir [-fvnrlh]\n", progname);
-	printf("options:\n\t-f\t\tforce unmount\n");
-	printf("\t-v\t\tverbose\n");
-	printf("\t-n\t\tDo not update /etc/mtab\n");
-	printf("\t-r\t\tremount\n");
-	printf("\t-l\t\tlazy unmount\n");
-	printf("\t-h\t\tprint this help\n\n");
+	printf(_("usage: %s dir [-fvnrlh]\n"), progname);
+	printf(_("options:\n\t-f\t\tforce unmount\n"));
+	printf(_("\t-v\tverbose\n"));
+	printf(_("\t-n\tDo not update /etc/mtab\n"));
+	printf(_("\t-r\tremount\n"));
+	printf(_("\t-l\tlazy unmount\n"));
+	printf(_("\t-h\tprint this help\n\n"));
 }
 
 int nfsumount(int argc, char *argv[])
@@ -282,6 +238,11 @@ int nfsumount(int argc, char *argv[])
 	int c, ret;
 	char *spec;
 	struct mntentchn *mc;
+
+	if (argc < 2) {
+		umount_usage();
+		return EX_USAGE;
+	}
 
 	spec = argv[1];
 
@@ -311,17 +272,17 @@ int nfsumount(int argc, char *argv[])
 		case 'h':
 		default:
 			umount_usage();
-			return 0;
+			return EX_USAGE;
 		}
 	}
 	if (optind != argc) {
 		umount_usage();
-		return 0;
+		return EX_USAGE;
 	}
 	
 	if (spec == NULL || (*spec != '/' && strchr(spec,':') == NULL)) {
-		printf(_("umount: %s: not found\n"), spec);
-		return 0;
+		nfs_error(_("%s: %s: not found\n"), progname, spec);
+		return EX_USAGE;
 	}
 
 	if (*spec == '/')
@@ -333,9 +294,9 @@ int nfsumount(int argc, char *argv[])
 
 	if (mc && strcmp(mc->m.mnt_type, "nfs") != 0 &&
 	    strcmp(mc->m.mnt_type, "nfs4") != 0) {
-		fprintf(stderr, "umount.nfs: %s on %s it not an nfs filesystem\n",
-			mc->m.mnt_fsname, mc->m.mnt_dir);
-		exit(1);
+		nfs_error(_("%s: %s on %s is not an NFS filesystem"),
+				progname, mc->m.mnt_fsname, mc->m.mnt_dir);
+		return EX_USAGE;
 	}
 
 	if (getuid() != 0) {
@@ -347,9 +308,9 @@ int nfsumount(int argc, char *argv[])
 			return 0;
 
 		only_root:
-			fprintf(stderr,"%s: You are not permitted to unmount %s\n",
-				progname, spec);
-			return 0;
+			nfs_error(_("%s: You are not permitted to unmount %s"),
+					progname, spec);
+			return EX_USAGE;
 		}
 		if (hasmntopt(&mc->m, "users") == NULL) {
 			char *opt = hasmntopt(&mc->m, "user");
@@ -375,14 +336,14 @@ int nfsumount(int argc, char *argv[])
 	ret = 0;
 	if (mc) {
 		if (!lazy)
-			_nfsumount(mc->m.mnt_fsname, mc->m.mnt_opts);
-		ret = del_mtab(mc->m.mnt_fsname, mc->m.mnt_dir);
+			ret = do_nfs_umount(mc->m.mnt_fsname, mc->m.mnt_opts);
+		if (!ret || force)
+			ret = del_mtab(mc->m.mnt_fsname, mc->m.mnt_dir);
 	} else if (*spec != '/') {
 		if (!lazy)
-			_nfsumount(spec, "tcp,v3");
+			ret = do_nfs_umount(spec, "tcp,v3");
 	} else
 		ret = del_mtab(NULL, spec);
 
-	return(ret);
+	return ret;
 }
-

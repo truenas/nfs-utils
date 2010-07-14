@@ -819,6 +819,7 @@ host_os
 INSTALL_PROGRAM
 INSTALL_SCRIPT
 INSTALL_DATA
+am__isrc
 CYGPATH_W
 PACKAGE
 VERSION
@@ -827,7 +828,6 @@ AUTOCONF
 AUTOMAKE
 AUTOHEADER
 MAKEINFO
-AMTAR
 install_sh
 STRIP
 INSTALL_STRIP_PROGRAM
@@ -835,6 +835,12 @@ mkdir_p
 AWK
 SET_MAKE
 am__leading_dot
+AMTAR
+am__tar
+am__untar
+MAINTAINER_MODE_TRUE
+MAINTAINER_MODE_FALSE
+MAINT
 RELEASE
 statedir
 statduser
@@ -902,6 +908,7 @@ GSSAPI_LIBS
 LIBSOCKET
 LIBCRYPT
 LIBBSD
+LIBBLKID
 KRBDIR
 KRBLIBS
 KRBCFLAGS
@@ -1517,6 +1524,8 @@ if test -n "$ac_init_help"; then
 Optional Features:
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
+  --enable-maintainer-mode  enable make rules and dependencies not useful
+			  (and sometimes confusing) to the casual installer
   --enable-nfsv3          enable support for NFSv3 @<:@default=yes@:>@
   --enable-nfsv4          enable support for NFSv4 @<:@default=yes@:>@
   --enable-gss            enable support for rpcsec_gss @<:@default=yes@:>@
@@ -2118,7 +2127,8 @@ case $host_os in *\ *) host_os=`echo "$host_os" | sed 's/ /-/g'`;; esac
 
 
 
-am__api_version="1.8"
+am__api_version='1.10'
+
 # Find a good install program.  We prefer a C program (faster),
 # so one script is as good as another.  But avoid the broken or
 # incompatible versions:
@@ -2270,30 +2280,53 @@ else
 echo "$as_me: WARNING: \`missing' script is too old or missing" >&2;}
 fi
 
-if mkdir -p --version . >/dev/null 2>&1 && test ! -d ./--version; then
-  # Keeping the `.' argument allows $(mkdir_p) to be used without
-  # argument.  Indeed, we sometimes output rules like
-  #   $(mkdir_p) $(somedir)
-  # where $(somedir) is conditionally defined.
-  # (`test -n '$(somedir)' && $(mkdir_p) $(somedir)' is a more
-  # expensive solution, as it forces Make to start a sub-shell.)
-  mkdir_p='mkdir -p -- .'
+{ echo "$as_me:$LINENO: checking for a thread-safe mkdir -p" >&5
+echo $ECHO_N "checking for a thread-safe mkdir -p... $ECHO_C" >&6; }
+if test -z "$MKDIR_P"; then
+  if test "${ac_cv_path_mkdir+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
 else
-  # On NextStep and OpenStep, the `mkdir' command does not
-  # recognize any option.  It will interpret all options as
-  # directories to create, and then abort because `.' already
-  # exists.
-  for d in ./-p ./--version;
-  do
-    test -d $d && rmdir $d
-  done
-  # $(mkinstalldirs) is defined by Automake if mkinstalldirs exists.
-  if test -f "$ac_aux_dir/mkinstalldirs"; then
-    mkdir_p='$(mkinstalldirs)'
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH$PATH_SEPARATOR/opt/sfw/bin
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+  for ac_prog in mkdir gmkdir; do
+	 for ac_exec_ext in '' $ac_executable_extensions; do
+	   { test -f "$as_dir/$ac_prog$ac_exec_ext" && $as_test_x "$as_dir/$ac_prog$ac_exec_ext"; } || continue
+	   case `"$as_dir/$ac_prog$ac_exec_ext" --version 2>&1` in #(
+	     'mkdir (GNU coreutils) '* | \
+	     'mkdir (coreutils) '* | \
+	     'mkdir (fileutils) '4.1*)
+	       ac_cv_path_mkdir=$as_dir/$ac_prog$ac_exec_ext
+	       break 3;;
+	   esac
+	 done
+       done
+done
+IFS=$as_save_IFS
+
+fi
+
+  if test "${ac_cv_path_mkdir+set}" = set; then
+    MKDIR_P="$ac_cv_path_mkdir -p"
   else
-    mkdir_p='$(install_sh) -d'
+    # As a last resort, use the slow shell script.  Don't cache a
+    # value for MKDIR_P within a source directory, because that will
+    # break other packages using the cache if that directory is
+    # removed, or if the value is a relative name.
+    test -d ./--version && rmdir ./--version
+    MKDIR_P="$ac_install_sh -d"
   fi
 fi
+{ echo "$as_me:$LINENO: result: $MKDIR_P" >&5
+echo "${ECHO_T}$MKDIR_P" >&6; }
+
+mkdir_p="$MKDIR_P"
+case $mkdir_p in
+  [\\/$]* | ?:[\\/]*) ;;
+  */*) mkdir_p="\$(top_builddir)/$mkdir_p" ;;
+esac
 
 for ac_prog in gawk mawk nawk awk
 do
@@ -2376,12 +2409,16 @@ else
 fi
 rmdir .tst 2>/dev/null
 
-# test to see if srcdir already configured
-if test "`cd $srcdir && pwd`" != "`pwd`" &&
-   test -f $srcdir/config.status; then
-  { { echo "$as_me:$LINENO: error: source directory already configured; run \"make distclean\" there first" >&5
+if test "`cd $srcdir && pwd`" != "`pwd`"; then
+  # Use -I$(srcdir) only when $(srcdir) != ., so that make's output
+  # is not polluted with repeated "-I."
+  am__isrc=' -I$(srcdir)'
+  # test to see if srcdir already configured
+  if test -f $srcdir/config.status; then
+    { { echo "$as_me:$LINENO: error: source directory already configured; run \"make distclean\" there first" >&5
 echo "$as_me: error: source directory already configured; run \"make distclean\" there first" >&2;}
    { (exit 1); exit 1; }; }
+  fi
 fi
 
 # test whether we have cygpath
@@ -2424,10 +2461,7 @@ AUTOHEADER=${AUTOHEADER-"${am_missing_run}autoheader"}
 
 MAKEINFO=${MAKEINFO-"${am_missing_run}makeinfo"}
 
-
-AMTAR=${AMTAR-"${am_missing_run}tar"}
-
-install_sh=${install_sh-"$am_aux_dir/install-sh"}
+install_sh=${install_sh-"\$(SHELL) $am_aux_dir/install-sh"}
 
 # Installed binaries are usually stripped using `strip' when the user
 # run `make install-strip'.  However `strip' might not be the right
@@ -2531,14 +2565,43 @@ else
 fi
 
 fi
-INSTALL_STRIP_PROGRAM="\${SHELL} \$(install_sh) -c -s"
+INSTALL_STRIP_PROGRAM="\$(install_sh) -c -s"
 
 # We need awk for the "check" target.  The system "awk" is bad on
 # some platforms.
+# Always define AMTAR for backward compatibility.
+
+AMTAR=${AMTAR-"${am_missing_run}tar"}
+
+am__tar='${AMTAR} chof - "$$tardir"'; am__untar='${AMTAR} xf -'
 
 
 
 
+
+
+
+{ echo "$as_me:$LINENO: checking whether to enable maintainer-specific portions of Makefiles" >&5
+echo $ECHO_N "checking whether to enable maintainer-specific portions of Makefiles... $ECHO_C" >&6; }
+    # Check whether --enable-maintainer-mode was given.
+if test "${enable_maintainer_mode+set}" = set; then
+  enableval=$enable_maintainer_mode; USE_MAINTAINER_MODE=$enableval
+else
+  USE_MAINTAINER_MODE=no
+fi
+
+  { echo "$as_me:$LINENO: result: $USE_MAINTAINER_MODE" >&5
+echo "${ECHO_T}$USE_MAINTAINER_MODE" >&6; }
+   if test $USE_MAINTAINER_MODE = yes; then
+  MAINTAINER_MODE_TRUE=
+  MAINTAINER_MODE_FALSE='#'
+else
+  MAINTAINER_MODE_TRUE='#'
+  MAINTAINER_MODE_FALSE=
+fi
+
+  MAINT=$MAINTAINER_MODE_TRUE
+  
 
 
 
@@ -2613,9 +2676,7 @@ _ACEOF
 	fi
 	
 	
-	 
-
-if test "$enable_nfsv4" = "yes"; then
+	 if test "$enable_nfsv4" = "yes"; then
   CONFIG_NFSV4_TRUE=
   CONFIG_NFSV4_FALSE='#'
 else
@@ -2646,9 +2707,7 @@ _ACEOF
 	
 	
 	
-	 
-
-if test "$enable_gss" = "yes"; then
+	 if test "$enable_gss" = "yes"; then
   CONFIG_GSS_TRUE=
   CONFIG_GSS_FALSE='#'
 else
@@ -2691,9 +2750,7 @@ fi
 	else
 		RQUOTAD=
 	fi
-	 
-
-if test "$enable_rquotad" = "yes"; then
+	 if test "$enable_rquotad" = "yes"; then
   CONFIG_RQUOTAD_TRUE=
   CONFIG_RQUOTAD_FALSE='#'
 else
@@ -2709,9 +2766,7 @@ else
   enable_mount=no
 fi
 
-	 
-
-if test "$enable_mount" = "yes"; then
+	 if test "$enable_mount" = "yes"; then
   CONFIG_MOUNT_TRUE=
   CONFIG_MOUNT_FALSE='#'
 else
@@ -2774,16 +2829,13 @@ if test "x$enable_dependency_tracking" != xno; then
   am_depcomp="$ac_aux_dir/depcomp"
   AMDEPBACKSLASH='\'
 fi
- 
-
-if test "x$enable_dependency_tracking" != xno; then
+ if test "x$enable_dependency_tracking" != xno; then
   AMDEP_TRUE=
   AMDEP_FALSE='#'
 else
   AMDEP_TRUE='#'
   AMDEP_FALSE=
 fi
-
 
 
 ac_ext=c
@@ -3772,6 +3824,7 @@ else
        depfile=sub/conftest.Po tmpdepfile=sub/conftest.TPo \
        $SHELL ./depcomp $depcc -c -o sub/conftest.${OBJEXT-o} sub/conftest.c \
          >/dev/null 2>conftest.err &&
+       grep sub/conftst1.h sub/conftest.Po > /dev/null 2>&1 &&
        grep sub/conftst6.h sub/conftest.Po > /dev/null 2>&1 &&
        grep sub/conftest.${OBJEXT-o} sub/conftest.Po > /dev/null 2>&1 &&
        ${MAKE-make} -s -f confmf > /dev/null 2>&1; then
@@ -3801,9 +3854,7 @@ fi
 echo "${ECHO_T}$am_cv_CC_dependencies_compiler_type" >&6; }
 CCDEPMODE=depmode=$am_cv_CC_dependencies_compiler_type
 
- 
-
-if 
+ if 
   test "x$enable_dependency_tracking" != xno \
   && test "$am_cv_CC_dependencies_compiler_type" = gcc3; then
   am__fastdepCC_TRUE=
@@ -3820,29 +3871,33 @@ fi
   
 # Check whether --with-tcp-wrappers was given.
 if test "${with_tcp_wrappers+set}" = set; then
-  withval=$with_tcp_wrappers; 
-        if test "x$withval" != "xno" ; then
+  withval=$with_tcp_wrappers; with_tcpw=$withval
+else
+  $with_tcpw=yes
+fi
+
+        if test "x$with_tcpw" != "xno" ; then
             saved_LIBS="$LIBS"
             saved_LDFLAGS="$LDFLAGS"
             saved_CPPFLAGS="$CPPFLAGS"
-            if test -n "${withval}" -a "${withval}" != "yes"; then
-                if test -d "${withval}/lib"; then
+            if test -n "${with_tcpw}" -a "${with_tcpw}" != "yes"; then
+                if test -d "${with_tcpw}/lib"; then
                     if test -n "${need_dash_r}"; then
-                        LDFLAGS="-L${withval}/lib -R${withval}/lib ${LDFLAGS}"
+                        LDFLAGS="-L${with_tcpw}/lib -R${with_tcpw}/lib ${LDFLAGS}"
                     else
-                        LDFLAGS="-L${withval}/lib ${LDFLAGS}"
+                        LDFLAGS="-L${with_tcpw}/lib ${LDFLAGS}"
                     fi
                 else
                     if test -n "${need_dash_r}"; then
-                        LDFLAGS="-L${withval} -R${withval} ${LDFLAGS}"
+                        LDFLAGS="-L${with_tcpw} -R${with_tcpw} ${LDFLAGS}"
                     else
-                        LDFLAGS="-L${withval} ${LDFLAGS}"
+                        LDFLAGS="-L${with_tcpw} ${LDFLAGS}"
                     fi
                 fi
-                if test -d "${withval}/include"; then
-                    CPPFLAGS="-I${withval}/include ${CPPFLAGS}"
+                if test -d "${with_tcpw}/include"; then
+                    CPPFLAGS="-I${with_tcpw}/include ${CPPFLAGS}"
                 else
-                    CPPFLAGS="-I${withval} ${CPPFLAGS}"
+                    CPPFLAGS="-I${with_tcpw} ${CPPFLAGS}"
                 fi
             fi
             LIBWRAP="-lwrap"
@@ -3922,10 +3977,6 @@ rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
       conftest$ac_exeext conftest.$ac_ext
             LIBS="$saved_LIBS"
         fi
-    
-  
-fi
-
   
   
   
@@ -4367,6 +4418,7 @@ else
        depfile=sub/conftest.Po tmpdepfile=sub/conftest.TPo \
        $SHELL ./depcomp $depcc -c -o sub/conftest.${OBJEXT-o} sub/conftest.c \
          >/dev/null 2>conftest.err &&
+       grep sub/conftst1.h sub/conftest.Po > /dev/null 2>&1 &&
        grep sub/conftst6.h sub/conftest.Po > /dev/null 2>&1 &&
        grep sub/conftest.${OBJEXT-o} sub/conftest.Po > /dev/null 2>&1 &&
        ${MAKE-make} -s -f confmf > /dev/null 2>&1; then
@@ -4396,9 +4448,7 @@ fi
 echo "${ECHO_T}$am_cv_CXX_dependencies_compiler_type" >&6; }
 CXXDEPMODE=depmode=$am_cv_CXX_dependencies_compiler_type
 
- 
-
-if 
+ if 
   test "x$enable_dependency_tracking" != xno \
   && test "$am_cv_CXX_dependencies_compiler_type" = gcc3; then
   am__fastdepCXX_TRUE=
@@ -5152,6 +5202,7 @@ else
        depfile=sub/conftest.Po tmpdepfile=sub/conftest.TPo \
        $SHELL ./depcomp $depcc -c -o sub/conftest.${OBJEXT-o} sub/conftest.c \
          >/dev/null 2>conftest.err &&
+       grep sub/conftst1.h sub/conftest.Po > /dev/null 2>&1 &&
        grep sub/conftst6.h sub/conftest.Po > /dev/null 2>&1 &&
        grep sub/conftest.${OBJEXT-o} sub/conftest.Po > /dev/null 2>&1 &&
        ${MAKE-make} -s -f confmf > /dev/null 2>&1; then
@@ -5181,9 +5232,7 @@ fi
 echo "${ECHO_T}$am_cv_CC_dependencies_compiler_type" >&6; }
 CCDEPMODE=depmode=$am_cv_CC_dependencies_compiler_type
 
- 
-
-if 
+ if 
   test "x$enable_dependency_tracking" != xno \
   && test "$am_cv_CC_dependencies_compiler_type" = gcc3; then
   am__fastdepCC_TRUE=
@@ -20807,11 +20856,15 @@ echo $ECHO_N "checking for BSD signal semantics... $ECHO_C" >&6; }
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
   if test "$cross_compiling" = yes; then
-  { { echo "$as_me:$LINENO: error: cannot run test program while cross compiling
-See \`config.log' for more details." >&5
-echo "$as_me: error: cannot run test program while cross compiling
-See \`config.log' for more details." >&2;}
-   { (exit 1); exit 1; }; }
+  
+      case "$host_os" in
+        *linux*) knfsd_cv_bsd_signals=no;;
+        *bsd*)   knfsd_cv_bsd_signals=yes;;
+        *)       { { echo "$as_me:$LINENO: error: unable to guess signal semantics for $host_os; please set knfsd_cv_bsd_signals" >&5
+echo "$as_me: error: unable to guess signal semantics for $host_os; please set knfsd_cv_bsd_signals" >&2;}
+   { (exit 1); exit 1; }; };;
+      esac
+    
 else
   cat >conftest.$ac_ext <<_ACEOF
 /* confdefs.h.  */
@@ -22077,6 +22130,215 @@ if test $ac_cv_lib_bsd_daemon = yes; then
 fi
 
 fi
+{ echo "$as_me:$LINENO: checking for blkid_get_cache in -lblkid" >&5
+echo $ECHO_N "checking for blkid_get_cache in -lblkid... $ECHO_C" >&6; }
+if test "${ac_cv_lib_blkid_blkid_get_cache+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lblkid  $LIBS"
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char blkid_get_cache ();
+int
+main ()
+{
+return blkid_get_cache ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (ac_try="$ac_link"
+case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval "echo \"\$as_me:$LINENO: $ac_try_echo\"") >&5
+  (eval "$ac_link") 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } && {
+	 test -z "$ac_c_werror_flag" ||
+	 test ! -s conftest.err
+       } && test -s conftest$ac_exeext &&
+       $as_test_x conftest$ac_exeext; then
+  ac_cv_lib_blkid_blkid_get_cache=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+	ac_cv_lib_blkid_blkid_get_cache=no
+fi
+
+rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
+      conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ echo "$as_me:$LINENO: result: $ac_cv_lib_blkid_blkid_get_cache" >&5
+echo "${ECHO_T}$ac_cv_lib_blkid_blkid_get_cache" >&6; }
+if test $ac_cv_lib_blkid_blkid_get_cache = yes; then
+  LIBBLKID="-lblkid"
+else
+  { { echo "$as_me:$LINENO: error: libblkid needed" >&5
+echo "$as_me: error: libblkid needed" >&2;}
+   { (exit 1); exit 1; }; }
+fi
+
+if test "${ac_cv_header_blkid_blkid_h+set}" = set; then
+  { echo "$as_me:$LINENO: checking for blkid/blkid.h" >&5
+echo $ECHO_N "checking for blkid/blkid.h... $ECHO_C" >&6; }
+if test "${ac_cv_header_blkid_blkid_h+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+fi
+{ echo "$as_me:$LINENO: result: $ac_cv_header_blkid_blkid_h" >&5
+echo "${ECHO_T}$ac_cv_header_blkid_blkid_h" >&6; }
+else
+  # Is the header compilable?
+{ echo "$as_me:$LINENO: checking blkid/blkid.h usability" >&5
+echo $ECHO_N "checking blkid/blkid.h usability... $ECHO_C" >&6; }
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+$ac_includes_default
+@%:@include <blkid/blkid.h>
+_ACEOF
+rm -f conftest.$ac_objext
+if { (ac_try="$ac_compile"
+case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval "echo \"\$as_me:$LINENO: $ac_try_echo\"") >&5
+  (eval "$ac_compile") 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } && {
+	 test -z "$ac_c_werror_flag" ||
+	 test ! -s conftest.err
+       } && test -s conftest.$ac_objext; then
+  ac_header_compiler=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+	ac_header_compiler=no
+fi
+
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+{ echo "$as_me:$LINENO: result: $ac_header_compiler" >&5
+echo "${ECHO_T}$ac_header_compiler" >&6; }
+
+# Is the header present?
+{ echo "$as_me:$LINENO: checking blkid/blkid.h presence" >&5
+echo $ECHO_N "checking blkid/blkid.h presence... $ECHO_C" >&6; }
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+@%:@include <blkid/blkid.h>
+_ACEOF
+if { (ac_try="$ac_cpp conftest.$ac_ext"
+case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval "echo \"\$as_me:$LINENO: $ac_try_echo\"") >&5
+  (eval "$ac_cpp conftest.$ac_ext") 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } >/dev/null && {
+	 test -z "$ac_c_preproc_warn_flag$ac_c_werror_flag" ||
+	 test ! -s conftest.err
+       }; then
+  ac_header_preproc=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+  ac_header_preproc=no
+fi
+
+rm -f conftest.err conftest.$ac_ext
+{ echo "$as_me:$LINENO: result: $ac_header_preproc" >&5
+echo "${ECHO_T}$ac_header_preproc" >&6; }
+
+# So?  What about this header?
+case $ac_header_compiler:$ac_header_preproc:$ac_c_preproc_warn_flag in
+  yes:no: )
+    { echo "$as_me:$LINENO: WARNING: blkid/blkid.h: accepted by the compiler, rejected by the preprocessor!" >&5
+echo "$as_me: WARNING: blkid/blkid.h: accepted by the compiler, rejected by the preprocessor!" >&2;}
+    { echo "$as_me:$LINENO: WARNING: blkid/blkid.h: proceeding with the compiler's result" >&5
+echo "$as_me: WARNING: blkid/blkid.h: proceeding with the compiler's result" >&2;}
+    ac_header_preproc=yes
+    ;;
+  no:yes:* )
+    { echo "$as_me:$LINENO: WARNING: blkid/blkid.h: present but cannot be compiled" >&5
+echo "$as_me: WARNING: blkid/blkid.h: present but cannot be compiled" >&2;}
+    { echo "$as_me:$LINENO: WARNING: blkid/blkid.h:     check for missing prerequisite headers?" >&5
+echo "$as_me: WARNING: blkid/blkid.h:     check for missing prerequisite headers?" >&2;}
+    { echo "$as_me:$LINENO: WARNING: blkid/blkid.h: see the Autoconf documentation" >&5
+echo "$as_me: WARNING: blkid/blkid.h: see the Autoconf documentation" >&2;}
+    { echo "$as_me:$LINENO: WARNING: blkid/blkid.h:     section \"Present But Cannot Be Compiled\"" >&5
+echo "$as_me: WARNING: blkid/blkid.h:     section \"Present But Cannot Be Compiled\"" >&2;}
+    { echo "$as_me:$LINENO: WARNING: blkid/blkid.h: proceeding with the preprocessor's result" >&5
+echo "$as_me: WARNING: blkid/blkid.h: proceeding with the preprocessor's result" >&2;}
+    { echo "$as_me:$LINENO: WARNING: blkid/blkid.h: in the future, the compiler will take precedence" >&5
+echo "$as_me: WARNING: blkid/blkid.h: in the future, the compiler will take precedence" >&2;}
+    ( cat <<\_ASBOX
+@%:@@%:@ ------------------------------- @%:@@%:@
+@%:@@%:@ Report this to nfs@lists.sf.net @%:@@%:@
+@%:@@%:@ ------------------------------- @%:@@%:@
+_ASBOX
+     ) | sed "s/^/$as_me: WARNING:     /" >&2
+    ;;
+esac
+{ echo "$as_me:$LINENO: checking for blkid/blkid.h" >&5
+echo $ECHO_N "checking for blkid/blkid.h... $ECHO_C" >&6; }
+if test "${ac_cv_header_blkid_blkid_h+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  ac_cv_header_blkid_blkid_h=$ac_header_preproc
+fi
+{ echo "$as_me:$LINENO: result: $ac_cv_header_blkid_blkid_h" >&5
+echo "${ECHO_T}$ac_cv_header_blkid_blkid_h" >&6; }
+
+fi
+if test $ac_cv_header_blkid_blkid_h = yes; then
+  :
+else
+  { { echo "$as_me:$LINENO: error: Cannot file libblkid header file blkid/blkid.h" >&5
+echo "$as_me: error: Cannot file libblkid header file blkid/blkid.h" >&2;}
+   { (exit 1); exit 1; }; }
+fi
+
+
+
 
 
 
@@ -28734,7 +28996,7 @@ AM_CFLAGS="$my_am_cflags"
 ACLOCAL_AMFLAGS="-I $ac_macro_dir \$(ACLOCAL_FLAGS)"
 
 
-ac_config_files="$ac_config_files Makefile linux-nfs/Makefile support/Makefile support/export/Makefile support/include/nfs/Makefile support/include/rpcsvc/Makefile support/include/sys/fs/Makefile support/include/sys/Makefile support/include/Makefile support/misc/Makefile support/nfs/Makefile tools/Makefile tools/getiversion/Makefile tools/getkversion/Makefile tools/locktest/Makefile tools/nlmtest/Makefile tools/rpcdebug/Makefile tools/rpcgen/Makefile utils/Makefile utils/exportfs/Makefile utils/gssd/Makefile utils/idmapd/Makefile utils/lockd/Makefile utils/mount/Makefile utils/mountd/Makefile utils/nfsd/Makefile utils/nfsstat/Makefile utils/rquotad/Makefile utils/showmount/Makefile utils/statd/Makefile"
+ac_config_files="$ac_config_files Makefile linux-nfs/Makefile support/Makefile support/export/Makefile support/include/nfs/Makefile support/include/rpcsvc/Makefile support/include/sys/fs/Makefile support/include/sys/Makefile support/include/Makefile support/misc/Makefile support/nfs/Makefile tools/Makefile tools/getiversion/Makefile tools/locktest/Makefile tools/nlmtest/Makefile tools/rpcdebug/Makefile tools/rpcgen/Makefile utils/Makefile utils/exportfs/Makefile utils/gssd/Makefile utils/idmapd/Makefile utils/lockd/Makefile utils/mount/Makefile utils/mountd/Makefile utils/nfsd/Makefile utils/nfsstat/Makefile utils/rquotad/Makefile utils/showmount/Makefile utils/statd/Makefile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -28832,6 +29094,13 @@ LIB@&t@OBJS=$ac_libobjs
 LTLIBOBJS=$ac_ltlibobjs
 
 
+if test -z "${MAINTAINER_MODE_TRUE}" && test -z "${MAINTAINER_MODE_FALSE}"; then
+  { { echo "$as_me:$LINENO: error: conditional \"MAINTAINER_MODE\" was never defined.
+Usually this means the macro was only invoked conditionally." >&5
+echo "$as_me: error: conditional \"MAINTAINER_MODE\" was never defined.
+Usually this means the macro was only invoked conditionally." >&2;}
+   { (exit 1); exit 1; }; }
+fi
 if test -z "${CONFIG_NFSV4_TRUE}" && test -z "${CONFIG_NFSV4_FALSE}"; then
   { { echo "$as_me:$LINENO: error: conditional \"CONFIG_NFSV4\" was never defined.
 Usually this means the macro was only invoked conditionally." >&5
@@ -29252,6 +29521,7 @@ gives unlimited permission to copy, distribute and modify it."
 ac_pwd='$ac_pwd'
 srcdir='$srcdir'
 INSTALL='$INSTALL'
+MKDIR_P='$MKDIR_P'
 _ACEOF
 
 cat >>$CONFIG_STATUS <<\_ACEOF
@@ -29369,7 +29639,6 @@ do
     "support/nfs/Makefile") CONFIG_FILES="$CONFIG_FILES support/nfs/Makefile" ;;
     "tools/Makefile") CONFIG_FILES="$CONFIG_FILES tools/Makefile" ;;
     "tools/getiversion/Makefile") CONFIG_FILES="$CONFIG_FILES tools/getiversion/Makefile" ;;
-    "tools/getkversion/Makefile") CONFIG_FILES="$CONFIG_FILES tools/getkversion/Makefile" ;;
     "tools/locktest/Makefile") CONFIG_FILES="$CONFIG_FILES tools/locktest/Makefile" ;;
     "tools/nlmtest/Makefile") CONFIG_FILES="$CONFIG_FILES tools/nlmtest/Makefile" ;;
     "tools/rpcdebug/Makefile") CONFIG_FILES="$CONFIG_FILES tools/rpcdebug/Makefile" ;;
@@ -29496,6 +29765,7 @@ host_os!$host_os$ac_delim
 INSTALL_PROGRAM!$INSTALL_PROGRAM$ac_delim
 INSTALL_SCRIPT!$INSTALL_SCRIPT$ac_delim
 INSTALL_DATA!$INSTALL_DATA$ac_delim
+am__isrc!$am__isrc$ac_delim
 CYGPATH_W!$CYGPATH_W$ac_delim
 PACKAGE!$PACKAGE$ac_delim
 VERSION!$VERSION$ac_delim
@@ -29504,7 +29774,6 @@ AUTOCONF!$AUTOCONF$ac_delim
 AUTOMAKE!$AUTOMAKE$ac_delim
 AUTOHEADER!$AUTOHEADER$ac_delim
 MAKEINFO!$MAKEINFO$ac_delim
-AMTAR!$AMTAR$ac_delim
 install_sh!$install_sh$ac_delim
 STRIP!$STRIP$ac_delim
 INSTALL_STRIP_PROGRAM!$INSTALL_STRIP_PROGRAM$ac_delim
@@ -29512,6 +29781,12 @@ mkdir_p!$mkdir_p$ac_delim
 AWK!$AWK$ac_delim
 SET_MAKE!$SET_MAKE$ac_delim
 am__leading_dot!$am__leading_dot$ac_delim
+AMTAR!$AMTAR$ac_delim
+am__tar!$am__tar$ac_delim
+am__untar!$am__untar$ac_delim
+MAINTAINER_MODE_TRUE!$MAINTAINER_MODE_TRUE$ac_delim
+MAINTAINER_MODE_FALSE!$MAINTAINER_MODE_FALSE$ac_delim
+MAINT!$MAINT$ac_delim
 RELEASE!$RELEASE$ac_delim
 statedir!$statedir$ac_delim
 statduser!$statduser$ac_delim
@@ -29539,12 +29814,6 @@ ac_ct_CC!$ac_ct_CC$ac_delim
 EXEEXT!$EXEEXT$ac_delim
 OBJEXT!$OBJEXT$ac_delim
 DEPDIR!$DEPDIR$ac_delim
-am__include!$am__include$ac_delim
-am__quote!$am__quote$ac_delim
-AMDEP_TRUE!$AMDEP_TRUE$ac_delim
-AMDEP_FALSE!$AMDEP_FALSE$ac_delim
-AMDEPBACKSLASH!$AMDEPBACKSLASH$ac_delim
-CCDEPMODE!$CCDEPMODE$ac_delim
 _ACEOF
 
   if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 97; then
@@ -29586,6 +29855,12 @@ _ACEOF
 ac_delim='%!_!# '
 for ac_last_try in false false false false false :; do
   cat >conf$$subs.sed <<_ACEOF
+am__include!$am__include$ac_delim
+am__quote!$am__quote$ac_delim
+AMDEP_TRUE!$AMDEP_TRUE$ac_delim
+AMDEP_FALSE!$AMDEP_FALSE$ac_delim
+AMDEPBACKSLASH!$AMDEPBACKSLASH$ac_delim
+CCDEPMODE!$CCDEPMODE$ac_delim
 am__fastdepCC_TRUE!$am__fastdepCC_TRUE$ac_delim
 am__fastdepCC_FALSE!$am__fastdepCC_FALSE$ac_delim
 LIBWRAP!$LIBWRAP$ac_delim
@@ -29620,6 +29895,7 @@ GSSAPI_LIBS!$GSSAPI_LIBS$ac_delim
 LIBSOCKET!$LIBSOCKET$ac_delim
 LIBCRYPT!$LIBCRYPT$ac_delim
 LIBBSD!$LIBBSD$ac_delim
+LIBBLKID!$LIBBLKID$ac_delim
 KRBDIR!$KRBDIR$ac_delim
 KRBLIBS!$KRBLIBS$ac_delim
 KRBCFLAGS!$KRBCFLAGS$ac_delim
@@ -29637,7 +29913,7 @@ ACLOCAL_AMFLAGS!$ACLOCAL_AMFLAGS$ac_delim
 LTLIBOBJS!$LTLIBOBJS$ac_delim
 _ACEOF
 
-  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 49; then
+  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 56; then
     break
   elif $ac_last_try; then
     { { echo "$as_me:$LINENO: error: could not make $CONFIG_STATUS" >&5
@@ -29864,6 +30140,11 @@ ac_abs_srcdir=$ac_abs_top_srcdir$ac_dir_suffix
   [\\/$]* | ?:[\\/]* ) ac_INSTALL=$INSTALL ;;
   *) ac_INSTALL=$ac_top_build_prefix$INSTALL ;;
   esac
+  ac_MKDIR_P=$MKDIR_P
+  case $MKDIR_P in
+  [\\/$]* | ?:[\\/]* ) ;;
+  */*) ac_MKDIR_P=$ac_top_build_prefix$MKDIR_P ;;
+  esac
 _ACEOF
 
 cat >>$CONFIG_STATUS <<\_ACEOF
@@ -29917,6 +30198,7 @@ s&@builddir@&$ac_builddir&;t t
 s&@abs_builddir@&$ac_abs_builddir&;t t
 s&@abs_top_builddir@&$ac_abs_top_builddir&;t t
 s&@INSTALL@&$ac_INSTALL&;t t
+s&@MKDIR_P@&$ac_MKDIR_P&;t t
 $ac_datarootdir_hack
 " $ac_file_inputs | sed -f "$tmp/subs-1.sed" | sed -f "$tmp/subs-2.sed" >$tmp/out
 
@@ -30081,8 +30363,9 @@ echo "$as_me: executing $ac_file commands" >&6;}
   # some people rename them; so instead we look at the file content.
   # Grep'ing the first line is not enough: some people post-process
   # each Makefile.in and add a new line on top of each file to say so.
-  # So let's grep whole file.
-  if grep '^#.*generated by automake' $mf > /dev/null 2>&1; then
+  # Grep'ing the whole file is not good either: AIX grep has a line
+  # limit of 2048, but all sed's we know have understand at least 4000.
+  if sed 10q "$mf" | grep '^#.*generated by automake' > /dev/null 2>&1; then
     dirpart=`$as_dirname -- "$mf" ||
 $as_expr X"$mf" : 'X\(.*[^/]\)//*[^/][^/]*/*$' \| \
 	 X"$mf" : 'X\(//\)[^/]' \| \
@@ -30109,27 +30392,21 @@ echo X"$mf" |
   else
     continue
   fi
-  grep '^DEP_FILES *= *[^ @%:@]' < "$mf" > /dev/null || continue
-  # Extract the definition of DEP_FILES from the Makefile without
-  # running `make'.
+  # Extract the definition of DEPDIR, am__include, and am__quote
+  # from the Makefile without running `make'.
   DEPDIR=`sed -n 's/^DEPDIR = //p' < "$mf"`
   test -z "$DEPDIR" && continue
+  am__include=`sed -n 's/^am__include = //p' < "$mf"`
+  test -z "am__include" && continue
+  am__quote=`sed -n 's/^am__quote = //p' < "$mf"`
   # When using ansi2knr, U may be empty or an underscore; expand it
   U=`sed -n 's/^U = //p' < "$mf"`
-  test -d "$dirpart/$DEPDIR" || mkdir "$dirpart/$DEPDIR"
-  # We invoke sed twice because it is the simplest approach to
-  # changing $(DEPDIR) to its actual value in the expansion.
-  for file in `sed -n '
-    /^DEP_FILES = .*\\\\$/ {
-      s/^DEP_FILES = //
-      :loop
-	s/\\\\$//
-	p
-	n
-	/\\\\$/ b loop
-      p
-    }
-    /^DEP_FILES = / s/^DEP_FILES = //p' < "$mf" | \
+  # Find all dependency output files, they are included files with
+  # $(DEPDIR) in their names.  We invoke sed twice because it is the
+  # simplest approach to changing $(DEPDIR) to its actual value in the
+  # expansion.
+  for file in `sed -n "
+    s/^$am__include $am__quote\(.*(DEPDIR).*\)$am__quote"'$/\1/p' <"$mf" | \
        sed -e 's/\$(DEPDIR)/'"$DEPDIR"'/g' -e 's/\$U/'"$U"'/g'`; do
     # Make sure the directory exists.
     test -f "$dirpart/$file" && continue

@@ -22,6 +22,11 @@ client may be immediately followed by a parenthesized, comma-separated
 list of export options for that client. No whitespace is permitted
 between a client and its option list.
 .PP
+Also, each line may have one or more specifications for default options
+after the path name, in the form of a dash ("\-") followed by an option
+list. The option list is used for all subsequent exports on that line
+only.
+.PP
 Blank lines are ignored.  A pound sign ("#") introduces a comment to the
 end of the line. Entries may be continued across newlines using a
 backslash. If an export name contains spaces it should be quoted using
@@ -121,7 +126,7 @@ default.  In all subsequence releases,
 .I sync
 is the default, and
 .I async
-must be explicit requested if needed.
+must be explicitly requested if needed.
 To help make system administrators aware of this change, 'exportfs'
 will issue a warning if neither
 .I sync
@@ -301,26 +306,33 @@ then the nominated path must be a mountpoint for the exportpoint to be
 exported.
 
 .TP
-.IR fsid= num
-This option forces the filesystem identification portion of the file
-handle and file attributes used on the wire to be
-.I num
-instead of a number derived from the major and minor number of the
-block device on which the filesystem is mounted.  Any 32 bit number
-can be used, but it must be unique amongst all the exported filesystems.
+.IR fsid= num|root|uuid
+NFS needs to be able to identify each filesystem that it exports.
+Normally it will use a UUID for the filesystem (if the filesystem has
+such a thing) or the device number of the device holding the
+filesystem (if the filesystem is stored on the device).
 
-This can be useful for NFS failover, to ensure that both servers of
-the failover pair use the same NFS file handles for the shared filesystem
-thus avoiding stale file handles after failover.
+As not all filesystems are stored on devices, and not all filesystems
+have UUIDs, it is sometimes necessary to explicitly tell NFS how to
+identify a filesystem.  This is done with the
+.I fsid=
+option.
 
-Some Linux filesystems are not mounted on a block device; exporting
-these via NFS requires the use of the
-.I fsid
-option (although that may still not be enough).
+For NFSv4, there is a distinguished filesystem which is the root of
+all exported filesystem.  This is specified with
+.I fsid=root
+or
+.I fsid=0
+both of which mean exactly the same thing.
 
-The value  0 has a special meaning when use with NFSv4.  NFSv4 has a
-concept of a root of the overall exported filesystem. The export point
-exported with fsid=0 will be used as this root.
+Other filesystems can be identified with a small integer, or a UUID
+which should contain 32 hex digits and arbitrary punctuation.
+
+Linux kernels version 2.6.20 and earlier do not understand the UUID
+setting so a small integer must be used if an fsid option needs to be
+set for such kernels.  Setting both a small number and a UUID is
+supported so the same configuration can be made to work on old and new
+kernels alike.
 
 .SS User ID Mapping
 .PP
@@ -499,6 +511,7 @@ is supposedly that of user joe).
 /usr            *.local.domain(ro) @trusted(rw)
 /home/joe       pc001(rw,all_squash,anonuid=150,anongid=100)
 /pub            (ro,insecure,all_squash)
+/srv/www        \-sync,rw server @trusted @external(ro)
 '''/pub/private    (noaccess)
 .fi
 .PP
@@ -512,6 +525,9 @@ under the nobody account. The
 .I insecure 
 option in this entry also allows clients with NFS implementations that
 don't use a reserved port for NFS.
+The sixth line exports a directory read-write to the machine 'server'
+as well as the `@trusted' netgroup, and read-only to netgroup `@external',
+all three mounts with the `sync' option enabled.
 ''' The last line denies all NFS clients
 '''access to the private directory.
 '''.SH CAVEATS

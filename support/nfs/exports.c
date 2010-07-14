@@ -39,12 +39,13 @@ int export_errno;
 static char	*efname = NULL;
 static XFILE	*efp = NULL;
 static int	first;
+static int	has_default_opts, has_default_subtree_opts;
 static int	*squids = NULL, nsquids = 0,
 		*sqgids = NULL, nsqgids = 0;
 
 static int	getexport(char *exp, int len);
 static int	getpath(char *path, int len);
-static int	parseopts(char *cp, struct exportent *ep, int warn);
+static int	parseopts(char *cp, struct exportent *ep, int warn, int *had_subtree_opt_ptr);
 static int	parsesquash(char *list, int **idp, int *lenp, char **ep);
 static int	parsenum(char **cpp);
 static int	parsemaptype(char *type);
@@ -68,7 +69,7 @@ setexportent(char *fname, char *type)
 struct exportent *
 getexportent(int fromkernel, int fromexports)
 {
-	static struct exportent	ee;
+	static struct exportent	ee, def_ee;
 	char		exp[512], *hostname;
 	char		rpath[MAXPATHLEN+1];
 	char		*opt, *sp;
@@ -78,31 +79,36 @@ getexportent(int fromkernel, int fromexports)
 		return NULL;
 
 	freesquash();
-	ee.e_flags = EXPORT_DEFAULT_FLAGS;
-	/* some kernels assume the default is sync rather than
-	 * async.  More recent kernels always report one or other,
-	 * but this test makes sure we assume same as kernel
-	 * Ditto for wgather
-	 */
-	if (fromkernel) {
-		ee.e_flags &= ~NFSEXP_ASYNC;
-		ee.e_flags &= ~NFSEXP_GATHERED_WRITES;
-	}
-	ee.e_maptype = CLE_MAP_IDENT;
-	ee.e_anonuid = 65534;
-	ee.e_anongid = 65534;
-	ee.e_squids = NULL;
-	ee.e_sqgids = NULL;
-	ee.e_mountpoint = NULL;
-	ee.e_nsquids = 0;
-	ee.e_nsqgids = 0;
 
 	if (first || (ok = getexport(exp, sizeof(exp))) == 0) {
-		ok = getpath(ee.e_path, sizeof(ee.e_path));
+		has_default_opts = 0;
+		has_default_subtree_opts = 0;
+	
+		def_ee.e_flags = EXPORT_DEFAULT_FLAGS;
+		/* some kernels assume the default is sync rather than
+		 * async.  More recent kernels always report one or other,
+		 * but this test makes sure we assume same as kernel
+		 * Ditto for wgather
+		 */
+		if (fromkernel) {
+			def_ee.e_flags &= ~NFSEXP_ASYNC;
+			def_ee.e_flags &= ~NFSEXP_GATHERED_WRITES;
+		}
+		def_ee.e_maptype = CLE_MAP_IDENT;
+		def_ee.e_anonuid = 65534;
+		def_ee.e_anongid = 65534;
+		def_ee.e_squids = NULL;
+		def_ee.e_sqgids = NULL;
+		def_ee.e_mountpoint = NULL;
+		def_ee.e_nsquids = 0;
+		def_ee.e_nsqgids = 0;
+
+		ok = getpath(def_ee.e_path, sizeof(def_ee.e_path));
 		if (ok <= 0)
 			return NULL;
-		strncpy (ee.m_path, ee.e_path, sizeof (ee.m_path) - 1);
-		ee.m_path [sizeof (ee.m_path) - 1] = '\0';
+
+		strncpy (def_ee.m_path, def_ee.e_path, sizeof (def_ee.m_path) - 1);
+		def_ee.m_path [sizeof (def_ee.m_path) - 1] = '\0';
 		ok = getexport(exp, sizeof(exp));
 	}
 	if (ok < 0) {
@@ -111,6 +117,23 @@ getexportent(int fromkernel, int fromexports)
 		return NULL;
 	}
 	first = 0;
+		
+	/* Check for default options */
+	if (exp[0] == '-') {
+		if (parseopts(exp + 1, &def_ee, 0, &has_default_subtree_opts) < 0)
+			return NULL;
+		
+		has_default_opts = 1;
+
+		ok = getexport(exp, sizeof(exp));
+		if (ok < 0) {
+			xlog(L_ERROR, "expected client(options...)");
+			export_errno = EINVAL;
+			return NULL;
+		}
+	}
+
+	ee = def_ee;
 
 	/* Check for default client */
 	if (ok == 0)
@@ -130,7 +153,8 @@ getexportent(int fromkernel, int fromexports)
 		}
 		*sp = '\0';
 	} else {
-	    xlog(L_WARNING, "No options for %s %s: suggest %s(sync) to avoid warning", ee.e_path, exp, exp);
+		if (!has_default_opts)
+			xlog(L_WARNING, "No options for %s %s: suggest %s(sync) to avoid warning", ee.e_path, exp, exp);
 	}
 	if (strlen(hostname) >= sizeof(ee.e_hostname)) {
 		syntaxerr("client name too long");
@@ -140,7 +164,7 @@ getexportent(int fromkernel, int fromexports)
 	strncpy(ee.e_hostname, hostname, sizeof (ee.e_hostname) - 1);
 	ee.e_hostname[sizeof (ee.e_hostname) - 1] = '\0';
 
-	if (parseopts(opt, &ee, fromexports) < 0)
+	if (parseopts(opt, &ee, fromexports && !has_default_subtree_opts, NULL) < 0)
 		return NULL;
 
 	/* resolve symlinks */
@@ -196,6 +220,8 @@ putexportent(struct exportent *ep)
 	if (ep->e_flags & NFSEXP_FSID) {
 		fprintf(fp, "fsid=%d,", ep->e_fsid);
 	}
+	if (ep->e_uuid)
+		fprintf(fp, "fsid=%s,", ep->e_uuid);
 	if (ep->e_mountpoint)
 		fprintf(fp, "mountpoint%s%s,",
 			ep->e_mountpoint[0]?"=":"", ep->e_mountpoint);
@@ -278,6 +304,7 @@ mkexportent(char *hname, char *path, char *options)
 	ee.e_mountpoint = NULL;
 	ee.e_nsquids = 0;
 	ee.e_nsqgids = 0;
+	ee.e_uuid = NULL;
 
 	if (strlen(hname) >= sizeof(ee.e_hostname)) {
 		xlog(L_WARNING, "client name %s too long", hname);
@@ -293,7 +320,7 @@ mkexportent(char *hname, char *path, char *options)
 	ee.e_path[sizeof (ee.e_path) - 1] = '\0';
 	strncpy (ee.m_path, ee.e_path, sizeof (ee.m_path) - 1);
 	ee.m_path [sizeof (ee.m_path) - 1] = '\0';
-	if (parseopts(options, &ee, 0) < 0)
+	if (parseopts(options, &ee, 0, NULL) < 0)
 		return NULL;
 	return &ee;
 }
@@ -301,16 +328,27 @@ mkexportent(char *hname, char *path, char *options)
 int
 updateexportent(struct exportent *eep, char *options)
 {
-	if (parseopts(options, eep, 0) < 0)
+	if (parseopts(options, eep, 0, NULL) < 0)
 		return 0;
 	return 1;
+}
+
+
+static int valid_uuid(char *uuid)
+{
+	/* must have 32 hex digits */
+	int cnt;
+	for (cnt = 0 ; *uuid; uuid++)
+		if (isxdigit(*uuid))
+			cnt++;
+	return cnt == 32;
 }
 
 /*
  * Parse option string pointed to by cp and set mount options accordingly.
  */
 static int
-parseopts(char *cp, struct exportent *ep, int warn)
+parseopts(char *cp, struct exportent *ep, int warn, int *had_subtree_opt_ptr)
 {
 	int	had_subtree_opt = 0;
 	char 	*flname = efname?efname:"command line";
@@ -421,13 +459,21 @@ bad_option:
 			}
 		} else if (strncmp(opt, "fsid=", 5) == 0) {
 			char *oe;
-			ep->e_fsid = strtoul(opt+5, &oe, 0);
-			if (opt[5]=='\0' || *oe != '\0') {
-				xlog(L_ERROR, "%s: %d: bad fsid \"%s\"\n",
-				     flname, flline, opt);	
-				goto bad_option;
+			if (strcmp(opt+5, "root") == 0) {
+				ep->e_fsid = 0;
+				ep->e_flags |= NFSEXP_FSID;
+			} else {
+				ep->e_fsid = strtoul(opt+5, &oe, 0);
+				if (opt[5]!='\0' && *oe == '\0') 
+					ep->e_flags |= NFSEXP_FSID;
+				else if (valid_uuid(opt+5))
+					ep->e_uuid = strdup(opt+7);
+				else {
+					xlog(L_ERROR, "%s: %d: bad fsid \"%s\"\n",
+					     flname, flline, opt);	
+					goto bad_option;
+				}
 			}
-			ep->e_flags |= NFSEXP_FSID;
 		} else if (strcmp(opt, "mountpoint")==0 ||
 			   strcmp(opt, "mp") == 0 ||
 			   strncmp(opt, "mountpoint=", 11)==0 ||
@@ -461,6 +507,8 @@ out:
 
 				flname, flline,
 				ep->e_hostname, ep->e_path);
+	if (had_subtree_opt_ptr)
+		*had_subtree_opt_ptr = had_subtree_opt;
 
 	return 1;
 }

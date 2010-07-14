@@ -444,7 +444,7 @@ dirscancb(int fd, short which, void *data)
 {
 	int nent, i;
 	struct dirent **ents;
-	struct idmap_client *ic;
+	struct idmap_client *ic, *nextic;
 	char path[PATH_MAX];
 	struct idmap_clientq *icq = data;
 
@@ -464,7 +464,7 @@ dirscancb(int fd, short which, void *data)
 				goto next;
 
 			if ((ic = calloc(1, sizeof(*ic))) == NULL)
-				return;
+				goto out;
 			strlcpy(ic->ic_clid, ents[i]->d_name + 4,
 			    sizeof(ic->ic_clid));
 			path[0] = '\0';
@@ -474,7 +474,7 @@ dirscancb(int fd, short which, void *data)
 			if ((ic->ic_dirfd = open(path, O_RDONLY, 0)) == -1) {
 				idmapd_warn("dirscancb: open(%s)", path);
 				free(ic);
-				return;
+				goto out;
 			}
 
 			strlcat(path, "/idmap", sizeof(path));
@@ -486,7 +486,7 @@ dirscancb(int fd, short which, void *data)
 			if (nfsopen(ic) == -1) {
 				close(ic->ic_dirfd);
 				free(ic);
-				return;
+				goto out;
 			}
 
 			ic->ic_id = "Client";
@@ -498,7 +498,9 @@ dirscancb(int fd, short which, void *data)
 		}
 	}
 
-	TAILQ_FOREACH(ic, icq, ic_next) {
+	ic = TAILQ_FIRST(icq);
+	while(ic != NULL) {
+		nextic=TAILQ_NEXT(ic, ic_next);
 		if (!ic->ic_scanned) {
 			event_del(&ic->ic_event);
 			close(ic->ic_fd);
@@ -511,7 +513,13 @@ dirscancb(int fd, short which, void *data)
 			free(ic);
 		} else
 			ic->ic_scanned = 0;
+		ic = nextic;
 	}
+
+out:
+	for (i = 0;  i < nent; i++)
+		free(ents[i]);
+	free(ents);
 	return;
 }
 

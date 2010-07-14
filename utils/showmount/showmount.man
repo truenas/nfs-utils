@@ -4,7 +4,7 @@
 .SH NAME
 showmount \- show mount information for an NFS server
 .SH SYNOPSIS
-.B /usr/sbin/showmount
+.B showmount
 .B "[\ \-adehv\ ]"
 .B "[\ \-\-all\ ]"
 .B "[\ \-\-directories\ ]"
@@ -21,7 +21,7 @@ lists the set of clients who are mounting from that host.
 The output from
 .B showmount
 is designed to
-appear as though it were processed through ``sort -u''.
+appear as though it were processed through ``sort \-u''.
 .SH OPTIONS
 .TP
 .BR \-a " or " \-\-all

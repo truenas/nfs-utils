@@ -73,6 +73,7 @@
 #include "krb5_util.h"
 #include "context.h"
 #include "nfsrpc.h"
+#include "nfslib.h"
 
 /*
  * pollarray:
@@ -83,20 +84,22 @@
  *      linked list of struct clnt_info which associates a clntXXX directory
  *	with an index into pollarray[], and other basic data about that client.
  *
- * Directory structure: created by the kernel nfs client
- *      {pipefs_nfsdir}/clntXX             : one per rpc_clnt struct in the kernel
- *      {pipefs_nfsdir}/clntXX/krb5        : read uid for which kernel wants
+ * Directory structure: created by the kernel
+ *      {rpc_pipefs}/{dir}/clntXX         : one per rpc_clnt struct in the kernel
+ *      {rpc_pipefs}/{dir}/clntXX/krb5    : read uid for which kernel wants
  *					    a context, write the resulting context
- *      {pipefs_nfsdir}/clntXX/info        : stores info such as server name
+ *      {rpc_pipefs}/{dir}/clntXX/info    : stores info such as server name
+ *      {rpc_pipefs}/{dir}/clntXX/gssd    : pipe for all gss mechanisms using
+ *					    a text-based string of parameters
  *
  * Algorithm:
- *      Poll all {pipefs_nfsdir}/clntXX/krb5 files.  When ready, data read
- *      is a uid; performs rpcsec_gss context initialization protocol to
+ *      Poll all {rpc_pipefs}/{dir}/clntXX/YYYY files.  When data is ready,
+ *      read and process; performs rpcsec_gss context initialization protocol to
  *      get a cred for that user.  Writes result to corresponding krb5 file
  *      in a form the kernel code will understand.
  *      In addition, we make sure we are notified whenever anything is
- *      created or destroyed in {pipefs_nfsdir} or in an of the clntXX directories,
- *      and rescan the whole {pipefs_nfsdir} when this happens.
+ *      created or destroyed in {rpc_pipefs} or in any of the clntXX directories,
+ *      and rescan the whole {rpc_pipefs} when this happens.
  */
 
 struct pollfd * pollarray;
@@ -105,7 +108,7 @@ int pollsize;  /* the size of pollaray (in pollfd's) */
 
 /*
  * convert a presentation address string to a sockaddr_storage struct. Returns
- * true on success and false on failure.
+ * true on success or false on failure.
  *
  * Note that we do not populate the sin6_scope_id field here for IPv6 addrs.
  * gssd nececessarily relies on hostname resolution and DNS AAAA records
@@ -117,26 +120,43 @@ int pollsize;  /* the size of pollaray (in pollfd's) */
  * not really feasible at present.
  */
 static int
-addrstr_to_sockaddr(struct sockaddr *sa, const char *addr, const int port)
+addrstr_to_sockaddr(struct sockaddr *sa, const char *node, const char *port)
 {
-	struct sockaddr_in	*s4 = (struct sockaddr_in *) sa;
-#ifdef IPV6_SUPPORTED
-	struct sockaddr_in6	*s6 = (struct sockaddr_in6 *) sa;
+	int rc;
+	struct addrinfo *res;
+	struct addrinfo hints = { .ai_flags = AI_NUMERICHOST | AI_NUMERICSERV };
+
+#ifndef IPV6_SUPPORTED
+	hints.ai_family = AF_INET;
 #endif /* IPV6_SUPPORTED */
 
-	if (inet_pton(AF_INET, addr, &s4->sin_addr)) {
-		s4->sin_family = AF_INET;
-		s4->sin_port = htons(port);
-#ifdef IPV6_SUPPORTED
-	} else if (inet_pton(AF_INET6, addr, &s6->sin6_addr)) {
-		s6->sin6_family = AF_INET6;
-		s6->sin6_port = htons(port);
-#endif /* IPV6_SUPPORTED */
-	} else {
-		printerr(0, "ERROR: unable to convert %s to address\n", addr);
+	rc = getaddrinfo(node, port, &hints, &res);
+	if (rc) {
+		printerr(0, "ERROR: unable to convert %s|%s to sockaddr: %s\n",
+			 node, port, rc == EAI_SYSTEM ? strerror(errno) :
+						gai_strerror(rc));
 		return 0;
 	}
 
+#ifdef IPV6_SUPPORTED
+	/*
+	 * getnameinfo ignores the scopeid. If the address turns out to have
+	 * a non-zero scopeid, we can't use it -- the resolved host might be
+	 * completely different from the one intended.
+	 */
+	if (res->ai_addr->sa_family == AF_INET6) {
+		struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)res->ai_addr;
+		if (sin6->sin6_scope_id) {
+			printerr(0, "ERROR: address %s has non-zero "
+				    "sin6_scope_id!\n", node);
+			freeaddrinfo(res);
+			return 0;
+		}
+	}
+#endif /* IPV6_SUPPORTED */
+
+	memcpy(sa, res->ai_addr, res->ai_addrlen);
+	freeaddrinfo(res);
 	return 1;
 }
 
@@ -194,11 +214,10 @@ read_service_info(char *info_file_name, char **servicename, char **servername,
 	char		program[16];
 	char		version[16];
 	char		protoname[16];
-	char		cb_port[128];
+	char		port[128];
 	char		*p;
 	int		fd = -1;
 	int		numfields;
-	int		port = 0;
 
 	*servicename = *servername = *protocol = NULL;
 
@@ -227,20 +246,22 @@ read_service_info(char *info_file_name, char **servicename, char **servername,
 		goto fail;
 	}
 
-	cb_port[0] = '\0';
+	port[0] = '\0';
 	if ((p = strstr(buf, "port")) != NULL)
-		sscanf(p, "port: %127s\n", cb_port);
+		sscanf(p, "port: %127s\n", port);
 
 	/* check service, program, and version */
-	if(memcmp(service, "nfs", 3)) return -1;
+	if (memcmp(service, "nfs", 3) != 0)
+		return -1;
 	*prog = atoi(program + 1); /* skip open paren */
 	*vers = atoi(version);
-	if((*prog != 100003) || ((*vers != 2) && (*vers != 3) && (*vers != 4)))
-		goto fail;
 
-	if (cb_port[0] != '\0') {
-		port = atoi(cb_port);
-		if (port < 0 || port > 65535)
+	if (strlen(service) == 3 ) {
+		if ((*prog != 100003) || ((*vers != 2) && (*vers != 3) &&
+		    (*vers != 4)))
+			goto fail;
+	} else if (memcmp(service, "nfs4_cb", 7) == 0) {
+		if (*vers != 1)
 			goto fail;
 	}
 
@@ -281,9 +302,13 @@ destroy_client(struct clnt_info *clp)
 	if (clp->spkm3_poll_index != -1)
 		memset(&pollarray[clp->spkm3_poll_index], 0,
 					sizeof(struct pollfd));
+	if (clp->gssd_poll_index != -1)
+		memset(&pollarray[clp->gssd_poll_index], 0,
+					sizeof(struct pollfd));
 	if (clp->dir_fd != -1) close(clp->dir_fd);
 	if (clp->krb5_fd != -1) close(clp->krb5_fd);
 	if (clp->spkm3_fd != -1) close(clp->spkm3_fd);
+	if (clp->gssd_fd != -1) close(clp->gssd_fd);
 	free(clp->dirname);
 	free(clp->servicename);
 	free(clp->servername);
@@ -303,8 +328,10 @@ insert_new_clnt(void)
 	}
 	clp->krb5_poll_index = -1;
 	clp->spkm3_poll_index = -1;
+	clp->gssd_poll_index = -1;
 	clp->krb5_fd = -1;
 	clp->spkm3_fd = -1;
+	clp->gssd_fd = -1;
 	clp->dir_fd = -1;
 
 	TAILQ_INSERT_HEAD(&clnt_list, clp, list);
@@ -315,19 +342,43 @@ out:
 static int
 process_clnt_dir_files(struct clnt_info * clp)
 {
-	char	kname[32];
-	char	sname[32];
-	char	info_file_name[32];
+	char	name[PATH_MAX];
+	char	gname[PATH_MAX];
+	char	info_file_name[PATH_MAX];
 
-	if (clp->krb5_fd == -1) {
-		snprintf(kname, sizeof(kname), "%s/krb5", clp->dirname);
-		clp->krb5_fd = open(kname, O_RDWR);
+	if (clp->gssd_fd == -1) {
+		snprintf(gname, sizeof(gname), "%s/gssd", clp->dirname);
+		clp->gssd_fd = open(gname, O_RDWR);
 	}
-	if (clp->spkm3_fd == -1) {
-		snprintf(sname, sizeof(sname), "%s/spkm3", clp->dirname);
-		clp->spkm3_fd = open(sname, O_RDWR);
+	if (clp->gssd_fd == -1) {
+		if (clp->krb5_fd == -1) {
+			snprintf(name, sizeof(name), "%s/krb5", clp->dirname);
+			clp->krb5_fd = open(name, O_RDWR);
+		}
+		if (clp->spkm3_fd == -1) {
+			snprintf(name, sizeof(name), "%s/spkm3", clp->dirname);
+			clp->spkm3_fd = open(name, O_RDWR);
+		}
+
+		/* If we opened a gss-specific pipe, let's try opening
+		 * the new upcall pipe again. If we succeed, close
+		 * gss-specific pipe(s).
+		 */
+		if (clp->krb5_fd != -1 || clp->spkm3_fd != -1) {
+			clp->gssd_fd = open(gname, O_RDWR);
+			if (clp->gssd_fd != -1) {
+				if (clp->krb5_fd != -1)
+					close(clp->krb5_fd);
+				clp->krb5_fd = -1;
+				if (clp->spkm3_fd != -1)
+					close(clp->spkm3_fd);
+				clp->spkm3_fd = -1;
+			}
+		}
 	}
-	if((clp->krb5_fd == -1) && (clp->spkm3_fd == -1))
+
+	if ((clp->krb5_fd == -1) && (clp->spkm3_fd == -1) &&
+			(clp->gssd_fd == -1))
 		return -1;
 	snprintf(info_file_name, sizeof(info_file_name), "%s/info",
 			clp->dirname);
@@ -362,6 +413,15 @@ get_poll_index(int *ind)
 static int
 insert_clnt_poll(struct clnt_info *clp)
 {
+	if ((clp->gssd_fd != -1) && (clp->gssd_poll_index == -1)) {
+		if (get_poll_index(&clp->gssd_poll_index)) {
+			printerr(0, "ERROR: Too many gssd clients\n");
+			return -1;
+		}
+		pollarray[clp->gssd_poll_index].fd = clp->gssd_fd;
+		pollarray[clp->gssd_poll_index].events |= POLLIN;
+	}
+
 	if ((clp->krb5_fd != -1) && (clp->krb5_poll_index == -1)) {
 		if (get_poll_index(&clp->krb5_poll_index)) {
 			printerr(0, "ERROR: Too many krb5 clients\n");
@@ -384,17 +444,18 @@ insert_clnt_poll(struct clnt_info *clp)
 }
 
 static void
-process_clnt_dir(char *dir)
+process_clnt_dir(char *dir, char *pdir)
 {
 	struct clnt_info *	clp;
 
 	if (!(clp = insert_new_clnt()))
 		goto fail_destroy_client;
 
-	if (!(clp->dirname = calloc(strlen(dir) + 1, 1))) {
+	/* An extra for the '/', and an extra for the null */
+	if (!(clp->dirname = calloc(strlen(dir) + strlen(pdir) + 2, 1))) {
 		goto fail_destroy_client;
 	}
-	memcpy(clp->dirname, dir, strlen(dir));
+	sprintf(clp->dirname, "%s/%s", pdir, dir);
 	if ((clp->dir_fd = open(clp->dirname, O_RDONLY)) == -1) {
 		printerr(0, "ERROR: can't open %s: %s\n",
 			 clp->dirname, strerror(errno));
@@ -438,16 +499,24 @@ init_client_list(void)
  * directories, since the DNOTIFY could have been in there.
  */
 static void
-update_old_clients(struct dirent **namelist, int size)
+update_old_clients(struct dirent **namelist, int size, char *pdir)
 {
 	struct clnt_info *clp;
 	void *saveprev;
 	int i, stillhere;
+	char fname[PATH_MAX];
 
 	for (clp = clnt_list.tqh_first; clp != NULL; clp = clp->list.tqe_next) {
+		/* only compare entries in the global list that are from the
+		 * same pipefs parent directory as "pdir"
+		 */
+		if (strncmp(clp->dirname, pdir, strlen(pdir)) != 0) continue;
+
 		stillhere = 0;
 		for (i=0; i < size; i++) {
-			if (!strcmp(clp->dirname, namelist[i]->d_name)) {
+			snprintf(fname, sizeof(fname), "%s/%s",
+				 pdir, namelist[i]->d_name);
+			if (strcmp(clp->dirname, fname) == 0) {
 				stillhere = 1;
 				break;
 			}
@@ -468,13 +537,49 @@ update_old_clients(struct dirent **namelist, int size)
 
 /* Search for a client by directory name, return 1 if found, 0 otherwise */
 static int
-find_client(char *dirname)
+find_client(char *dirname, char *pdir)
 {
 	struct clnt_info	*clp;
+	char fname[PATH_MAX];
 
-	for (clp = clnt_list.tqh_first; clp != NULL; clp = clp->list.tqe_next)
-		if (!strcmp(clp->dirname, dirname))
+	for (clp = clnt_list.tqh_first; clp != NULL; clp = clp->list.tqe_next) {
+		snprintf(fname, sizeof(fname), "%s/%s", pdir, dirname);
+		if (strcmp(clp->dirname, fname) == 0)
 			return 1;
+	}
+	return 0;
+}
+
+static int
+process_pipedir(char *pipe_name)
+{
+	struct dirent **namelist;
+	int i, j;
+
+	if (chdir(pipe_name) < 0) {
+		printerr(0, "ERROR: can't chdir to %s: %s\n",
+			 pipe_name, strerror(errno));
+		return -1;
+	}
+
+	j = scandir(pipe_name, &namelist, NULL, alphasort);
+	if (j < 0) {
+		printerr(0, "ERROR: can't scandir %s: %s\n",
+			 pipe_name, strerror(errno));
+		return -1;
+	}
+
+	update_old_clients(namelist, j, pipe_name);
+	for (i=0; i < j; i++) {
+		if (i < FD_ALLOC_BLOCK
+				&& !strncmp(namelist[i]->d_name, "clnt", 4)
+				&& !find_client(namelist[i]->d_name, pipe_name))
+			process_clnt_dir(namelist[i]->d_name, pipe_name);
+		free(namelist[i]);
+	}
+
+	free(namelist);
+
 	return 0;
 }
 
@@ -482,32 +587,17 @@ find_client(char *dirname)
 int
 update_client_list(void)
 {
-	struct dirent **namelist;
-	int i, j;
+	int retval = -1;
+	struct topdirs_info *tdi;
 
-	if (chdir(pipefs_nfsdir) < 0) {
-		printerr(0, "ERROR: can't chdir to %s: %s\n",
-			 pipefs_nfsdir, strerror(errno));
-		return -1;
-	}
+	TAILQ_FOREACH(tdi, &topdirs_list, list) {
+		retval = process_pipedir(tdi->dirname);
+		if (retval)
+			printerr(1, "WARNING: error processing %s\n",
+				 tdi->dirname);
 
-	j = scandir(pipefs_nfsdir, &namelist, NULL, alphasort);
-	if (j < 0) {
-		printerr(0, "ERROR: can't scandir %s: %s\n",
-			 pipefs_nfsdir, strerror(errno));
-		return -1;
 	}
-	update_old_clients(namelist, j);
-	for (i=0; i < j; i++) {
-		if (i < FD_ALLOC_BLOCK
-				&& !strncmp(namelist[i]->d_name, "clnt", 4)
-				&& !find_client(namelist[i]->d_name))
-			process_clnt_dir(namelist[i]->d_name);
-		free(namelist[i]);
-	}
-
-	free(namelist);
-	return 0;
+	return retval;
 }
 
 static int
@@ -798,15 +888,14 @@ int create_auth_rpc_client(struct clnt_info *clp,
 	goto out;
 }
 
-
 /*
  * this code uses the userland rpcsec gss library to create a krb5
  * context on behalf of the kernel
  */
-void
-handle_krb5_upcall(struct clnt_info *clp)
+static void
+process_krb5_upcall(struct clnt_info *clp, uid_t uid, int fd, char *tgtname,
+		    char *service)
 {
-	uid_t			uid;
 	CLIENT			*rpc_clnt = NULL;
 	AUTH			*auth = NULL;
 	struct authgss_private_data pd;
@@ -815,23 +904,51 @@ handle_krb5_upcall(struct clnt_info *clp)
 	char			**ccname;
 	char			**dirname;
 	int			create_resp = -1;
+	int			err, downcall_err = -EACCES;
 
-	printerr(1, "handling krb5 upcall\n");
+	printerr(1, "handling krb5 upcall (%s)\n", clp->dirname);
 
+	if (tgtname) {
+		if (clp->servicename) {
+			free(clp->servicename);
+			clp->servicename = strdup(tgtname);
+		}
+	}
 	token.length = 0;
 	token.value = NULL;
 	memset(&pd, 0, sizeof(struct authgss_private_data));
 
-	if (read(clp->krb5_fd, &uid, sizeof(uid)) < sizeof(uid)) {
-		printerr(0, "WARNING: failed reading uid from krb5 "
-			    "upcall pipe: %s\n", strerror(errno));
-		goto out;
-	}
-
-	if (uid != 0 || (uid == 0 && root_uses_machine_creds == 0)) {
+	/*
+	 * If "service" is specified, then the kernel is indicating that
+	 * we must use machine credentials for this request.  (Regardless
+	 * of the uid value or the setting of root_uses_machine_creds.)
+	 * If the service value is "*", then any service name can be used.
+	 * Otherwise, it specifies the service name that should be used.
+	 * (For now, the values of service will only be "*" or "nfs".)
+	 *
+	 * Restricting gssd to use "nfs" service name is needed for when
+	 * the NFS server is doing a callback to the NFS client.  In this
+	 * case, the NFS server has to authenticate itself as "nfs" --
+	 * even if there are other service keys such as "host" or "root"
+	 * in the keytab.
+	 *
+	 * Another case when the kernel may specify the service attribute
+	 * is when gssd is being asked to create the context for a
+	 * SETCLIENT_ID operation.  In this case, machine credentials
+	 * must be used for the authentication.  However, the service name
+	 * used for this case is not important.
+	 *
+	 */
+	printerr(2, "%s: service is '%s'\n", __func__,
+		 service ? service : "<null>");
+	if (uid != 0 || (uid == 0 && root_uses_machine_creds == 0 &&
+				service == NULL)) {
 		/* Tell krb5 gss which credentials cache to use */
 		for (dirname = ccachesearch; *dirname != NULL; dirname++) {
-			if (gssd_setup_krb5_user_gss_ccache(uid, clp->servername, *dirname) == 0)
+			err = gssd_setup_krb5_user_gss_ccache(uid, clp->servername, *dirname);
+			if (err == -EKEYEXPIRED)
+				downcall_err = -EKEYEXPIRED;
+			else if (!err)
 				create_resp = create_auth_rpc_client(clp, &rpc_clnt, &auth, uid,
 							     AUTHTYPE_KRB5);
 			if (create_resp == 0)
@@ -839,12 +956,13 @@ handle_krb5_upcall(struct clnt_info *clp)
 		}
 	}
 	if (create_resp != 0) {
-		if (uid == 0 && root_uses_machine_creds == 1) {
+		if (uid == 0 && (root_uses_machine_creds == 1 ||
+				service != NULL)) {
 			int nocache = 0;
 			int success = 0;
 			do {
 				gssd_refresh_krb5_machine_credential(clp->servername,
-								     NULL, nocache);
+								     NULL, service);
 				/*
 				 * Get a list of credential cache names and try each
 				 * of them until one works or we've tried them all
@@ -904,7 +1022,7 @@ handle_krb5_upcall(struct clnt_info *clp)
 		goto out_return_error;
 	}
 
-	do_downcall(clp->krb5_fd, uid, &pd, &token);
+	do_downcall(fd, uid, &pd, &token);
 
 out:
 	if (token.value)
@@ -920,7 +1038,7 @@ out:
 	return;
 
 out_return_error:
-	do_error_downcall(clp->krb5_fd, uid, -1);
+	do_error_downcall(fd, uid, downcall_err);
 	goto out;
 }
 
@@ -928,25 +1046,18 @@ out_return_error:
  * this code uses the userland rpcsec gss library to create an spkm3
  * context on behalf of the kernel
  */
-void
-handle_spkm3_upcall(struct clnt_info *clp)
+static void
+process_spkm3_upcall(struct clnt_info *clp, uid_t uid, int fd)
 {
-	uid_t			uid;
 	CLIENT			*rpc_clnt = NULL;
 	AUTH			*auth = NULL;
 	struct authgss_private_data pd;
 	gss_buffer_desc		token;
 
-	printerr(2, "handling spkm3 upcall\n");
+	printerr(2, "handling spkm3 upcall (%s)\n", clp->dirname);
 
 	token.length = 0;
 	token.value = NULL;
-
-	if (read(clp->spkm3_fd, &uid, sizeof(uid)) < sizeof(uid)) {
-		printerr(0, "WARNING: failed reading uid from spkm3 "
-			 "upcall pipe: %s\n", strerror(errno));
-		goto out;
-	}
 
 	if (create_auth_rpc_client(clp, &rpc_clnt, &auth, uid, AUTHTYPE_SPKM3)) {
 		printerr(0, "WARNING: Failed to create spkm3 context for "
@@ -968,7 +1079,7 @@ handle_spkm3_upcall(struct clnt_info *clp)
 		goto out_return_error;
 	}
 
-	do_downcall(clp->spkm3_fd, uid, &pd, &token);
+	do_downcall(fd, uid, &pd, &token);
 
 out:
 	if (token.value)
@@ -980,6 +1091,139 @@ out:
 	return;
 
 out_return_error:
-	do_error_downcall(clp->spkm3_fd, uid, -1);
+	do_error_downcall(fd, uid, -1);
 	goto out;
 }
+
+void
+handle_krb5_upcall(struct clnt_info *clp)
+{
+	uid_t			uid;
+
+	if (read(clp->krb5_fd, &uid, sizeof(uid)) < sizeof(uid)) {
+		printerr(0, "WARNING: failed reading uid from krb5 "
+			    "upcall pipe: %s\n", strerror(errno));
+		return;
+	}
+
+	return process_krb5_upcall(clp, uid, clp->krb5_fd, NULL, NULL);
+}
+
+void
+handle_spkm3_upcall(struct clnt_info *clp)
+{
+	uid_t			uid;
+
+	if (read(clp->spkm3_fd, &uid, sizeof(uid)) < sizeof(uid)) {
+		printerr(0, "WARNING: failed reading uid from spkm3 "
+			 "upcall pipe: %s\n", strerror(errno));
+		return;
+	}
+
+	return process_spkm3_upcall(clp, uid, clp->spkm3_fd);
+}
+
+void
+handle_gssd_upcall(struct clnt_info *clp)
+{
+	uid_t			uid;
+	char			*lbuf = NULL;
+	int			lbuflen = 0;
+	char			*p;
+	char			*mech = NULL;
+	char			*target = NULL;
+	char			*service = NULL;
+
+	printerr(1, "handling gssd upcall (%s)\n", clp->dirname);
+
+	if (readline(clp->gssd_fd, &lbuf, &lbuflen) != 1) {
+		printerr(0, "WARNING: handle_gssd_upcall: "
+			    "failed reading request\n");
+		return;
+	}
+	printerr(2, "%s: '%s'\n", __func__, lbuf);
+
+	/* find the mechanism name */
+	if ((p = strstr(lbuf, "mech=")) != NULL) {
+		mech = malloc(lbuflen);
+		if (!mech)
+			goto out;
+		if (sscanf(p, "mech=%s", mech) != 1) {
+			printerr(0, "WARNING: handle_gssd_upcall: "
+				    "failed to parse gss mechanism name "
+				    "in upcall string '%s'\n", lbuf);
+			goto out;
+		}
+	} else {
+		printerr(0, "WARNING: handle_gssd_upcall: "
+			    "failed to find gss mechanism name "
+			    "in upcall string '%s'\n", lbuf);
+		goto out;
+	}
+
+	/* read uid */
+	if ((p = strstr(lbuf, "uid=")) != NULL) {
+		if (sscanf(p, "uid=%d", &uid) != 1) {
+			printerr(0, "WARNING: handle_gssd_upcall: "
+				    "failed to parse uid "
+				    "in upcall string '%s'\n", lbuf);
+			goto out;
+		}
+	} else {
+		printerr(0, "WARNING: handle_gssd_upcall: "
+			    "failed to find uid "
+			    "in upcall string '%s'\n", lbuf);
+		goto out;
+	}
+
+	/* read target name */
+	if ((p = strstr(lbuf, "target=")) != NULL) {
+		target = malloc(lbuflen);
+		if (!target)
+			goto out;
+		if (sscanf(p, "target=%s", target) != 1) {
+			printerr(0, "WARNING: handle_gssd_upcall: "
+				    "failed to parse target name "
+				    "in upcall string '%s'\n", lbuf);
+			goto out;
+		}
+	}
+
+	/*
+	 * read the service name
+	 *
+	 * The presence of attribute "service=" indicates that machine
+	 * credentials should be used for this request.  If the value
+	 * is "*", then any machine credentials available can be used.
+	 * If the value is anything else, then machine credentials for
+	 * the specified service name (always "nfs" for now) should be
+	 * used.
+	 */
+	if ((p = strstr(lbuf, "service=")) != NULL) {
+		service = malloc(lbuflen);
+		if (!service)
+			goto out;
+		if (sscanf(p, "service=%s", service) != 1) {
+			printerr(0, "WARNING: handle_gssd_upcall: "
+				    "failed to parse service type "
+				    "in upcall string '%s'\n", lbuf);
+			goto out;
+		}
+	}
+
+	if (strcmp(mech, "krb5") == 0)
+		process_krb5_upcall(clp, uid, clp->gssd_fd, target, service);
+	else if (strcmp(mech, "spkm3") == 0)
+		process_spkm3_upcall(clp, uid, clp->gssd_fd);
+	else
+		printerr(0, "WARNING: handle_gssd_upcall: "
+			    "received unknown gss mech '%s'\n", mech);
+
+out:
+	free(lbuf);
+	free(mech);
+	free(target);
+	free(service);
+	return;	
+}
+

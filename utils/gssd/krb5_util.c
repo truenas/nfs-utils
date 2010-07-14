@@ -170,9 +170,8 @@ select_krb5_ccache(const struct dirent *d)
  * what we want. Otherwise, return zero and no dirent pointer.
  * The caller is responsible for freeing the dirent if one is returned.
  *
- * Returns:
- *	0 => could not find an existing entry
- *	1 => found an existing entry
+ * Returns 0 if a valid-looking entry was found and a non-zero error
+ * code otherwise.
  */
 static int
 gssd_find_existing_krb5_ccache(uid_t uid, char *dirname, struct dirent **d)
@@ -186,7 +185,7 @@ gssd_find_existing_krb5_ccache(uid_t uid, char *dirname, struct dirent **d)
 	char buf[1030];
 	char *princname = NULL;
 	char *realm = NULL;
-	int score, best_match_score = 0;
+	int score, best_match_score = 0, err = -EACCES;
 
 	memset(&best_match_stat, 0, sizeof(best_match_stat));
 	*d = NULL;
@@ -229,6 +228,7 @@ gssd_find_existing_krb5_ccache(uid_t uid, char *dirname, struct dirent **d)
 				printerr(3, "CC file '%s' is expired or corrupt\n",
 					 statname);
 				free(namelist[i]);
+				err = -EKEYEXPIRED;
 				continue;
 			}
 
@@ -284,11 +284,12 @@ gssd_find_existing_krb5_ccache(uid_t uid, char *dirname, struct dirent **d)
 		}
 		free(namelist);
 	}
-	if (found)
-	{
+	if (found) {
 		*d = best_match_dir;
+		return 0;
 	}
-	return found;
+
+	return err;
 }
 
 
@@ -797,10 +798,9 @@ gssd_search_krb5_keytab(krb5_context context, krb5_keytab kt,
  */
 static int
 find_keytab_entry(krb5_context context, krb5_keytab kt, const char *hostname,
-		  krb5_keytab_entry *kte)
+		  krb5_keytab_entry *kte, const char **svcnames)
 {
 	krb5_error_code code;
-	const char *svcnames[] = { "root", "nfs", "host", NULL };
 	char **realmnames = NULL;
 	char myhostname[NI_MAXHOST], targethostname[NI_MAXHOST];
 	int i, j, retval;
@@ -1025,29 +1025,29 @@ err_cache:
  * given only a UID.  We really need more information, but we
  * do the best we can.
  *
- * Returns:
- *	0 => a ccache was found
- *	1 => no ccache was found
+ * Returns 0 if a ccache was found, and a non-zero error code otherwise.
  */
 int
 gssd_setup_krb5_user_gss_ccache(uid_t uid, char *servername, char *dirname)
 {
 	char			buf[MAX_NETOBJ_SZ];
 	struct dirent		*d;
+	int			err;
 
 	printerr(2, "getting credentials for client with uid %u for "
 		    "server %s\n", uid, servername);
 	memset(buf, 0, sizeof(buf));
-	if (gssd_find_existing_krb5_ccache(uid, dirname, &d)) {
-		snprintf(buf, sizeof(buf), "FILE:%s/%s", dirname, d->d_name);
-		free(d);
-	}
-	else
-		return 1;
+	err = gssd_find_existing_krb5_ccache(uid, dirname, &d);
+	if (err)
+		return err;
+
+	snprintf(buf, sizeof(buf), "FILE:%s/%s", dirname, d->d_name);
+	free(d);
+
 	printerr(2, "using %s as credentials cache for client with "
 		    "uid %u for server %s\n", buf, uid, servername);
 	gssd_set_krb5_ccache_name(buf);
-	return 0;
+	return err;
 }
 
 /*
@@ -1096,7 +1096,8 @@ gssd_get_krb5_machine_cred_list(char ***list)
 	for (ple = gssd_k5_kt_princ_list; ple; ple = ple->next) {
 		if (ple->ccname) {
 			/* Make sure cred is up-to-date before returning it */
-			retval = gssd_refresh_krb5_machine_credential(NULL, ple, 0);
+			retval = gssd_refresh_krb5_machine_credential(NULL, ple,
+				NULL);
 			if (retval)
 				continue;
 			if (i + 1 > listsize) {
@@ -1186,14 +1187,24 @@ gssd_destroy_krb5_machine_creds(void)
  */
 int
 gssd_refresh_krb5_machine_credential(char *hostname,
-				     struct gssd_k5_kt_princ *ple, int nocache)
+				     struct gssd_k5_kt_princ *ple, 
+					 char *service)
 {
 	krb5_error_code code = 0;
 	krb5_context context;
 	krb5_keytab kt = NULL;;
 	int retval = 0;
 	char *k5err = NULL;
+	const char *svcnames[4] = { "root", "nfs", "host", NULL };
 
+	/*
+	 * If a specific service name was specified, use it.
+	 * Otherwise, use the default list.
+	 */
+	if (service != NULL && strcmp(service, "*") != 0) {
+		svcnames[0] = service;
+		svcnames[1] = NULL;
+	}
 	if (hostname == NULL && ple == NULL)
 		return EINVAL;
 
@@ -1216,7 +1227,7 @@ gssd_refresh_krb5_machine_credential(char *hostname,
 	if (ple == NULL) {
 		krb5_keytab_entry kte;
 
-		code = find_keytab_entry(context, kt, hostname, &kte);
+		code = find_keytab_entry(context, kt, hostname, &kte, svcnames);
 		if (code) {
 			printerr(0, "ERROR: %s: no usable keytab entry found "
 				 "in keytab %s for connection with host %s\n",
@@ -1241,7 +1252,7 @@ gssd_refresh_krb5_machine_credential(char *hostname,
 			goto out;
 		}
 	}
-	retval = gssd_get_single_krb5_cred(context, kt, ple, nocache);
+	retval = gssd_get_single_krb5_cred(context, kt, ple, 0);
 out:
 	if (kt)
 		krb5_kt_close(context, kt);

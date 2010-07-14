@@ -35,9 +35,11 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include "sockaddr.h"
 #include "xcommon.h"
 #include "mount.h"
 #include "nls.h"
+#include "nfsrpc.h"
 #include "mount_constants.h"
 #include "stropts.h"
 #include "error.h"
@@ -46,6 +48,10 @@
 #include "version.h"
 #include "parse_dev.h"
 #include "conffile.h"
+
+#ifndef HAVE_DECL_AI_ADDRCONFIG
+#define AI_ADDRCONFIG	0
+#endif
 
 #ifndef NFS_PROGRAM
 #define NFS_PROGRAM	(100003)
@@ -81,8 +87,7 @@ struct nfsmount_info {
 				*node,		/* mounted-on dir */
 				*type;		/* "nfs" or "nfs4" */
 	char			*hostname;	/* server's hostname */
-	struct sockaddr_storage	address;	/* server's address */
-	socklen_t		salen;		/* size of server's address */
+	struct addrinfo		*address;	/* server's addresses */
 
 	struct mount_options	*options;	/* parsed mount options */
 	char			**extra_opts;	/* string for /etc/mtab */
@@ -204,9 +209,9 @@ static int nfs_append_clientaddr_option(const struct sockaddr *sap,
 					socklen_t salen,
 					struct mount_options *options)
 {
-	struct sockaddr_storage dummy;
-	struct sockaddr *my_addr = (struct sockaddr *)&dummy;
-	socklen_t my_len = sizeof(dummy);
+	union nfs_sockaddr address;
+	struct sockaddr *my_addr = &address.sa;
+	socklen_t my_len = sizeof(address);
 
 	if (po_contains(options, "clientaddr") == PO_FOUND)
 		return 1;
@@ -218,21 +223,33 @@ static int nfs_append_clientaddr_option(const struct sockaddr *sap,
 }
 
 /*
- * Resolve the 'mounthost=' hostname and append a new option using
- * the resulting address.
+ * Determine whether to append a 'mountaddr=' option.  The option is needed if:
+ *
+ *   1. "mounthost=" was specified, or
+ *   2. The address families for proto= and mountproto= are different.
  */
-static int nfs_fix_mounthost_option(struct mount_options *options)
+static int nfs_fix_mounthost_option(struct mount_options *options,
+		const char *nfs_hostname)
 {
-	struct sockaddr_storage dummy;
-	struct sockaddr *sap = (struct sockaddr *)&dummy;
-	socklen_t salen = sizeof(dummy);
+	union nfs_sockaddr address;
+	struct sockaddr *sap = &address.sa;
+	socklen_t salen = sizeof(address);
+	sa_family_t nfs_family, mnt_family;
 	char *mounthost;
 
-	mounthost = po_get(options, "mounthost");
-	if (!mounthost)
-		return 1;
+	if (!nfs_nfs_proto_family(options, &nfs_family))
+		return 0;
+	if (!nfs_mount_proto_family(options, &mnt_family))
+		return 0;
 
-	if (!nfs_name_to_address(mounthost, sap, &salen)) {
+	mounthost = po_get(options, "mounthost");
+	if (mounthost == NULL) {
+		if (nfs_family == mnt_family)
+			return 1;
+		mounthost = (char *)nfs_hostname;
+	}
+
+	if (!nfs_lookup(mounthost, mnt_family, sap, &salen)) {
 		nfs_error(_("%s: unable to determine mount server's address"),
 				progname);
 		return 0;
@@ -319,14 +336,27 @@ static int nfs_set_version(struct nfsmount_info *mi)
  */
 static int nfs_validate_options(struct nfsmount_info *mi)
 {
-	struct sockaddr *sap = (struct sockaddr *)&mi->address;
+	struct addrinfo hint = {
+		.ai_protocol	= (int)IPPROTO_UDP,
+		.ai_flags	= AI_ADDRCONFIG,
+	};
+	sa_family_t family;
+	int error;
 
 	if (!nfs_parse_devname(mi->spec, &mi->hostname, NULL))
 		return 0;
 
-	mi->salen = sizeof(mi->address);
-	if (!nfs_name_to_address(mi->hostname, sap, &mi->salen))
+	if (!nfs_nfs_proto_family(mi->options, &family))
 		return 0;
+
+	hint.ai_family = (int)family;
+	error = getaddrinfo(mi->hostname, NULL, &hint, &mi->address);
+	if (error != 0) {
+		nfs_error(_("%s: Failed to resolve server %s: %s"),
+			progname, mi->hostname, gai_strerror(error));
+		mi->address = NULL;
+		return 0;
+	}
 
 	if (!nfs_set_version(mi))
 		return 0;
@@ -334,7 +364,8 @@ static int nfs_validate_options(struct nfsmount_info *mi)
 	if (!nfs_append_sloppy_option(mi->options))
 		return 0;
 
-	if (!nfs_append_addr_option(sap, mi->salen, mi->options))
+	if (!nfs_append_addr_option(mi->address->ai_addr,
+					mi->address->ai_addrlen, mi->options))
 		return 0;
 
 	return 1;
@@ -371,10 +402,13 @@ static int nfs_extract_server_addresses(struct mount_options *options,
 }
 
 static int nfs_construct_new_options(struct mount_options *options,
+				     struct sockaddr *nfs_saddr,
 				     struct pmap *nfs_pmap,
+				     struct sockaddr *mnt_saddr,
 				     struct pmap *mnt_pmap)
 {
 	char new_option[64];
+	char *netid;
 
 	po_remove_all(options, "nfsprog");
 	po_remove_all(options, "mountprog");
@@ -391,20 +425,14 @@ static int nfs_construct_new_options(struct mount_options *options,
 	po_remove_all(options, "proto");
 	po_remove_all(options, "udp");
 	po_remove_all(options, "tcp");
-	switch (nfs_pmap->pm_prot) {
-	case IPPROTO_TCP:
-		snprintf(new_option, sizeof(new_option) - 1,
-			 "proto=tcp");
-		if (po_append(options, new_option) == PO_FAILED)
-			return 0;
-		break;
-	case IPPROTO_UDP:
-		snprintf(new_option, sizeof(new_option) - 1,
-			 "proto=udp");
-		if (po_append(options, new_option) == PO_FAILED)
-			return 0;
-		break;
-	}
+	netid = nfs_get_netid(nfs_saddr->sa_family, nfs_pmap->pm_prot);
+	if (netid == NULL)
+		return 0;
+	snprintf(new_option, sizeof(new_option) - 1,
+			 "proto=%s", netid);
+	free(netid);
+	if (po_append(options, new_option) == PO_FAILED)
+		return 0;
 
 	po_remove_all(options, "port");
 	if (nfs_pmap->pm_port != NFS_PORT) {
@@ -421,20 +449,14 @@ static int nfs_construct_new_options(struct mount_options *options,
 		return 0;
 
 	po_remove_all(options, "mountproto");
-	switch (mnt_pmap->pm_prot) {
-	case IPPROTO_TCP:
-		snprintf(new_option, sizeof(new_option) - 1,
-			 "mountproto=tcp");
-		if (po_append(options, new_option) == PO_FAILED)
-			return 0;
-		break;
-	case IPPROTO_UDP:
-		snprintf(new_option, sizeof(new_option) - 1,
-			 "mountproto=udp");
-		if (po_append(options, new_option) == PO_FAILED)
-			return 0;
-		break;
-	}
+	netid = nfs_get_netid(mnt_saddr->sa_family, mnt_pmap->pm_prot);
+	if (netid == NULL)
+		return 0;
+	snprintf(new_option, sizeof(new_option) - 1,
+			 "mountproto=%s", netid);
+	free(netid);
+	if (po_append(options, new_option) == PO_FAILED)
+		return 0;
 
 	po_remove_all(options, "mountport");
 	snprintf(new_option, sizeof(new_option) - 1,
@@ -461,12 +483,12 @@ static int nfs_construct_new_options(struct mount_options *options,
 static int
 nfs_rewrite_pmap_mount_options(struct mount_options *options)
 {
-	struct sockaddr_storage nfs_address;
-	struct sockaddr *nfs_saddr = (struct sockaddr *)&nfs_address;
+	union nfs_sockaddr nfs_address;
+	struct sockaddr *nfs_saddr = &nfs_address.sa;
 	socklen_t nfs_salen = sizeof(nfs_address);
 	struct pmap nfs_pmap;
-	struct sockaddr_storage mnt_address;
-	struct sockaddr *mnt_saddr = (struct sockaddr *)&mnt_address;
+	union nfs_sockaddr mnt_address;
+	struct sockaddr *mnt_saddr = &mnt_address.sa;
 	socklen_t mnt_salen = sizeof(mnt_address);
 	struct pmap mnt_pmap;
 	char *option;
@@ -507,10 +529,15 @@ nfs_rewrite_pmap_mount_options(struct mount_options *options)
 	if (!nfs_probe_bothports(mnt_saddr, mnt_salen, &mnt_pmap,
 				 nfs_saddr, nfs_salen, &nfs_pmap)) {
 		errno = ESPIPE;
+		if (rpc_createerr.cf_stat == RPC_PROGNOTREGISTERED)
+			errno = EOPNOTSUPP;
+		else if (rpc_createerr.cf_error.re_errno != 0)
+			errno = rpc_createerr.cf_error.re_errno;
 		return 0;
 	}
 
-	if (!nfs_construct_new_options(options, &nfs_pmap, &mnt_pmap)) {
+	if (!nfs_construct_new_options(options, nfs_saddr, &nfs_pmap,
+					mnt_saddr, &mnt_pmap)) {
 		errno = EINVAL;
 		return 0;
 	}
@@ -536,10 +563,6 @@ static int nfs_sys_mount(struct nfsmount_info *mi, struct mount_options *opts)
 		return 0;
 	}
 
-	if (verbose)
-		printf(_("%s: trying text-based options '%s'\n"),
-			progname, options);
-
 	if (mi->fake)
 		return 1;
 
@@ -553,10 +576,8 @@ static int nfs_sys_mount(struct nfsmount_info *mi, struct mount_options *opts)
 	return !result;
 }
 
-/*
- * For "-t nfs vers=2" or "-t nfs vers=3" mounts.
- */
-static int nfs_try_mount_v3v2(struct nfsmount_info *mi)
+static int nfs_do_mount_v3v2(struct nfsmount_info *mi,
+		struct sockaddr *sap, socklen_t salen)
 {
 	struct mount_options *options = po_dup(mi->options);
 	int result = 0;
@@ -566,7 +587,12 @@ static int nfs_try_mount_v3v2(struct nfsmount_info *mi)
 		return result;
 	}
 
-	if (!nfs_fix_mounthost_option(options)) {
+	if (!nfs_append_addr_option(sap, salen, options)) {
+		errno = EINVAL;
+		goto out_fail;
+	}
+
+	if (!nfs_fix_mounthost_option(options, mi->hostname)) {
 		errno = EINVAL;
 		goto out_fail;
 	}
@@ -586,6 +612,10 @@ static int nfs_try_mount_v3v2(struct nfsmount_info *mi)
 		goto out_fail;
 	}
 
+	if (verbose)
+		printf(_("%s: trying text-based options '%s'\n"),
+			progname, *mi->extra_opts);
+
 	if (!nfs_rewrite_pmap_mount_options(options))
 		goto out_fail;
 
@@ -597,11 +627,36 @@ out_fail:
 }
 
 /*
- * For "-t nfs -o vers=4" or "-t nfs4" mounts.
+ * Attempt a "-t nfs vers=2" or "-t nfs vers=3" mount.
+ *
+ * Returns TRUE if successful, otherwise FALSE.
+ * "errno" is set to reflect the individual error.
  */
-static int nfs_try_mount_v4(struct nfsmount_info *mi)
+static int nfs_try_mount_v3v2(struct nfsmount_info *mi)
 {
-	struct sockaddr *sap = (struct sockaddr *)&mi->address;
+	struct addrinfo *ai;
+	int ret;
+
+	for (ai = mi->address; ai != NULL; ai = ai->ai_next) {
+		ret = nfs_do_mount_v3v2(mi, ai->ai_addr, ai->ai_addrlen);
+		if (ret != 0)
+			return ret;
+
+		switch (errno) {
+		case ECONNREFUSED:
+		case EOPNOTSUPP:
+		case EHOSTUNREACH:
+			continue;
+		default:
+			break;
+		}
+	}
+	return ret;
+}
+
+static int nfs_do_mount_v4(struct nfsmount_info *mi,
+		struct sockaddr *sap, socklen_t salen)
+{
 	struct mount_options *options = po_dup(mi->options);
 	int result = 0;
 
@@ -611,13 +666,30 @@ static int nfs_try_mount_v4(struct nfsmount_info *mi)
 	}
 
 	if (mi->version == 0) {
+		if (po_contains(options, "mounthost") ||
+			po_contains(options, "mountaddr") ||
+			po_contains(options, "mountvers") ||
+			po_contains(options, "mountproto")) {
+		/*
+		 * Since these mountd options are set assume version 3
+		 * is wanted so error out with EPROTONOSUPPORT so the
+		 * protocol negation starts with v3.
+		 */
+			errno = EPROTONOSUPPORT;
+			goto out_fail;
+		}
 		if (po_append(options, "vers=4") == PO_FAILED) {
 			errno = EINVAL;
 			goto out_fail;
 		}
 	}
 
-	if (!nfs_append_clientaddr_option(sap, mi->salen, options)) {
+	if (!nfs_append_addr_option(sap, salen, options)) {
+		errno = EINVAL;
+		goto out_fail;
+	}
+
+	if (!nfs_append_clientaddr_option(sap, salen, options)) {
 		errno = EINVAL;
 		goto out_fail;
 	}
@@ -630,11 +702,42 @@ static int nfs_try_mount_v4(struct nfsmount_info *mi)
 		goto out_fail;
 	}
 
+	if (verbose)
+		printf(_("%s: trying text-based options '%s'\n"),
+			progname, *mi->extra_opts);
+
 	result = nfs_sys_mount(mi, options);
 
 out_fail:
 	po_destroy(options);
 	return result;
+}
+
+/*
+ * Attempt a "-t nfs -o vers=4" or "-t nfs4" mount.
+ *
+ * Returns TRUE if successful, otherwise FALSE.
+ * "errno" is set to reflect the individual error.
+ */
+static int nfs_try_mount_v4(struct nfsmount_info *mi)
+{
+	struct addrinfo *ai;
+	int ret;
+
+	for (ai = mi->address; ai != NULL; ai = ai->ai_next) {
+		ret = nfs_do_mount_v4(mi, ai->ai_addr, ai->ai_addrlen);
+		if (ret != 0)
+			return ret;
+
+		switch (errno) {
+		case ECONNREFUSED:
+		case EHOSTUNREACH:
+			continue;
+		default:
+			break;
+		}
+	}
+	return ret;
 }
 
 /*
@@ -656,9 +759,10 @@ static int nfs_try_mount(struct nfsmount_info *mi)
 				/* 
 				 * To deal with legacy Linux servers that don't
 				 * automatically export a pseudo root, retry
-				 * ENOENT errors using version 3
+				 * ENOENT errors using version 3. And for
+				 * Linux servers prior to 2.6.25, retry EPERM
 				 */
-				if (errno != ENOENT)
+				if (errno != ENOENT && errno != EPERM)
 					break;
 			}
 		}
@@ -856,6 +960,7 @@ int nfsmount_string(const char *spec, const char *node, const char *type,
 	struct nfsmount_info mi = {
 		.spec		= spec,
 		.node		= node,
+		.address	= NULL,
 		.type		= type,
 		.extra_opts	= extra_opts,
 		.flags		= flags,
@@ -871,6 +976,7 @@ int nfsmount_string(const char *spec, const char *node, const char *type,
 	} else
 		nfs_error(_("%s: internal option parsing error"), progname);
 
+	freeaddrinfo(mi.address);
 	free(mi.hostname);
 	return retval;
 }

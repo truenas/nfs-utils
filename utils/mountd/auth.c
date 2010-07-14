@@ -20,6 +20,7 @@
 #include "exportfs.h"
 #include "mountd.h"
 #include "xmalloc.h"
+#include "v4root.h"
 
 enum auth_error
 {
@@ -102,9 +103,66 @@ auth_reload()
 	memset(&my_client, 0, sizeof(my_client));
 	xtab_export_read();
 	check_useipaddr();
+	v4root_set();
+
 	++counter;
 
 	return counter;
+}
+
+static char *get_client_hostname(struct sockaddr_in *caller, struct hostent *hp, enum auth_error *error)
+{
+	char *n;
+
+	if (use_ipaddr)
+		return strdup(inet_ntoa(caller->sin_addr));
+	n = client_compose(hp);
+	*error = unknown_host;
+	if (!n)
+		return NULL;
+	if (*n)
+		return n;
+	free(n);
+	return strdup("DEFAULT");
+}
+
+/* return static nfs_export with details filled in */
+static nfs_export *
+auth_authenticate_newcache(char *what, struct sockaddr_in *caller,
+			   char *path, struct hostent *hp,
+			   enum auth_error *error)
+{
+	nfs_export *exp;
+	int i;
+
+	free(my_client.m_hostname);
+
+	my_client.m_hostname = get_client_hostname(caller, hp, error);
+	if (my_client.m_hostname == NULL)
+		return NULL;
+
+	my_client.m_naddr = 1;
+	my_client.m_addrlist[0] = caller->sin_addr;
+	my_exp.m_client = &my_client;
+
+	exp = NULL;
+	for (i = 0; !exp && i < MCL_MAXTYPES; i++)
+		for (exp = exportlist[i].p_head; exp; exp = exp->m_next) {
+			if (strcmp(path, exp->m_export.e_path))
+				continue;
+			if (!use_ipaddr && !client_member(my_client.m_hostname, exp->m_client->m_hostname))
+				continue;
+			if (use_ipaddr && !client_check(exp->m_client, hp))
+				continue;
+			break;
+		}
+	*error = not_exported;
+	if (!exp)
+		return NULL;
+
+	my_exp.m_export = exp->m_export;
+	exp = &my_exp;
+	return exp;
 }
 
 static nfs_export *
@@ -112,65 +170,24 @@ auth_authenticate_internal(char *what, struct sockaddr_in *caller,
 			   char *path, struct hostent *hp,
 			   enum auth_error *error)
 {
-	nfs_export		*exp;
+	nfs_export *exp;
 
 	if (new_cache) {
-		int i;
-		/* return static nfs_export with details filled in */
-		char *n;
-		free(my_client.m_hostname);
-		if (use_ipaddr) {
-			my_client.m_hostname =
-				strdup(inet_ntoa(caller->sin_addr));
-		} else {
-			n = client_compose(hp);
-			*error = unknown_host;
-			if (!n)
-				my_client.m_hostname = NULL;
-			else if (*n)
-				my_client.m_hostname = n;
-			else {
-				free(n);
-				my_client.m_hostname = strdup("DEFAULT");
-			}
-		}
-		if (my_client.m_hostname == NULL)
-			return NULL;
-		my_client.m_naddr = 1;
-		my_client.m_addrlist[0] = caller->sin_addr;
-		my_exp.m_client = &my_client;
-
-		exp = NULL;
-		for (i = 0; !exp && i < MCL_MAXTYPES; i++) 
-			for (exp = exportlist[i].p_head; exp; exp = exp->m_next) {
-				if (strcmp(path, exp->m_export.e_path))
-					continue;
-				if (!use_ipaddr && !client_member(my_client.m_hostname, exp->m_client->m_hostname))
-					continue;
-				if (use_ipaddr && !client_check(exp->m_client, hp))
-					continue;
-				break;
-			}
-		*error = not_exported;
+		exp = auth_authenticate_newcache(what, caller, path, hp, error);
 		if (!exp)
-			return exp;
-
-		my_exp.m_export = exp->m_export;
-		exp = &my_exp;
-
+			return NULL;
 	} else {
 		if (!(exp = export_find(hp, path))) {
 			*error = no_entry;
 			return NULL;
 		}
-		if (!exp->m_mayexport) {
-			*error = not_exported;
-			return NULL;
-		}
+	}
+	if (exp->m_export.e_flags & NFSEXP_V4ROOT) {
+		*error = no_entry;
+		return NULL;
 	}
 	if (!(exp->m_export.e_flags & NFSEXP_INSECURE_PORT) &&
-		    (ntohs(caller->sin_port) <  IPPORT_RESERVED/2 ||
-		     ntohs(caller->sin_port) >= IPPORT_RESERVED)) {
+		     ntohs(caller->sin_port) >= IPPORT_RESERVED) {
 		*error = illegal_port;
 		return NULL;
 	}

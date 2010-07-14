@@ -194,18 +194,36 @@ void free_all(void)
 static char *versions[] = {"v2", "v3", "v4", "vers", "nfsvers", NULL};
 int inline check_vers(char *mopt, char *field)
 {
-	int i;
+	int i, found=0;
 
-	if (strncmp("mountvers", field, strlen("mountvers")) != 0) {
-		for (i=0; versions[i]; i++) 
-			if (strcasestr(mopt, versions[i]) != NULL)
-				return 1;
+	/*
+	 * First check to see if the config setting is one 
+	 * of the many version settings
+	 */
+	for (i=0; versions[i]; i++) { 
+		if (strcasestr(field, versions[i]) != NULL) {
+			found++;
+			break;
+		}
 	}
+	if (!found)
+		return 0;
+	/*
+	 * It appears the version is being set, now see
+	 * if the version appears on the command 
+	 */
+	for (i=0; versions[i]; i++)  {
+		if (strcasestr(mopt, versions[i]) != NULL)
+			return 1;
+	}
+
 	return 0;
 }
 
 unsigned long config_default_vers;
 unsigned long config_default_proto;
+extern sa_family_t config_default_family;
+
 /*
  * Check to see if a default value is being set.
  * If so, set the appropriate global value which will 
@@ -225,6 +243,10 @@ int inline default_value(char *mopt)
 		if ((options = po_split(field)) != NULL) {
 			if (!nfs_nfs_protocol(options, &config_default_proto)) {
 				xlog_warn("Unable to set default protocol : %s", 
+					strerror(errno));
+			}
+			if (!nfs_nfs_proto_family(options, &config_default_family)) {
+				xlog_warn("Unable to set default family : %s", 
 					strerror(errno));
 			}
 		} else {

@@ -95,6 +95,9 @@
 /* Define to 1 if you have the `gethostname' function. */
 #undef HAVE_GETHOSTNAME
 
+/* Define to 1 if you have the `getifaddrs' function. */
+#undef HAVE_GETIFADDRS
+
 /* Define to 1 if you have the `getmntent' function. */
 #undef HAVE_GETMNTENT
 
@@ -253,6 +256,9 @@
 /* Define to 1 if you have the <syslog.h> header file. */
 #undef HAVE_SYSLOG_H
 
+/* Define to 1 if you have the <sys/capability.h> header file. */
+#undef HAVE_SYS_CAPABILITY_H
+
 /* Define to 1 if you have the <sys/dir.h> header file, and it defines `DIR'.
    */
 #undef HAVE_SYS_DIR_H
@@ -345,6 +351,9 @@
 
 /* Define this if you want NFSv3 support compiled in */
 #undef NFS3_SUPPORTED
+
+/* Define this if you want NFSv41 support compiled in */
+#undef NFS41_SUPPORTED
 
 /* Define this if you want NFSv4 support compiled in */
 #undef NFS4_SUPPORTED

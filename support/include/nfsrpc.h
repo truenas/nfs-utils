@@ -59,16 +59,6 @@ static inline void nfs_clear_rpc_createerr(void)
 }
 
 /*
- * Extract port value from a socket address
- */
-extern uint16_t		nfs_get_port(const struct sockaddr *);
-
-/*
- * Set port value in a socket address
- */
-extern void		nfs_set_port(struct sockaddr *, const uint16_t);
-
-/*
  * Look up an RPC program name in /etc/rpc
  */
 extern rpcprog_t	nfs_getrpcbyname(const rpcprog_t, const char *table[]);
@@ -88,6 +78,18 @@ extern CLIENT		*nfs_get_priv_rpcclient( const struct sockaddr *,
 				const socklen_t, const unsigned short,
 				const rpcprog_t, const rpcvers_t,
 				struct timeval *);
+
+/*
+ * Convert a netid to a protocol number and protocol family
+ */
+extern int		nfs_get_proto(const char *netid, sa_family_t *family,
+				unsigned long *protocol);
+
+/*
+ * Convert a protocol family and protocol name to a netid
+ */
+extern char		*nfs_get_netid(const sa_family_t family,
+				const unsigned long protocol);
 
 /*
  * Convert a socket address to a universal address
@@ -158,4 +160,4 @@ extern int		nfs_rpc_ping(const struct sockaddr *sap,
 				const unsigned short protocol,
 				const struct timeval *timeout);
 
-#endif	/* __NFS_UTILS_NFSRPC_H */
+#endif	/* !__NFS_UTILS_NFSRPC_H */

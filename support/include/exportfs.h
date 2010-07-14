@@ -99,9 +99,18 @@ int				xtab_mount_write(void);
 int				xtab_export_write(void);
 void				xtab_append(nfs_export *);
 
+int				secinfo_addflavor(struct flav_info *, struct exportent *);
+
 int				rmtab_read(void);
 
 struct nfskey *			key_lookup(char *hname);
+
+struct export_features {
+	unsigned int flags;
+	unsigned int secinfo_flags;
+};
+
+struct export_features *get_export_features(void);
 
 /* Record export error.  */
 extern int export_errno;

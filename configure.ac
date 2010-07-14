@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 dnl
-AC_INIT([linux nfs-utils],[1.2.1],[linux-nfs@vger.kernel.org],[nfs-utils])
+AC_INIT([linux nfs-utils],[1.2.2],[linux-nfs@vger.kernel.org],[nfs-utils])
 AC_CANONICAL_BUILD([])
 AC_CANONICAL_HOST([])
 AC_CONFIG_MACRO_DIR(aclocal)
@@ -72,6 +72,20 @@ AC_ARG_ENABLE(nfsv4,
 	AC_SUBST(IDMAPD)
 	AC_SUBST(enable_nfsv4)
 	AM_CONDITIONAL(CONFIG_NFSV4, [test "$enable_nfsv4" = "yes"])
+
+AC_ARG_ENABLE(nfsv41,
+	[AC_HELP_STRING([--enable-nfsv41],
+                        [enable support for NFSv41 @<:@default=no@:>@])],
+	enable_nfsv41=$enableval,
+	enable_nfsv41=no)
+	if test "$enable_nfsv41" = yes; then
+		AC_DEFINE(NFS41_SUPPORTED, 1, [Define this if you want NFSv41 support compiled in])
+	else
+		enable_nfsv4=
+	fi
+	AC_SUBST(enable_nfsv41)
+	AM_CONDITIONAL(CONFIG_NFSV41, [test "$enable_nfsv41" = "yes"])
+
 AC_ARG_ENABLE(gss,
 	[AC_HELP_STRING([--enable-gss],
                         [enable support for rpcsec_gss @<:@default=yes@:>@])],
@@ -165,6 +179,9 @@ fi
 
 dnl Check for TI-RPC library and headers
 AC_LIBTIRPC
+
+dnl Check for -lcap
+AC_LIBCAP
 
 # Check whether user wants TCP wrappers support
 AC_TCP_WRAPPERS
@@ -327,7 +344,7 @@ AC_FUNC_STAT
 AC_FUNC_VPRINTF
 AC_CHECK_FUNCS([alarm atexit dup2 fdatasync ftruncate getcwd \
                gethostbyaddr gethostbyname gethostname getmntent \
-               getnameinfo getrpcbyname \
+               getnameinfo getrpcbyname getifaddrs \
                gettimeofday hasmntopt inet_ntoa innetgr memset mkdir pathconf \
                realpath rmdir select socket strcasecmp strchr strdup \
                strerror strrchr strtol strtoul sigprocmask])
@@ -402,6 +419,7 @@ AC_CONFIG_FILES([
 	support/include/Makefile
 	support/misc/Makefile
 	support/nfs/Makefile
+	support/nsm/Makefile
 	tools/Makefile
 	tools/locktest/Makefile
 	tools/nlmtest/Makefile
@@ -416,6 +434,8 @@ AC_CONFIG_FILES([
 	utils/nfsd/Makefile
 	utils/nfsstat/Makefile
 	utils/showmount/Makefile
-	utils/statd/Makefile])
+	utils/statd/Makefile
+	tests/Makefile
+	tests/nsm_client/Makefile])
 AC_OUTPUT
 

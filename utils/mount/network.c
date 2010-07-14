@@ -37,11 +37,13 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/wait.h>
+#include <sys/stat.h>
 #include <netinet/in.h>
 #include <rpc/rpc.h>
 #include <rpc/pmap_prot.h>
 #include <rpc/pmap_clnt.h>
 
+#include "sockaddr.h"
 #include "xcommon.h"
 #include "mount.h"
 #include "nls.h"
@@ -55,10 +57,6 @@
 #define PMAP_TIMEOUT	(10)
 #define CONNECT_TIMEOUT	(20)
 #define MOUNT_TIMEOUT	(30)
-
-#if SIZEOF_SOCKLEN_T - 0 == 0
-#define socklen_t unsigned int
-#endif
 
 extern int nfs_mount_data_version;
 extern char *progname;
@@ -193,8 +191,18 @@ static const unsigned int *nfs_default_proto()
 }
 #endif /* MOUNT_CONFIG */
 
-static int nfs_lookup(const char *hostname, const sa_family_t family,
-		      struct sockaddr *sap, socklen_t *salen)
+/**
+ * nfs_lookup - resolve hostname to an IPv4 or IPv6 socket address
+ * @hostname: pointer to C string containing DNS hostname to resolve
+ * @family: address family hint
+ * @sap: pointer to buffer to fill with socket address
+ * @len: IN: size of buffer to fill; OUT: size of socket address
+ *
+ * Returns 1 and places a socket address at @sap if successful;
+ * otherwise zero.
+ */
+int nfs_lookup(const char *hostname, const sa_family_t family,
+		struct sockaddr *sap, socklen_t *salen)
 {
 	struct addrinfo *gai_results;
 	struct addrinfo gai_hint = {
@@ -243,25 +251,6 @@ static int nfs_lookup(const char *hostname, const sa_family_t family,
 }
 
 /**
- * nfs_name_to_address - resolve hostname to an IPv4 or IPv6 socket address
- * @hostname: pointer to C string containing DNS hostname to resolve
- * @sap: pointer to buffer to fill with socket address
- * @len: IN: size of buffer to fill; OUT: size of socket address
- *
- * Returns 1 and places a socket address at @sap if successful;
- * otherwise zero.
- */
-int nfs_name_to_address(const char *hostname,
-			struct sockaddr *sap, socklen_t *salen)
-{
-#ifdef IPV6_SUPPORTED
-	return nfs_lookup(hostname, AF_UNSPEC, sap, salen);
-#else	/* !IPV6_SUPPORTED */
-	return nfs_lookup(hostname, AF_INET, sap, salen);
-#endif	/* !IPV6_SUPPORTED */
-}
-
-/**
  * nfs_gethostbyname - resolve a hostname to an IPv4 address
  * @hostname: pointer to a C string containing a DNS hostname
  * @sin: returns an IPv4 address 
@@ -283,8 +272,8 @@ int nfs_gethostbyname(const char *hostname, struct sockaddr_in *sin)
  *		OUT: length of converted socket address
  *
  * Convert a presentation format address string to a socket address.
- * Similar to nfs_name_to_address(), but the DNS query is squelched,
- * and won't make any noise if the getaddrinfo() call fails.
+ * Similar to nfs_lookup(), but the DNS query is squelched, and it
+ * won't make any noise if the getaddrinfo() call fails.
  *
  * Returns 1 and fills in @sap and @salen if successful; otherwise zero.
  *
@@ -549,8 +538,8 @@ static int nfs_probe_port(const struct sockaddr *sap, const socklen_t salen,
 			  struct pmap *pmap, const unsigned long *versions,
 			  const unsigned int *protos)
 {
-	struct sockaddr_storage address;
-	struct sockaddr *saddr = (struct sockaddr *)&address;
+	union nfs_sockaddr address;
+	struct sockaddr *saddr = &address.sa;
 	const unsigned long prog = pmap->pm_prog, *p_vers;
 	const unsigned int prot = (u_int)pmap->pm_prot, *p_prot;
 	const u_short port = (u_short) pmap->pm_port;
@@ -840,8 +829,8 @@ int start_statd(void)
 int nfs_advise_umount(const struct sockaddr *sap, const socklen_t salen,
 		      const struct pmap *pmap, const dirpath *argp)
 {
-	struct sockaddr_storage address;
-	struct sockaddr *saddr = (struct sockaddr *)&address;
+	union nfs_sockaddr address;
+	struct sockaddr *saddr = &address.sa;
 	struct pmap mnt_pmap = *pmap;
 	struct timeval timeout = {
 		.tv_sec		= MOUNT_TIMEOUT >> 3,
@@ -1284,11 +1273,13 @@ nfs_nfs_version(struct mount_options *options, unsigned long *version)
 
 /*
  * Returns TRUE if @protocol contains a valid value for this option,
- * or FALSE if the option was specified with an invalid value.
+ * or FALSE if the option was specified with an invalid value. On
+ * error, errno is set.
  */
 int
 nfs_nfs_protocol(struct mount_options *options, unsigned long *protocol)
 {
+	sa_family_t family;
 	char *option;
 
 	switch (po_rightmost(options, nfs_transport_opttbl)) {
@@ -1300,16 +1291,12 @@ nfs_nfs_protocol(struct mount_options *options, unsigned long *protocol)
 		return 1;
 	case 2: /* proto */
 		option = po_get(options, "proto");
-		if (option) {
-			if (strcmp(option, "tcp") == 0) {
-				*protocol = IPPROTO_TCP;
-				return 1;
+		if (option != NULL) {
+			if (!nfs_get_proto(option, &family, protocol)) {
+				errno = EPROTONOSUPPORT;
+				return 0;
 			}
-			if (strcmp(option, "udp") == 0) {
-				*protocol = IPPROTO_UDP;
-				return 1;
-			}
-			return 0;
+			return 1;
 		}
 	}
 
@@ -1349,6 +1336,61 @@ nfs_nfs_port(struct mount_options *options, unsigned long *port)
 	 */
 	*port = 0;
 	return 1;
+}
+
+#ifdef IPV6_SUPPORTED
+sa_family_t	config_default_family = AF_UNSPEC;
+
+static int
+nfs_verify_family(sa_family_t family)
+{
+	return 1;
+}
+#else /* IPV6_SUPPORTED */
+sa_family_t	config_default_family = AF_INET;
+
+static int
+nfs_verify_family(sa_family_t family)
+{
+	if (family != AF_INET)
+		return 0;
+
+	return 1;
+}
+#endif /* IPV6_SUPPORTED */
+
+/*
+ * Returns TRUE and fills in @family if a valid NFS protocol option
+ * is found, or FALSE if the option was specified with an invalid value
+ * or if the protocol family isn't supported. On error, errno is set.
+ */
+int nfs_nfs_proto_family(struct mount_options *options,
+				sa_family_t *family)
+{
+	unsigned long protocol;
+	char *option;
+	sa_family_t tmp_family = config_default_family;
+
+	switch (po_rightmost(options, nfs_transport_opttbl)) {
+	case 0:	/* udp */
+	case 1: /* tcp */
+		/* for compatibility; these are always AF_INET */
+		*family = AF_INET;
+		return 1;
+	case 2: /* proto */
+		option = po_get(options, "proto");
+		if (option != NULL &&
+		    !nfs_get_proto(option, &tmp_family, &protocol))
+			goto out_err;
+	}
+
+	if (!nfs_verify_family(tmp_family))
+		goto out_err;
+	*family = tmp_family;
+	return 1;
+out_err:
+	errno = EAFNOSUPPORT;
+	return 0;
 }
 
 /*
@@ -1414,24 +1456,22 @@ nfs_mount_version(struct mount_options *options, unsigned long *version)
 
 /*
  * Returns TRUE if @protocol contains a valid value for this option,
- * or FALSE if the option was specified with an invalid value.
+ * or FALSE if the option was specified with an invalid value. On
+ * error, errno is set.
  */
 static int
 nfs_mount_protocol(struct mount_options *options, unsigned long *protocol)
 {
+	sa_family_t family;
 	char *option;
 
 	option = po_get(options, "mountproto");
-	if (option) {
-		if (strcmp(option, "tcp") == 0) {
-			*protocol = IPPROTO_TCP;
-			return 1;
+	if (option != NULL) {
+		if (!nfs_get_proto(option, &family, protocol)) {
+			errno = EPROTONOSUPPORT;
+			return 0;
 		}
-		if (strcmp(option, "udp") == 0) {
-			*protocol = IPPROTO_UDP;
-			return 1;
-		}
-		return 0;
+		return 1;
 	}
 
 	/*
@@ -1470,6 +1510,40 @@ nfs_mount_port(struct mount_options *options, unsigned long *port)
 	 */
 	*port = 0;
 	return 1;
+}
+
+/*
+ * Returns TRUE and fills in @family if a valid MNT protocol option
+ * is found, or FALSE if the option was specified with an invalid value
+ * or if the protocol family isn't supported. On error, errno is set.
+ */
+int nfs_mount_proto_family(struct mount_options *options,
+				sa_family_t *family)
+{
+	unsigned long protocol;
+	char *option;
+	sa_family_t tmp_family = config_default_family;
+
+	option = po_get(options, "mountproto");
+	if (option != NULL) {
+		if (!nfs_get_proto(option, &tmp_family, &protocol))
+			goto out_err;
+		if (!nfs_verify_family(tmp_family))
+			goto out_err;
+		*family = tmp_family;
+		return 1;
+	}
+
+	/*
+	 * MNT transport protocol wasn't specified.  If the NFS
+	 * transport protocol was specified, derive the family
+	 * from that; otherwise, return the default family for
+	 * NFS.
+	 */
+	return nfs_nfs_proto_family(options, family);
+out_err:
+	errno = EAFNOSUPPORT;
+	return 0;
 }
 
 /**

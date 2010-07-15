@@ -2,6 +2,7 @@ nfs-utils (1:1.2.2-3) UNRELEASED; urgency=low
 
   * mount.nfs: Preserve explicit port=2049 option (Closes: #582003)
   * rpc.statd: Allow monitoring of addresses without names (Closes: #579397)
+  * Add control fields pointing to the new git repository
 
  -- Ben Hutchings <ben@decadent.org.uk>  Wed, 14 Jul 2010 03:37:03 +0100
 

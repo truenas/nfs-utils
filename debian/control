@@ -6,6 +6,8 @@ Uploaders: Anibal Monsalve Salazar <anibal@debian.org>, Ben Hutchings <ben@decad
 Build-Depends: debhelper (>= 7), libwrap0-dev, libevent-dev, libnfsidmap-dev, libkrb5-dev, libgssglue-dev, librpcsecgss-dev (>= 0.17), libblkid-dev, libkeyutils-dev, pkg-config, libldap2-dev, libcap-dev
 Standards-Version: 3.9.0
 Homepage: http://nfs.sourceforge.net/
+Vcs-Git: git://git.debian.org/kernel/nfs-utils.git
+Vcs-Browser: http://git.debian.org/?p=kernel/nfs-utils.git
 
 Package: nfs-kernel-server
 Priority: optional

@@ -1,6 +1,6 @@
 nfs-utils (1:1.2.2-4) UNRELEASED; urgency=low
 
-  * 
+  * mountd: fix path comparison for v4 crossmnt (Closes: #578317)
 
  -- Ben Hutchings <ben@decadent.org.uk>  Thu, 26 Aug 2010 03:39:40 +0100
 

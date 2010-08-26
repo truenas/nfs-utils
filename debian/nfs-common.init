@@ -45,6 +45,11 @@ if [ -f /etc/fstab ]; then
 
     while read DEV MTPT FSTYPE OPTS REST
     do
+	case $DEV in
+	    ''|\#*)
+		continue
+		;;
+	esac
         if [ "$FSTYPE" = "nfs4" ]; then
             AUTO_NEED_IDMAPD=yes
         fi

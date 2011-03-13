@@ -8,11 +8,11 @@ nfs-utils (1:1.2.2-5) UNRELEASED; urgency=low
 
   [ Luk Claes ]
   * nfs-common.init, nfs-kernel-server.init: Add warning when portmap is
-    not running (Closes: #612002)
+    not running (Closes: #612002,#561718)
   * nfs-common.init: Add --pidfile for statd (Closes: #521084)
   * nfs-common.init: Add statd to sendsigs.omit.d (Closes: #524610)
 
- -- Luk Claes <luk@debian.org>  Sun, 13 Mar 2011 19:26:30 +0100
+ -- Luk Claes <luk@debian.org>  Sun, 13 Mar 2011 19:40:27 +0100
 
 nfs-utils (1:1.2.2-4) unstable; urgency=low
 

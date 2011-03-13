@@ -11,8 +11,10 @@ nfs-utils (1:1.2.2-5) UNRELEASED; urgency=low
     not running (Closes: #612002,#561718,#562737)
   * nfs-common.init: Add --pidfile for statd (Closes: #521084)
   * nfs-common.init: Add statd to sendsigs.omit.d (Closes: #524610)
+  * nfs-common.default, nfs-kernel-server.default: Remove spurious question
+    mark in wiki url (Closes: #593511)
 
- -- Luk Claes <luk@debian.org>  Sun, 13 Mar 2011 19:43:17 +0100
+ -- Luk Claes <luk@debian.org>  Sun, 13 Mar 2011 19:50:47 +0100
 
 nfs-utils (1:1.2.2-4) unstable; urgency=low
 

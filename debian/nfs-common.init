@@ -147,6 +147,7 @@ case "$1" in
 	    fi
 
 	    start-stop-daemon --start --oknodo --quiet \
+		--pidfile /var/run/rpc.statd.pid \
 	        --exec $PREFIX/sbin/rpc.statd -- $STATDOPTS
 	    RET=$?
 	    if [ $RET != 0 ]; then

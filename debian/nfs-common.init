@@ -153,6 +153,10 @@ case "$1" in
 	    if [ $RET != 0 ]; then
 	        log_end_msg $RET
 	        exit $RET
+	    else
+		mkdir -p /lib/init/rw/sendsigs.omit.d
+		rm -f /lib/init/rw/sendsigs.omit.d/statd
+		ln -s /var/run/rpc.statd.pid /lib/init/rw/sendsigs.omit.d/statd
 	    fi
 	fi
 

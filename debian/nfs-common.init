@@ -136,6 +136,16 @@ case "$1" in
 
 	if [ "$NEED_STATD" = yes ]; then
 	    log_progress_msg "statd"
+	    
+	    # See if portmap or rpcbind are running
+	    lsof -i :111 >/dev/null
+	    RET=$?
+	    if [ $RET != 0 ]; then
+		echo
+		log_warning_msg "Not starting: portmap daemon is not running"
+		exit 0
+	    fi
+
 	    start-stop-daemon --start --oknodo --quiet \
 	        --exec $PREFIX/sbin/rpc.statd -- $STATDOPTS
 	    RET=$?

@@ -1,4 +1,4 @@
-nfs-utils (1:1.2.2-5) UNRELEASED; urgency=low
+nfs-utils (1:1.2.2-5) unstable; urgency=low
 
   [ Ben Hutchings ]
   * mount.nfs.man, nfs.man: Update distinction between fstypes
@@ -14,7 +14,7 @@ nfs-utils (1:1.2.2-5) UNRELEASED; urgency=low
   * nfs-common.default, nfs-kernel-server.default: Remove spurious question
     mark in wiki url (Closes: #593511)
 
- -- Luk Claes <luk@debian.org>  Sun, 13 Mar 2011 19:50:47 +0100
+ -- Luk Claes <luk@debian.org>  Wed, 16 Mar 2011 23:10:15 +0100
 
 nfs-utils (1:1.2.2-4) unstable; urgency=low
 

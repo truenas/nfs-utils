@@ -138,7 +138,7 @@ case "$1" in
 	    log_progress_msg "statd"
 	    
 	    # See if portmap or rpcbind are running
-	    lsof -i :111 >/dev/null
+	    cat </dev/null >/dev/tcp/localhost/111
 	    RET=$?
 	    if [ $RET != 0 ]; then
 		echo

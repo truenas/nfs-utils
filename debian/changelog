@@ -8,8 +8,16 @@ nfs-utils (1:1.2.3-1) unstable; urgency=low
     - 16-mount.nfs.man-nfs.man-update-distinction-between-fstypes:
       part about nfs.man removed and 
       renamed to 16-mount.nfs.man-update-distinction-between-fstypes
+    - mountd: fix --manage-gids hang due to int/uint bug (0f05c8a)
+      (Closes: #528939,585085)
+    - mount.nfs: Don't do anything fancy if this is a remount (f11547f)
+      (Closes: #612933)
+    - mount: Mount should retry unreachable hosts (5a355f4)
+      (Closes: #560388)
+    - Try to use kernel function to determine supported Kerberos 
+      enctypes (258f10f) (Closes: #474037)
 
- -- Luk Claes <luk@debian.org>  Sun, 20 Mar 2011 16:54:52 +0100
+ -- Luk Claes <luk@debian.org>  Sun, 20 Mar 2011 20:17:10 +0100
 
 nfs-utils (1:1.2.2-5) unstable; urgency=low
 

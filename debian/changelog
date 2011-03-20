@@ -1,3 +1,16 @@
+nfs-utils (1:1.2.3-1) unstable; urgency=low
+
+  * New upstream release
+    - 7-remove-duplicate-exports-paragraphs : removed
+    - 12-svcgssd-document-n-option: updated
+    - 14-allow-address-without-name : removed
+    - 15-mountd-fix-path-comparison-for-v4-crossmnt : removed
+    - 16-mount.nfs.man-nfs.man-update-distinction-between-fstypes:
+      part about nfs.man removed and 
+      renamed to 16-mount.nfs.man-update-distinction-between-fstypes
+
+ -- Luk Claes <luk@debian.org>  Sun, 20 Mar 2011 16:54:52 +0100
+
 nfs-utils (1:1.2.2-5) unstable; urgency=low
 
   [ Ben Hutchings ]

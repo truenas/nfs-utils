@@ -11,6 +11,6 @@ From: Alberto Gonzalez Iniesta <agi@inittab.org>
 +Do not search for nfs/<your.host>@<YOUR.REALM> at start up, but instead
 +accept requests for any key in the keytab file. Useful for HA clusters
 +where the NFS service hostname is different from the node hostname.
- 
- .SH SEE ALSO
- .BR rpc.gssd(8),
+ .TP
+ .B -p
+ Use \fIprincipal\fR instead of the default nfs/host.domain.

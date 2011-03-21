@@ -16,9 +16,9 @@ nfs-utils (1:1.2.3-1) unstable; urgency=low
       (Closes: #560388)
     - Try to use kernel function to determine supported Kerberos 
       enctypes (258f10f) (Closes: #474037)
-  * Make sure everything is shipped (Closes: #594933)
+  * Make sure everything is shipped (inspired by #594933) 
 
- -- Luk Claes <luk@debian.org>  Mon, 21 Mar 2011 19:36:26 +0100
+ -- Luk Claes <luk@debian.org>  Mon, 21 Mar 2011 19:57:02 +0100
 
 nfs-utils (1:1.2.2-5) unstable; urgency=low
 

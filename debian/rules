@@ -44,7 +44,7 @@ binary-arch: build
 	mkdir $(DEBTMP)
 	$(MAKE) DESTDIR='$(DEBTMP)' install
 	dh_installman
-	dh_install --fail-missing
+	dh_install -Xman --fail-missing
 	dh_installdocs -A
 	dh_installdocs -pnfs-common debian/README.Debian.nfsv4
 	install -m 0755 debian/nfs-common.init debian/nfs-common/etc/init.d/nfs-common

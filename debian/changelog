@@ -18,8 +18,9 @@ nfs-utils (1:1.2.3-1) unstable; urgency=low
       enctypes (258f10f) (Closes: #474037)
   * Make sure everything is shipped (inspired by #594933) 
   * nfs-common.init: Enable idmapd by default (Closes: #610363)
+  * Install bug scripts to ease debuging
 
- -- Luk Claes <luk@debian.org>  Mon, 21 Mar 2011 20:04:26 +0100
+ -- Luk Claes <luk@debian.org>  Sun, 27 Mar 2011 18:26:08 +0200
 
 nfs-utils (1:1.2.2-5) unstable; urgency=low
 

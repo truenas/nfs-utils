@@ -16,12 +16,13 @@ nfs-utils (1:1.2.3-1) unstable; urgency=low
       (Closes: #560388)
     - Try to use kernel function to determine supported Kerberos 
       enctypes (258f10f) (Closes: #474037)
+    - nfs-common: Add Recommends python for mountstats and nfsiostat
   * Make sure everything is shipped (inspired by #594933) 
   * nfs-common.init: Enable idmapd by default (Closes: #610363)
   * Install bug scripts to ease debuging
   * Build depend on libtirpc-dev and enable IPv6 (Closes: #441361)
 
- -- Luk Claes <luk@debian.org>  Sun, 27 Mar 2011 18:41:34 +0200
+ -- Luk Claes <luk@debian.org>  Sun, 27 Mar 2011 18:54:45 +0200
 
 nfs-utils (1:1.2.2-5) unstable; urgency=low
 

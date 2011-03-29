@@ -15,25 +15,22 @@
 #include <netdb.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <stdlib.h>
 
 #include "nfslib.h"
 #include "xlog.h"
 
-/*
- * IPv6 support for nfsd was finished before some of the other daemons (mountd
- * and statd in particular). That could be a problem in the future if someone
- * were to boot a kernel that supports IPv6 serving with an older nfs-utils. For
- * now, hardcode the IPv6 switch into the off position until the other daemons
- * are functional.
- */
-#undef IPV6_SUPPORTED
+#ifndef NFSD_FS_DIR
+#define NFSD_FS_DIR	  "/proc/fs/nfsd"
+#endif
 
-#define NFSD_PORTS_FILE     "/proc/fs/nfsd/portlist"
-#define NFSD_VERS_FILE    "/proc/fs/nfsd/versions"
-#define NFSD_THREAD_FILE  "/proc/fs/nfsd/threads"
+#define NFSD_PORTS_FILE   NFSD_FS_DIR "/portlist"
+#define NFSD_VERS_FILE    NFSD_FS_DIR "/versions"
+#define NFSD_THREAD_FILE  NFSD_FS_DIR "/threads"
 
 /*
  * declaring a common static scratch buffer here keeps us from having to
@@ -42,6 +39,46 @@
  * routines below however.
  */
 char buf[128];
+
+/*
+ * Using the "new" interfaces for nfsd requires that /proc/fs/nfsd is
+ * actually mounted. Make an attempt to mount it here if it doesn't appear
+ * to be. If the mount attempt fails, no big deal -- fall back to using nfsctl
+ * instead.
+ */
+void
+nfssvc_mount_nfsdfs(char *progname)
+{
+	int err;
+	struct stat statbuf;
+
+	err = stat(NFSD_THREAD_FILE, &statbuf);
+	if (err == 0)
+		return;
+
+	if (errno != ENOENT) {
+		xlog(L_ERROR, "Unable to stat %s: errno %d (%m)",
+				NFSD_THREAD_FILE, errno);
+		return;
+	}
+
+	/*
+	 * this call can return an error if modprobe is set up to automatically
+	 * mount nfsdfs when nfsd.ko is plugged in. So, ignore the return
+	 * code from it and just check for the "threads" file afterward.
+	 */
+	system("/bin/mount -t nfsd nfsd " NFSD_FS_DIR " >/dev/null 2>&1");
+
+	err = stat(NFSD_THREAD_FILE, &statbuf);
+	if (err == 0)
+		return;
+
+	xlog(L_WARNING, "Unable to access " NFSD_FS_DIR " errno %d (%m)." 
+		"\nPlease try, as root, 'mount -t nfsd nfsd " NFSD_FS_DIR 
+		"' and then restart %s to correct the problem", errno, progname);
+
+	return;
+}
 
 /*
  * Are there already sockets configured? If not, then it is safe to try to

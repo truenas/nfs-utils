@@ -27,15 +27,6 @@
 #include "nfssvc.h"
 #include "xlog.h"
 
-/*
- * IPv6 support for nfsd was finished before some of the other daemons (mountd
- * and statd in particular). That could be a problem in the future if someone
- * were to boot a kernel that supports IPv6 serving with  an older nfs-utils. For
- * now, hardcode the IPv6 switch into the off position until the other daemons
- * are functional.
- */
-#undef IPV6_SUPPORTED
-
 static void	usage(const char *);
 
 static struct option longopts[] =
@@ -245,6 +236,9 @@ main(int argc, char **argv)
 		xlog(L_ERROR, "chdir(%s) failed: %m", NFS_STATEDIR);
 		exit(1);
 	}
+
+	/* make sure nfsdfs is mounted if it's available */
+	nfssvc_mount_nfsdfs(progname);
 
 	/* can only change number of threads if nfsd is already up */
 	if (nfssvc_inuse()) {

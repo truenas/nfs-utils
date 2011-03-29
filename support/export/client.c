@@ -17,7 +17,9 @@
 #include <string.h>
 #include <ctype.h>
 #include <netdb.h>
+#include <errno.h>
 
+#include "sockaddr.h"
 #include "misc.h"
 #include "nfslib.h"
 #include "exportfs.h"
@@ -58,50 +60,170 @@ client_free(nfs_client *clp)
 }
 
 static int
-init_netmask(nfs_client *clp, const char *slash)
+init_netmask4(nfs_client *clp, const char *slash)
 {
 	struct sockaddr_in sin = {
 		.sin_family		= AF_INET,
 	};
+	uint32_t shift;
 
-	if (strchr(slash + 1, '.') != NULL)
-		sin.sin_addr.s_addr = inet_addr(slash + 1);
+	/*
+	 * Decide what kind of netmask was specified.  If there's
+	 * no '/' present, assume the netmask is all ones.  If
+	 * there is a '/' and at least one '.', look for a spelled-
+	 * out netmask.  Otherwise, assume it was a prefixlen.
+	 */
+	if (slash == NULL)
+		shift = 0;
 	else {
-		int prefixlen = atoi(slash + 1);
-		if (0 < prefixlen && prefixlen <= 32)
-			sin.sin_addr.s_addr =
-					htonl((uint32_t)~0 << (32 - prefixlen));
-		else
+		unsigned long prefixlen;
+
+		if (strchr(slash + 1, '.') != NULL) {
+			if (inet_pton(AF_INET, slash + 1,
+						&sin.sin_addr.s_addr) == 0)
+				goto out_badmask;
+			set_addrlist_in(clp, 1, &sin);
+			return 1;
+		} else {
+			char *endptr;
+
+			prefixlen = strtoul(slash + 1, &endptr, 10);
+			if (*endptr != '\0' && prefixlen != ULONG_MAX &&
+			    errno != ERANGE)
+				goto out_badprefix;
+		}
+		if (prefixlen > 32)
 			goto out_badprefix;
+		shift = 32 - (uint32_t)prefixlen;
 	}
 
+	/*
+	 * Now construct the full netmask bitmask in a sockaddr_in,
+	 * and plant it in the nfs_client record.
+	 */
+	sin.sin_addr.s_addr = htonl((uint32_t)~0 << shift);
 	set_addrlist_in(clp, 1, &sin);
+
 	return 1;
+
+out_badmask:
+	xlog(L_ERROR, "Invalid netmask `%s' for %s", slash + 1, clp->m_hostname);
+	return 0;
 
 out_badprefix:
 	xlog(L_ERROR, "Invalid prefix `%s' for %s", slash + 1, clp->m_hostname);
 	return 0;
 }
 
+#ifdef IPV6_SUPPORTED
+static int
+init_netmask6(nfs_client *clp, const char *slash)
+{
+	struct sockaddr_in6 sin6 = {
+		.sin6_family		= AF_INET6,
+	};
+	unsigned long prefixlen;
+	uint32_t shift;
+	int i;
+
+	/*
+	 * Decide what kind of netmask was specified.  If there's
+	 * no '/' present, assume the netmask is all ones.  If
+	 * there is a '/' and at least one ':', look for a spelled-
+	 * out netmask.  Otherwise, assume it was a prefixlen.
+	 */
+	if (slash == NULL)
+		prefixlen = 128;
+	else {
+		if (strchr(slash + 1, ':') != NULL) {
+			if (!inet_pton(AF_INET6, slash + 1, &sin6.sin6_addr))
+				goto out_badmask;
+			set_addrlist_in6(clp, 1, &sin6);
+			return 1;
+		} else {
+			char *endptr;
+
+			prefixlen = strtoul(slash + 1, &endptr, 10);
+			if (*endptr != '\0' && prefixlen != ULONG_MAX &&
+			    errno != ERANGE)
+				goto out_badprefix;
+		}
+		if (prefixlen > 128)
+			goto out_badprefix;
+	}
+
+	/*
+	 * Now construct the full netmask bitmask in a sockaddr_in6,
+	 * and plant it in the nfs_client record.
+	 */
+	for (i = 0; prefixlen > 32; i++) {
+		sin6.sin6_addr.s6_addr32[i] = 0xffffffff;
+		prefixlen -= 32;
+	}
+	shift = 32 - (uint32_t)prefixlen;
+	sin6.sin6_addr.s6_addr32[i] = htonl((uint32_t)~0 << shift);
+	set_addrlist_in6(clp, 1, &sin6);
+
+	return 1;
+
+out_badmask:
+	xlog(L_ERROR, "Invalid netmask `%s' for %s", slash + 1, clp->m_hostname);
+	return 0;
+
+out_badprefix:
+	xlog(L_ERROR, "Invalid prefix `%s' for %s", slash + 1, clp->m_hostname);
+	return 0;
+}
+#else	/* IPV6_SUPPORTED */
+static int
+init_netmask6(nfs_client *UNUSED(clp), const char *UNUSED(slash))
+{
+}
+#endif	/* IPV6_SUPPORTED */
+
+/*
+ * Parse the network mask for M_SUBNETWORK type clients.
+ *
+ * Return TRUE if successful, or FALSE if some error occurred.
+ */
 static int
 init_subnetwork(nfs_client *clp)
 {
-	struct sockaddr_in sin = {
-		.sin_family		= AF_INET,
-	};
-	static char slash32[] = "/32";
-	char *cp;
+	struct addrinfo *ai;
+	sa_family_t family;
+	int result = 0;
+	char *slash;
 
-	cp = strchr(clp->m_hostname, '/');
-	if (cp == NULL)
-		cp = slash32;
+	slash = strchr(clp->m_hostname, '/');
+	if (slash != NULL) {
+		*slash = '\0';
+		ai = host_pton(clp->m_hostname);
+		*slash = '/';
+	} else
+		ai = host_pton(clp->m_hostname);
+	if (ai == NULL) {
+		xlog(L_ERROR, "Invalid IP address %s", clp->m_hostname);
+		return result;
+	}
 
-	*cp = '\0';
-	sin.sin_addr.s_addr = inet_addr(clp->m_hostname);
-	set_addrlist_in(clp, 0, &sin);
-	*cp = '/';
+	set_addrlist(clp, 0, ai->ai_addr);
+	family = ai->ai_addr->sa_family;
 
-	return init_netmask(clp, cp);
+	freeaddrinfo(ai);
+
+	switch (family) {
+	case AF_INET:
+		result = init_netmask4(clp, slash);
+		break;
+	case AF_INET6:
+		result = init_netmask6(clp, slash);
+		break;
+	default:
+		xlog(L_ERROR, "Unsupported address family for %s",
+			clp->m_hostname);
+	}
+
+	return result;
 }
 
 static int
@@ -372,27 +494,6 @@ add_name(char *old, const char *add)
 	return new;
 }
 
-static _Bool
-addrs_match4(const struct sockaddr *sa1, const struct sockaddr *sa2)
-{
-	const struct sockaddr_in *si1 = (const struct sockaddr_in *)sa1;
-	const struct sockaddr_in *si2 = (const struct sockaddr_in *)sa2;
-
-	return si1->sin_addr.s_addr == si2->sin_addr.s_addr;
-}
-
-static _Bool
-addrs_match(const struct sockaddr *sa1, const struct sockaddr *sa2)
-{
-	if (sa1->sa_family == sa2->sa_family)
-		switch (sa1->sa_family) {
-		case AF_INET:
-			return addrs_match4(sa1, sa2);
-		}
-
-	return false;
-}
-
 /*
  * Check each address listed in @ai against each address
  * stored in @clp.  Return 1 if a match is found, otherwise
@@ -405,7 +506,8 @@ check_fqdn(const nfs_client *clp, const struct addrinfo *ai)
 
 	for (; ai; ai = ai->ai_next)
 		for (i = 0; i < clp->m_naddr; i++)
-			if (addrs_match(ai->ai_addr, get_addrlist(clp, i)))
+			if (nfs_compare_sockaddr(ai->ai_addr,
+							get_addrlist(clp, i)))
 				return 1;
 
 	return 0;
@@ -435,6 +537,43 @@ check_subnet_v4(const struct sockaddr_in *address,
 	return 0;
 }
 
+#ifdef IPV6_SUPPORTED
+static int
+check_subnet_v6(const struct sockaddr_in6 *address,
+		const struct sockaddr_in6 *mask, const struct addrinfo *ai)
+{
+	for (; ai; ai = ai->ai_next) {
+		struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)ai->ai_addr;
+
+		if (sin6->sin6_family != AF_INET6)
+			continue;
+
+		if (mask_match(address->sin6_addr.s6_addr32[0],
+				sin6->sin6_addr.s6_addr32[0],
+				mask->sin6_addr.s6_addr32[0]) &&
+		    mask_match(address->sin6_addr.s6_addr32[1],
+				sin6->sin6_addr.s6_addr32[1],
+				mask->sin6_addr.s6_addr32[1]) &&
+		    mask_match(address->sin6_addr.s6_addr32[2],
+				sin6->sin6_addr.s6_addr32[2],
+				mask->sin6_addr.s6_addr32[2]) &&
+		    mask_match(address->sin6_addr.s6_addr32[3],
+				sin6->sin6_addr.s6_addr32[3],
+				mask->sin6_addr.s6_addr32[3]))
+			return 1;
+	}
+	return 0;
+}
+#else	/* !IPV6_SUPPORTED */
+static int
+check_subnet_v6(const struct sockaddr_in6 *UNUSED(address),
+		const struct sockaddr_in6 *UNUSED(mask),
+		const struct addrinfo *UNUSED(ai))
+{
+	return 0;
+}
+#endif	/* !IPV6_SUPPORTED */
+
 /*
  * Check each address listed in @ai against the subnetwork or
  * host address stored in @clp.  Return 1 if an address in @hp
@@ -447,6 +586,9 @@ check_subnetwork(const nfs_client *clp, const struct addrinfo *ai)
 	case AF_INET:
 		return check_subnet_v4(get_addrlist_in(clp, 0),
 				get_addrlist_in(clp, 1), ai);
+	case AF_INET6:
+		return check_subnet_v6(get_addrlist_in6(clp, 0),
+				get_addrlist_in6(clp, 1), ai);
 	}
 
 	return 0;
@@ -602,7 +744,8 @@ client_check(const nfs_client *clp, const struct addrinfo *ai)
 int
 client_gettype(char *ident)
 {
-	char	*sp;
+	struct addrinfo *ai;
+	char *sp;
 
 	if (ident[0] == '\0' || strcmp(ident, "*")==0)
 		return MCL_ANONYMOUS;
@@ -622,12 +765,16 @@ client_gettype(char *ident)
 		if (*sp == '\\' && sp[1])
 			sp++;
 	}
-	/* check for N.N.N.N */
-	sp = ident;
-	if(!isdigit(*sp) || strtoul(sp, &sp, 10) > 255 || *sp != '.') return MCL_FQDN;
-	sp++; if(!isdigit(*sp) || strtoul(sp, &sp, 10) > 255 || *sp != '.') return MCL_FQDN;
-	sp++; if(!isdigit(*sp) || strtoul(sp, &sp, 10) > 255 || *sp != '.') return MCL_FQDN;
-	sp++; if(!isdigit(*sp) || strtoul(sp, &sp, 10) > 255 || *sp != '\0') return MCL_FQDN;
-	/* we lie here a bit. but technically N.N.N.N == N.N.N.N/32 :) */
-	return MCL_SUBNETWORK;
+
+	/*
+	 * Treat unadorned IP addresses as MCL_SUBNETWORK.
+	 * Everything else is MCL_FQDN.
+	 */
+	ai = host_pton(ident);
+	if (ai != NULL) {
+		freeaddrinfo(ai);
+		return MCL_SUBNETWORK;
+	}
+
+	return MCL_FQDN;
 }

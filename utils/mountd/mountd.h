@@ -41,14 +41,19 @@ bool_t		mount_mnt_3_svc(struct svc_req *, dirpath *, mountres3 *);
 void		mount_dispatch(struct svc_req *, SVCXPRT *);
 void		auth_init(char *export_file);
 unsigned int	auth_reload(void);
-nfs_export *	auth_authenticate(char *what, struct sockaddr_in *sin,
-					char *path);
+nfs_export *	auth_authenticate(const char *what,
+					const struct sockaddr *caller,
+					const char *path);
 void		auth_export(nfs_export *exp);
 
 void		mountlist_add(char *host, const char *path);
 void		mountlist_del(char *host, const char *path);
-void		mountlist_del_all(struct sockaddr_in *sin);
+void		mountlist_del_all(const struct sockaddr *sap);
 mountlist	mountlist_list(void);
 
+void		cache_open(void);
+struct nfs_fh_len *
+		cache_get_filehandle(nfs_export *exp, int len, char *p);
+int		cache_export(nfs_export *exp, char *path);
 
 #endif /* MOUNTD_H */

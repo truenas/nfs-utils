@@ -31,7 +31,7 @@ enum {
 	SRVPROC3_SZ = 22,
 	CLTPROC3_SZ = 22,
 	SRVPROC4_SZ = 2,
-	CLTPROC4_SZ = 48,
+	CLTPROC4_SZ = 49,
 	SRVPROC4OPS_SZ = 59,
 };
 
@@ -118,6 +118,7 @@ static const char *	nfscltproc4name[CLTPROC4_SZ] = {
 	"remove",    "rename",    "link",    "symlink",     "create",      "pathconf",
 	"statfs",    "readlink",  "readdir", "server_caps", "delegreturn", "getacl",
 	"setacl",    "fs_locations",
+	"rel_lkowner",
 	/* nfsv4.1 client ops */
 	"exchange_id",
 	"create_ses",
@@ -791,7 +792,7 @@ print_callstats(const char *hdr, const char **names,
 {
 	unsigned long long	total;
 	unsigned long long	pct;
-	int		i, j;
+	unsigned int		i, j;
 
 	fputs(hdr, stdout);
 	for (i = 0, total = 0; i < nr; i++)
@@ -816,7 +817,7 @@ print_callstats_list(const char *hdr, const char **names,
 		 	unsigned int *callinfo, unsigned int nr)
 {
 	unsigned long long	calltotal;
-	int			i;
+	unsigned int			i;
 
 	for (i = 0, calltotal = 0; i < nr; i++) {
 		calltotal += callinfo[i];
@@ -1118,7 +1119,7 @@ unpause(int sig)
 	time_diff = difftime(endtime, starttime);
 	minutes = time_diff / 60;
 	seconds = (int)time_diff % 60;
-	printf("Signal received; displaying (only) statistics gathered over the last %d minutes, %d seconds:\n\n", minutes, seconds);
+	printf("Signal %d received; displaying (only) statistics gathered over the last %d minutes, %d seconds:\n\n", sig, minutes, seconds);
 }
 
 static void

@@ -24,9 +24,24 @@ static int export_hash(char *);
 
 static void	export_init(nfs_export *exp, nfs_client *clp,
 					struct exportent *nep);
-static int	export_check(nfs_export *, struct hostent *, char *);
+static void	export_add(nfs_export *exp);
+static int	export_check(const nfs_export *exp, const struct addrinfo *ai,
+				const char *path);
 static nfs_export *
-		export_allowed_internal(struct hostent *hp, char *path);
+		export_allowed_internal(const struct addrinfo *ai,
+				const char *path);
+
+static void
+export_free(nfs_export *exp)
+{
+	xfree(exp->m_export.e_squids);
+	xfree(exp->m_export.e_sqgids);
+	free(exp->m_export.e_mountpoint);
+	free(exp->m_export.e_fslocdata);
+
+	xfree(exp->m_export.e_hostname);
+	xfree(exp);
+}
 
 static void warn_duplicated_exports(nfs_export *exp, struct exportent *eep)
 {
@@ -44,7 +59,12 @@ static void warn_duplicated_exports(nfs_export *exp, struct exportent *eep)
 	}
 }
 
-int
+/**
+ * export_read - read entries from /etc/exports
+ * @fname: name of file to read from
+ *
+ */
+void
 export_read(char *fname)
 {
 	struct exportent	*eep;
@@ -59,11 +79,15 @@ export_read(char *fname)
 			warn_duplicated_exports(exp, eep);
 	}
 	endexportent();
-	return 0;
 }
 
-/*
- * Create an in-core export struct from an export entry.
+/**
+ * export_create - create an in-core nfs_export record from an export entry
+ * @xep: export entry to lookup
+ * @canonical: if set, e_hostname is known to be canonical DNS name
+ *
+ * Returns a freshly instantiated export record, or NULL if
+ * a problem occurred.
  */
 nfs_export *
 export_create(struct exportent *xep, int canonical)
@@ -105,8 +129,8 @@ export_init(nfs_export *exp, nfs_client *clp, struct exportent *nep)
  * original hostname from /etc/exports, while the in-core client struct
  * gets the newly found FQDN.
  */
-nfs_export *
-export_dup(nfs_export *exp, struct hostent *hp)
+static nfs_export *
+export_dup(nfs_export *exp, const struct addrinfo *ai)
 {
 	nfs_export		*new;
 	nfs_client		*clp;
@@ -116,7 +140,11 @@ export_dup(nfs_export *exp, struct hostent *hp)
 	dupexportent(&new->m_export, &exp->m_export);
 	if (exp->m_export.e_hostname)
 		new->m_export.e_hostname = xstrdup(exp->m_export.e_hostname);
-	clp = client_dup(exp->m_client, hp);
+	clp = client_dup(exp->m_client, ai);
+	if (clp == NULL) {
+		export_free(new);
+		return NULL;
+	}
 	clp->m_count++;
 	new->m_client = clp;
 	new->m_mayexport = exp->m_mayexport;
@@ -128,10 +156,8 @@ export_dup(nfs_export *exp, struct hostent *hp)
 
 	return new;
 }
-/*
- * Add export entry to hash table
- */
-void 
+
+static void
 export_add(nfs_export *exp)
 {
 	exp_hash_table *p_tbl;
@@ -159,19 +185,27 @@ export_add(nfs_export *exp)
 	}
 }
 
+/**
+ * export_find - find or create a suitable nfs_export for @ai and @path
+ * @ai: pointer to addrinfo for client
+ * @path: '\0'-terminated ASCII string containing export path
+ *
+ * Returns a pointer to nfs_export data matching @ai and @path,
+ * or NULL if an error occurs.
+ */
 nfs_export *
-export_find(struct hostent *hp, char *path)
+export_find(const struct addrinfo *ai, const char *path)
 {
 	nfs_export	*exp;
 	int		i;
 
 	for (i = 0; i < MCL_MAXTYPES; i++) {
 		for (exp = exportlist[i].p_head; exp; exp = exp->m_next) {
-			if (!export_check(exp, hp, path))
+			if (!export_check(exp, ai, path))
 				continue;
 			if (exp->m_client->m_type == MCL_FQDN)
 				return exp;
-			return export_dup(exp, hp);
+			return export_dup(exp, ai);
 		}
 	}
 
@@ -179,7 +213,7 @@ export_find(struct hostent *hp, char *path)
 }
 
 static nfs_export *
-export_allowed_internal (struct hostent *hp, char *path)
+export_allowed_internal(const struct addrinfo *ai, const char *path)
 {
 	nfs_export	*exp;
 	int		i;
@@ -187,7 +221,7 @@ export_allowed_internal (struct hostent *hp, char *path)
 	for (i = 0; i < MCL_MAXTYPES; i++) {
 		for (exp = exportlist[i].p_head; exp; exp = exp->m_next) {
 			if (!exp->m_mayexport ||
-			    !export_check(exp, hp, path))
+			    !export_check(exp, ai, path))
 				continue;
 			return exp;
 		}
@@ -196,8 +230,16 @@ export_allowed_internal (struct hostent *hp, char *path)
 	return NULL;
 }
 
+/**
+ * export_allowed - determine if this export is allowed
+ * @ai: pointer to addrinfo for client
+ * @path: '\0'-terminated ASCII string containing export path
+ *
+ * Returns a pointer to nfs_export data matching @ai and @path,
+ * or NULL if the export is not allowed.
+ */
 nfs_export *
-export_allowed(struct hostent *hp, char *path)
+export_allowed(const struct addrinfo *ai, const char *path)
 {
 	nfs_export		*exp;
 	char			epath[MAXPATHLEN+1];
@@ -210,7 +252,7 @@ export_allowed(struct hostent *hp, char *path)
 
 	/* Try the longest matching exported pathname. */
 	while (1) {
-		exp = export_allowed_internal (hp, epath);
+		exp = export_allowed_internal(ai, epath);
 		if (exp)
 			return exp;
 		/* We have to treat the root, "/", specially. */
@@ -223,11 +265,17 @@ export_allowed(struct hostent *hp, char *path)
 	return NULL;
 }
 
-/*
- * Search hash table for export entry. 
- */  
+/**
+ * export_lookup - search hash table for export entry
+ * @hname: '\0'-terminated ASCII string containing client hostname to look for
+ * @path: '\0'-terminated ASCII string containing export path to look for
+ * @canonical: if set, @hname is known to be canonical DNS name
+ *
+ * Returns a pointer to nfs_export record matching @hname and @path,
+ * or NULL if the export was not found.
+ */
 nfs_export *
-export_lookup(char *hname, char *path, int canonical) 
+export_lookup(char *hname, char *path, int canonical)
 {
 	nfs_client *clp;
 	nfs_export *exp;
@@ -251,14 +299,18 @@ export_lookup(char *hname, char *path, int canonical)
 }
 
 static int
-export_check(nfs_export *exp, struct hostent *hp, char *path)
+export_check(const nfs_export *exp, const struct addrinfo *ai, const char *path)
 {
 	if (strcmp(path, exp->m_export.e_path))
 		return 0;
 
-	return client_check(exp->m_client, hp);
+	return client_check(exp->m_client, ai);
 }
 
+/**
+ * export_freeall - deallocate all nfs_export records
+ *
+ */
 void
 export_freeall(void)
 {
@@ -269,22 +321,13 @@ export_freeall(void)
 		for (exp = exportlist[i].p_head; exp; exp = nxt) {
 			nxt = exp->m_next;
 			client_release(exp->m_client);
-			if (exp->m_export.e_squids)
-				xfree(exp->m_export.e_squids);
-			if (exp->m_export.e_sqgids)
-				xfree(exp->m_export.e_sqgids);
-			if (exp->m_export.e_mountpoint)
-				free(exp->m_export.e_mountpoint);
-			if (exp->m_export.e_fslocdata)
-				xfree(exp->m_export.e_fslocdata);
-			xfree(exp->m_export.e_hostname);
-			xfree(exp);
+			export_free(exp);
 		}
-      for(j = 0; j < HASH_TABLE_SIZE; j++) {
-        exportlist[i].entries[j].p_first = NULL;
-        exportlist[i].entries[j].p_last = NULL;
-      }
-      exportlist[i].p_head = NULL;
+		for (j = 0; j < HASH_TABLE_SIZE; j++) {
+			exportlist[i].entries[j].p_first = NULL;
+			exportlist[i].entries[j].p_last = NULL;
+		}
+		exportlist[i].p_head = NULL;
 	}
 	client_freeall();
 }

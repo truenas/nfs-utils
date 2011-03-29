@@ -54,7 +54,7 @@ struct nsm_host {
 	uint32_t		xid;
 };
 
-static char		nsm_hostname[256];
+static char		nsm_hostname[SM_MAXSTRLEN + 1];
 static int		nsm_state;
 static int		nsm_family = AF_INET;
 static int		opt_debug = 0;
@@ -412,12 +412,33 @@ usage:		fprintf(stderr,
 		}
 	}
 
-	if (opt_srcaddr) {
-		strncpy(nsm_hostname, opt_srcaddr, sizeof(nsm_hostname)-1);
-	} else
-	if (gethostname(nsm_hostname, sizeof(nsm_hostname)) < 0) {
-		xlog(L_ERROR, "Failed to obtain name of local host: %m");
-		exit(1);
+	if (opt_srcaddr != NULL) {
+		struct addrinfo *ai = NULL;
+		struct addrinfo hint = {
+			.ai_family	= AF_UNSPEC,
+			.ai_flags	= AI_NUMERICHOST,
+		};
+
+		if (getaddrinfo(opt_srcaddr, NULL, &hint, &ai))
+			/* not a presentation address - use it */
+			strncpy(nsm_hostname, opt_srcaddr, sizeof(nsm_hostname));
+		else {
+			/* was a presentation address - look it up in
+			 * /etc/hosts, so it can be used for my_name */
+			int error;
+
+			freeaddrinfo(ai);
+			hint.ai_flags = AI_CANONNAME;
+			error = getaddrinfo(opt_srcaddr, NULL, &hint, &ai);
+			if (error != 0) {
+				xlog(L_ERROR, "Bind address %s is unusable: %s",
+						opt_srcaddr, gai_strerror(error));
+				exit(1);
+			}
+			strncpy(nsm_hostname, ai->ai_canonname,
+							sizeof(nsm_hostname));
+			freeaddrinfo(ai);
+		}
 	}
 
 	(void)nsm_retire_monitored_hosts();
@@ -535,6 +556,8 @@ notify(const int sock)
 static int
 notify_host(int sock, struct nsm_host *host)
 {
+	const char *my_name = (opt_srcaddr != NULL ?
+					nsm_hostname : host->my_name);
 	struct sockaddr *sap;
 	socklen_t salen;
 
@@ -580,8 +603,8 @@ notify_host(int sock, struct nsm_host *host)
 		host->xid = nsm_xmit_rpcbind(sock, sap, SM_PROG, SM_VERS);
 	else
 		host->xid = nsm_xmit_notify(sock, sap, salen,
-				SM_PROG, nsm_hostname, nsm_state);
-	
+					SM_PROG, my_name, nsm_state);
+
 	return 0;
 }
 
@@ -611,15 +634,28 @@ recv_rpcbind_reply(struct sockaddr *sap, struct nsm_host *host, XDR *xdr)
 }
 
 /*
- * Successful NOTIFY call. Server returns void, so nothing
- * we need to do here.
+ * Successful NOTIFY call. Server returns void.
+ *
+ * Try sending another SM_NOTIFY with an unqualified "my_name"
+ * argument.  Reuse the port number.  If "my_name" is already
+ * unqualified, we're done.
  */
 static void
 recv_notify_reply(struct nsm_host *host)
 {
-	xlog(D_GENERAL, "Host %s notified successfully", host->name);
+	char *dot = strchr(host->my_name, '.');
 
-	smn_forget_host(host);
+	if (dot != NULL) {
+		*dot = '\0';
+		host->send_next = time(NULL);
+		host->xid = 0;
+		if (host->timeout >= NSM_MAX_TIMEOUT / 4)
+			host->timeout = NSM_MAX_TIMEOUT / 4;
+		insert_host(host);
+	} else {
+		xlog(D_GENERAL, "Host %s notified successfully", host->name);
+		smn_forget_host(host);
+	}
 }
 
 /*

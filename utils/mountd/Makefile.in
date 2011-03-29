@@ -47,6 +47,11 @@ am__aclocal_m4_deps = $(top_srcdir)/aclocal/bsdsignals.m4 \
 	$(top_srcdir)/aclocal/libnfsidmap.m4 \
 	$(top_srcdir)/aclocal/librpcsecgss.m4 \
 	$(top_srcdir)/aclocal/libtirpc.m4 \
+	$(top_srcdir)/aclocal/libtool.m4 \
+	$(top_srcdir)/aclocal/ltoptions.m4 \
+	$(top_srcdir)/aclocal/ltsugar.m4 \
+	$(top_srcdir)/aclocal/ltversion.m4 \
+	$(top_srcdir)/aclocal/lt~obsolete.m4 \
 	$(top_srcdir)/aclocal/nfs-utils.m4 \
 	$(top_srcdir)/aclocal/rpcsec_vers.m4 \
 	$(top_srcdir)/aclocal/tcp-wrappers.m4 \
@@ -194,6 +199,7 @@ PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@
 PACKAGE_NAME = @PACKAGE_NAME@
 PACKAGE_STRING = @PACKAGE_STRING@
 PACKAGE_TARNAME = @PACKAGE_TARNAME@
+PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 PKG_CONFIG = @PKG_CONFIG@

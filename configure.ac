@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 dnl
-AC_INIT([linux nfs-utils],[1.2.2],[linux-nfs@vger.kernel.org],[nfs-utils])
+AC_INIT([linux nfs-utils],[1.2.3],[linux-nfs@vger.kernel.org],[nfs-utils])
 AC_CANONICAL_BUILD([])
 AC_CANONICAL_HOST([])
 AC_CONFIG_MACRO_DIR(aclocal)
@@ -81,7 +81,7 @@ AC_ARG_ENABLE(nfsv41,
 	if test "$enable_nfsv41" = yes; then
 		AC_DEFINE(NFS41_SUPPORTED, 1, [Define this if you want NFSv41 support compiled in])
 	else
-		enable_nfsv4=
+		enable_nfsv41=
 	fi
 	AC_SUBST(enable_nfsv41)
 	AM_CONDITIONAL(CONFIG_NFSV41, [test "$enable_nfsv41" = "yes"])
@@ -400,7 +400,7 @@ case $host in
     ARCHFLAGS="" ;;
 esac
 
-my_am_cflags="-Wall -Wstrict-prototypes $ARCHFLAGS -pipe"
+my_am_cflags="-Wall -Wextra -Wstrict-prototypes $ARCHFLAGS -pipe"
 
 AC_SUBST([AM_CFLAGS], ["$my_am_cflags"])
 
@@ -425,6 +425,8 @@ AC_CONFIG_FILES([
 	tools/nlmtest/Makefile
 	tools/rpcdebug/Makefile
 	tools/rpcgen/Makefile
+	tools/mountstats/Makefile
+	tools/nfs-iostat/Makefile
 	utils/Makefile
 	utils/exportfs/Makefile
 	utils/gssd/Makefile

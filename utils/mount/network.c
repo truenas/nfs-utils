@@ -53,6 +53,7 @@
 #include "parse_opt.h"
 #include "network.h"
 #include "conffile.h"
+#include "nfslib.h"
 
 #define PMAP_TIMEOUT	(10)
 #define CONNECT_TIMEOUT	(20)
@@ -82,6 +83,7 @@ static const char *nfs_nfs_pgmtbl[] = {
 static const char *nfs_transport_opttbl[] = {
 	"udp",
 	"tcp",
+	"rdma",
 	"proto",
 	NULL,
 };
@@ -857,7 +859,14 @@ int nfs_advise_umount(const struct sockaddr *sap, const socklen_t salen,
 		return 0;
 	}
 
-	client->cl_auth = authunix_create_default();
+	client->cl_auth = nfs_authsys_create();
+	if (client->cl_auth == NULL) {
+		if (verbose)
+			nfs_error(_("%s: Failed to create RPC auth handle"),
+				progname);
+		CLNT_DESTROY(client);
+		return 0;
+	}
 
 	res = CLNT_CALL(client, MOUNTPROC_UMNT,
 			(xdrproc_t)xdr_dirpath, (caddr_t)argp,
@@ -957,8 +966,10 @@ CLIENT *mnt_openclnt(clnt_addr_t *mnt_server, int *msock)
 	}
 	if (clnt) {
 		/* try to mount hostname:dirname */
-		clnt->cl_auth = authunix_create_default();
-		return clnt;
+		clnt->cl_auth = nfs_authsys_create();
+		if (clnt->cl_auth)
+			return clnt;
+		CLNT_DESTROY(clnt);
 	}
 	return NULL;
 }
@@ -1203,6 +1214,8 @@ nfs_nfs_program(struct mount_options *options, unsigned long *program)
 			return 1;
 		}
 	case PO_BAD_VALUE:
+		nfs_error(_("%s: invalid value for 'nfsprog=' option"),
+				progname);
 		return 0;
 	}
 
@@ -1242,9 +1255,12 @@ nfs_nfs_version(struct mount_options *options, unsigned long *version)
 			}
 			return 0;
 		case PO_NOT_FOUND:
-			nfs_error(_("%s: option parsing error\n"),
+			nfs_error(_("%s: parsing error on 'vers=' option\n"),
 					progname);
+			return 0;
 		case PO_BAD_VALUE:
+			nfs_error(_("%s: invalid value for 'vers=' option"),
+					progname);
 			return 0;
 		}
 	case 4: /* nfsvers */
@@ -1256,9 +1272,12 @@ nfs_nfs_version(struct mount_options *options, unsigned long *version)
 			}
 			return 0;
 		case PO_NOT_FOUND:
-			nfs_error(_("%s: option parsing error\n"),
+			nfs_error(_("%s: parsing error on 'nfsvers=' option\n"),
 					progname);
+			return 0;
 		case PO_BAD_VALUE:
+			nfs_error(_("%s: invalid value for 'nfsvers=' option"),
+					progname);
 			return 0;
 		}
 	}
@@ -1289,11 +1308,16 @@ nfs_nfs_protocol(struct mount_options *options, unsigned long *protocol)
 	case 1: /* tcp */
 		*protocol = IPPROTO_TCP;
 		return 1;
-	case 2: /* proto */
+	case 2: /* rdma */
+		*protocol = NFSPROTO_RDMA;
+		return 1;
+	case 3: /* proto */
 		option = po_get(options, "proto");
 		if (option != NULL) {
 			if (!nfs_get_proto(option, &family, protocol)) {
 				errno = EPROTONOSUPPORT;
+				nfs_error(_("%s: Failed to find '%s' protocol"), 
+					progname, option);
 				return 0;
 			}
 			return 1;
@@ -1327,6 +1351,8 @@ nfs_nfs_port(struct mount_options *options, unsigned long *port)
 			return 1;
 		}
 	case PO_BAD_VALUE:
+		nfs_error(_("%s: invalid value for 'port=' option"),
+				progname);
 		return 0;
 	}
 
@@ -1342,7 +1368,7 @@ nfs_nfs_port(struct mount_options *options, unsigned long *port)
 sa_family_t	config_default_family = AF_UNSPEC;
 
 static int
-nfs_verify_family(sa_family_t family)
+nfs_verify_family(sa_family_t UNUSED(family))
 {
 	return 1;
 }
@@ -1374,14 +1400,20 @@ int nfs_nfs_proto_family(struct mount_options *options,
 	switch (po_rightmost(options, nfs_transport_opttbl)) {
 	case 0:	/* udp */
 	case 1: /* tcp */
+	case 2: /* rdma */
 		/* for compatibility; these are always AF_INET */
 		*family = AF_INET;
 		return 1;
-	case 2: /* proto */
+	case 3: /* proto */
 		option = po_get(options, "proto");
 		if (option != NULL &&
-		    !nfs_get_proto(option, &tmp_family, &protocol))
-			goto out_err;
+		    !nfs_get_proto(option, &tmp_family, &protocol)) {
+
+			nfs_error(_("%s: Failed to find '%s' protocol"), 
+				progname, option);
+			errno = EPROTONOSUPPORT;
+			return 0;
+		}
 	}
 
 	if (!nfs_verify_family(tmp_family))
@@ -1414,6 +1446,8 @@ nfs_mount_program(struct mount_options *options, unsigned long *program)
 			return 1;
 		}
 	case PO_BAD_VALUE:
+		nfs_error(_("%s: invalid value for 'mountprog=' option"),
+				progname);
 		return 0;
 	}
 
@@ -1443,6 +1477,8 @@ nfs_mount_version(struct mount_options *options, unsigned long *version)
 			return 1;
 		}
 	case PO_BAD_VALUE:
+		nfs_error(_("%s: invalid value for 'mountvers=' option"),
+				progname);
 		return 0;
 	}
 
@@ -1469,6 +1505,8 @@ nfs_mount_protocol(struct mount_options *options, unsigned long *protocol)
 	if (option != NULL) {
 		if (!nfs_get_proto(option, &family, protocol)) {
 			errno = EPROTONOSUPPORT;
+			nfs_error(_("%s: Failed to find '%s' protocol"), 
+				progname, option);
 			return 0;
 		}
 		return 1;
@@ -1501,6 +1539,8 @@ nfs_mount_port(struct mount_options *options, unsigned long *port)
 			return 1;
 		}
 	case PO_BAD_VALUE:
+		nfs_error(_("%s: invalid value for 'mountport=' option"),
+				progname);
 		return 0;
 	}
 
@@ -1526,8 +1566,12 @@ int nfs_mount_proto_family(struct mount_options *options,
 
 	option = po_get(options, "mountproto");
 	if (option != NULL) {
-		if (!nfs_get_proto(option, &tmp_family, &protocol))
+		if (!nfs_get_proto(option, &tmp_family, &protocol)) {
+			nfs_error(_("%s: Failed to find '%s' protocol"), 
+				progname, option);
+			errno = EPROTONOSUPPORT;
 			goto out_err;
+		}
 		if (!nfs_verify_family(tmp_family))
 			goto out_err;
 		*family = tmp_family;

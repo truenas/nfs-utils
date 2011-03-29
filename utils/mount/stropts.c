@@ -302,11 +302,16 @@ static int nfs_set_version(struct nfsmount_info *mi)
 
 	if (strncmp(mi->type, "nfs4", 4) == 0)
 		mi->version = 4;
-	else {
-		char *option = po_get(mi->options, "proto");
-		if (option && strcmp(option, "rdma") == 0)
-			mi->version = 3;
-	}
+
+	/*
+	 * Before 2.6.32, the kernel NFS client didn't
+	 * support "-t nfs vers=4" mounts, so NFS version
+	 * 4 cannot be included when autonegotiating
+	 * while running on those kernels.
+	 */
+	if (mi->version == 0 &&
+	    linux_version_code() <= MAKE_VERSION(2, 6, 31))
+		mi->version = 3;
 
 	/*
 	 * If we still don't know, check for version-specific
@@ -490,14 +495,18 @@ nfs_rewrite_pmap_mount_options(struct mount_options *options)
 	union nfs_sockaddr mnt_address;
 	struct sockaddr *mnt_saddr = &mnt_address.sa;
 	socklen_t mnt_salen = sizeof(mnt_address);
+	unsigned long protocol;
 	struct pmap mnt_pmap;
-	char *option;
 
 	/*
-	 * Skip option negotiation for proto=rdma mounts.
+	 * Version and transport negotiation is not required
+	 * and does not work for RDMA mounts.
 	 */
-	option = po_get(options, "proto");
-	if (option && strcmp(option, "rdma") == 0)
+	if (!nfs_nfs_protocol(options, &protocol)) {
+		errno = EINVAL;
+		return 0;
+	}
+	if (protocol == NFSPROTO_RDMA)
 		goto out;
 
 	/*
@@ -538,7 +547,10 @@ nfs_rewrite_pmap_mount_options(struct mount_options *options)
 
 	if (!nfs_construct_new_options(options, nfs_saddr, &nfs_pmap,
 					mnt_saddr, &mnt_pmap)) {
-		errno = EINVAL;
+		if (rpc_createerr.cf_stat == RPC_UNKNOWNPROTO)
+			errno = EPROTONOSUPPORT;
+		else
+			errno = EINVAL;
 		return 0;
 	}
 
@@ -586,18 +598,21 @@ static int nfs_do_mount_v3v2(struct nfsmount_info *mi,
 		errno = ENOMEM;
 		return result;
 	}
-
+	errno = 0;
 	if (!nfs_append_addr_option(sap, salen, options)) {
-		errno = EINVAL;
+		if (errno == 0)
+			errno = EINVAL;
 		goto out_fail;
 	}
 
 	if (!nfs_fix_mounthost_option(options, mi->hostname)) {
-		errno = EINVAL;
+		if (errno == 0)
+			errno = EINVAL;
 		goto out_fail;
 	}
 	if (!mi->fake && !nfs_verify_lock_option(options)) {
-		errno = EINVAL;
+		if (errno == 0)
+			errno = EINVAL;
 		goto out_fail;
 	}
 
@@ -741,6 +756,47 @@ static int nfs_try_mount_v4(struct nfsmount_info *mi)
 }
 
 /*
+ * Handle NFS version and transport protocol
+ * autonegotiation.
+ *
+ * When no version or protocol is specified on the
+ * command line, mount.nfs negotiates with the server
+ * to determine appropriate settings for the new
+ * mount point.
+ *
+ * Returns TRUE if successful, otherwise FALSE.
+ * "errno" is set to reflect the individual error.
+ */
+static int nfs_autonegotiate(struct nfsmount_info *mi)
+{
+	int result;
+
+	result = nfs_try_mount_v4(mi);
+	if (result)
+		return result;
+		
+	switch (errno) {
+	case EPROTONOSUPPORT:
+		/* A clear indication that the server or our
+		 * client does not support NFS version 4. */
+		goto fall_back;
+	case ENOENT:
+		/* Legacy Linux servers don't export an NFS
+		 * version 4 pseudoroot. */
+		goto fall_back;
+	case EPERM:
+		/* Linux servers prior to 2.6.25 may return
+		 * EPERM when NFS version 4 is not supported. */
+		goto fall_back;
+	default:
+		return result;
+	}
+
+fall_back:
+	return nfs_try_mount_v3v2(mi);
+}
+
+/*
  * This is a single pass through the fg/bg loop.
  *
  * Returns TRUE if successful, otherwise FALSE.
@@ -752,20 +808,8 @@ static int nfs_try_mount(struct nfsmount_info *mi)
 
 	switch (mi->version) {
 	case 0:
-		if (linux_version_code() > MAKE_VERSION(2, 6, 31)) {
-			errno = 0;
-			result = nfs_try_mount_v4(mi);
-			if (errno != EPROTONOSUPPORT) {
-				/* 
-				 * To deal with legacy Linux servers that don't
-				 * automatically export a pseudo root, retry
-				 * ENOENT errors using version 3. And for
-				 * Linux servers prior to 2.6.25, retry EPERM
-				 */
-				if (errno != ENOENT && errno != EPERM)
-					break;
-			}
-		}
+		result = nfs_autonegotiate(mi);
+		break;
 	case 2:
 	case 3:
 		result = nfs_try_mount_v3v2(mi);
@@ -799,6 +843,7 @@ static int nfs_is_permanent_error(int error)
 	case ESTALE:
 	case ETIMEDOUT:
 	case ECONNREFUSED:
+	case EHOSTUNREACH:
 		return 0;	/* temporary */
 	default:
 		return 1;	/* permanent */
@@ -922,6 +967,26 @@ static int nfsmount_bg(struct nfsmount_info *mi)
 }
 
 /*
+ * Usually all that is needed for an NFS remount is to change
+ * generic mount options like "sync" or "ro".  These generic
+ * options are controlled by mi->flags, not by text-based
+ * options, and no contact with the server is needed.
+ *
+ * Take care with the /etc/mtab entry for this mount; just
+ * calling update_mtab() will change an "-t nfs -o vers=4"
+ * mount to an "-t nfs -o remount" mount, and that will
+ * confuse umount.nfs.
+ *
+ * Returns a valid mount command exit code.
+ */
+static int nfs_remount(struct nfsmount_info *mi)
+{
+	if (nfs_sys_mount(mi, mi->options))
+		return EX_SUCCESS;
+	return EX_FAIL;
+}
+
+/*
  * Process mount options and try a mount system call.
  *
  * Returns a valid mount command exit code.
@@ -936,6 +1001,12 @@ static int nfsmount_start(struct nfsmount_info *mi)
 {
 	if (!nfs_validate_options(mi))
 		return EX_FAIL;
+
+	/*
+	 * Avoid retry and negotiation logic when remounting
+	 */
+	if (mi->flags & MS_REMOUNT)
+		return nfs_remount(mi);
 
 	if (po_rightmost(mi->options, nfs_background_opttbl) == 0)
 		return nfsmount_bg(mi);
@@ -953,6 +1024,8 @@ static int nfsmount_start(struct nfsmount_info *mi)
  *		(input and output argument)
  * @fake: flag indicating whether to carry out the whole operation
  * @child: one if this is a mount daemon (bg)
+ *
+ * Returns a valid mount command exit code.
  */
 int nfsmount_string(const char *spec, const char *node, const char *type,
 		    int flags, char **extra_opts, int fake, int child)

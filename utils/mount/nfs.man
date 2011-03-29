@@ -3,8 +3,6 @@
 .SH NAME
 nfs \- fstab format and options for the
 .B nfs
-and
-.B nfs4
 file systems
 .SH SYNOPSIS
 .I /etc/fstab
@@ -71,14 +69,10 @@ for details on specifying raw IPv6 addresses.
 .P
 The
 .I fstype
-field contains either "nfs" (for version 2 or version 3 NFS mounts)
-or "nfs4" (for NFS version 4 mounts).
+field contains "nfs", for whatever version of the protocol.
 The
 .B nfs
-and
-.B nfs4
-file system types share similar mount options,
-which are described below.
+allow several mount options, which are described below.
 .SH "MOUNT OPTIONS"
 Refer to
 .BR mount (8)
@@ -89,14 +83,8 @@ specify any mount options, use the generic option
 in
 .IR /etc/fstab .
 .DT
-.SS "Valid options for either the nfs or nfs4 file system type"
-These options are valid to use when mounting either
-.B nfs
-or
-.B nfs4
-file system types.
-They imply the same behavior
-and have the same default for both file system types.
+.SS "Options supported by all versions"
+These options are valid to use with any NFS version.
 .TP 1.5i
 .BR soft " / " hard
 Determines the recovery behavior of the NFS client
@@ -476,11 +464,9 @@ by other clients, but can impact application and server performance.
 .IP
 The DATA AND METADATA COHERENCE section contains a
 detailed discussion of these trade-offs.
-.SS "Valid options for the nfs file system type"
+.SS "Options for versions 2 and 3 only"
 Use these options, along with the options in the above subsection,
-for mounting the
-.B nfs
-file system type.
+for NFSv2/v3 only. They will be ignored for newer versions.
 .TP 1.5i
 .BI proto= netid
 The transport protocol name and protocol family the NFS client uses
@@ -495,7 +481,10 @@ command,
 .I netid
 is a valid netid listed in
 .IR /etc/netconfig .
-Otherwise,
+The value "rdma" may also be specified.
+If the
+.B mount.nfs
+command does not have TI-RPC support, then
 .I netid
 is one of "tcp," "udp," or "rdma," and only IPv4 may be used.
 .IP
@@ -536,6 +525,12 @@ The
 option is an alternative to specifying
 .BR proto=tcp.
 It is included for compatibility with other operating systems.
+.TP 1.5i
+.B rdma
+The
+.B rdma
+option is an alternative to specifying
+.BR proto=rdma.
 .TP 1.5i
 .BI port= n
 The numeric value of the server's NFS service port.
@@ -623,14 +618,9 @@ in such cases.
 .TP 1.5i
 .BI nfsvers= n
 The NFS protocol version number used to contact the server's NFS service.
-The Linux client supports version 2 and version 3 of the NFS protocol
-when using the file system type
-.BR nfs .
-If the server does not support the requested version,
-the mount request fails.
-If this option is not specified, the client attempts to use version 3,
-but negotiates the NFS version with the server if version 3 support
-is not available.
+If the server does not support the requested version, the mount request fails.
+If this option is not specified, the client negociate a suitable version with
+the server, trying version 4 first, version 3 second, and version 2 last.
 .TP 1.5i
 .BI vers= n
 This option is an alternative to the
@@ -727,11 +717,9 @@ If this option is not specified, the NFS client uses READDIRPLUS requests
 on NFS version 3 mounts to read small directories.
 Some applications perform better if the client uses only READDIR requests
 for all directories.
-.SS "Valid options for the nfs4 file system type"
+.SS "Options for version 4 only"
 Use these options, along with the options in the first subsection above,
-for mounting the
-.B nfs4
-file system type.
+for NFSv4 only. They will be ignored with older versions.
 .TP 1.5i
 .BI proto= netid
 The transport protocol name and protocol family the NFS client uses
@@ -828,6 +816,13 @@ In the presence of multiple client network interfaces,
 special routing policies,
 or atypical network topologies,
 the exact address to use for callbacks may be nontrivial to determine.
+.SH nfs4 FILE SYSTEM TYPE
+The
+.BR nfs4
+file system type is an old syntax for specifying NFSv4 usage. It can still 
+be used with all NFSv4-specific and common options, excepted the
+.B nfsvers
+mount option.
 .SH MOUNT CONFIGURATION FILE
 If the mount command is configured to do so, all of the mount options 
 described in the previous section can also be configured in the 
@@ -849,12 +844,11 @@ file system type and specify the
 .B nfsvers=3
 mount option.
 To mount using NFS version 4,
-use the
-.B nfs4
-file system type.
-The
-.B nfsvers
-mount option is not supported for the
+use either the
+.B nfs
+file system type, with the
+.B nfsvers=4
+mount option, or the 
 .B nfs4
 file system type.
 .P

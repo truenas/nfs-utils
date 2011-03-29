@@ -27,6 +27,12 @@
 #include <rpc/clnt.h>
 
 /*
+ * IANA does not define an IP protocol number for RDMA transports.
+ * Choose an arbitrary value we can use locally.
+ */
+#define NFSPROTO_RDMA		(3939)
+
+/*
  * Conventional RPC program numbers
  */
 #ifndef RPCBPROG
@@ -159,5 +165,8 @@ extern int		nfs_rpc_ping(const struct sockaddr *sap,
 				const rpcvers_t version,
 				const unsigned short protocol,
 				const struct timeval *timeout);
+
+/* create AUTH_SYS handle with no supplemental groups */
+extern AUTH *			 nfs_authsys_create(void);
 
 #endif	/* !__NFS_UTILS_NFSRPC_H */

@@ -1,3 +1,10 @@
+nfs-utils (1:1.2.3-3) UNRELEASED; urgency=low
+
+  * Remove build dependency on librpcsecgss-dev as it's superseeded by
+    libtirpc-dev
+
+ -- Luk Claes <luk@debian.org>  Mon, 11 Apr 2011 10:12:35 +0200
+
 nfs-utils (1:1.2.3-2) unstable; urgency=low
 
   * Depend on rpcbind unconditionally, as libtirpc does not support the

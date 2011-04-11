@@ -64,7 +64,7 @@ binary-arch: build
 	dh_installdeb
 	dh_shlibdeps
 	dh_gencontrol
-	dh_md5sums
+	dh_md5sums -Xvar/lib
 	dh_builddeb
 
 binary: binary-indep binary-arch

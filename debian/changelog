@@ -4,8 +4,9 @@ nfs-utils (1:1.2.3-3) UNRELEASED; urgency=low
     libtirpc-dev
   * Remove very old versioned dependencies on netbase and libblkid1
   * Exclude state files from dh_md5sum
+  * Use rpcinfo instead of /dev/tcp redirection
 
- -- Luk Claes <luk@debian.org>  Mon, 11 Apr 2011 18:06:40 +0200
+ -- Luk Claes <luk@debian.org>  Wed, 13 Apr 2011 22:54:50 +0200
 
 nfs-utils (1:1.2.3-2) unstable; urgency=low
 

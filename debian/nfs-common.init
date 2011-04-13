@@ -138,12 +138,12 @@ case "$1" in
 	if [ "$NEED_STATD" = yes ]; then
 	    log_progress_msg "statd"
 	    
-	    # See if portmap or rpcbind are running
-	    (cat </dev/null >/dev/tcp/localhost/111) 2>/dev/null
+	    # See if rpcbind is running
+	    rpcinfo -p >/dev/null 2>&1
 	    RET=$?
 	    if [ $RET != 0 ]; then
 		echo
-		log_warning_msg "Not starting: portmap daemon is not running"
+		log_warning_msg "Not starting: portmapper is not running"
 		exit 0
 	    fi
 

@@ -7,3 +7,4 @@
 16-mount.nfs.man-update-distinction-between-fstype.patch
 17-Fix-statd.8-manpage-syntax-visible.patch
 18-Fix-nfsiostat.8-manpage-syntax-missing-.I.patch
+19-exports.man-Fix-comment-syntax.patch

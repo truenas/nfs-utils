@@ -9,6 +9,7 @@ nfs-utils (1:1.2.3-3) UNRELEASED; urgency=low
 
   [ Ben Hutchings ]
   * statd.man, nfsiostat.man: Fix syntax errors, thanks to Simon Paillard
+  * exports.man: Fix syntax errors
 
  -- Luk Claes <luk@debian.org>  Wed, 13 Apr 2011 22:54:50 +0200
 

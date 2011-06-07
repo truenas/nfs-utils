@@ -10,3 +10,4 @@
 19-exports.man-Fix-comment-syntax.patch
 20-nfs.man-Fix-fstab-example.patch
 21-anticipate-RLIMIT_FSIZE.patch
+22-start-statd-Use-bash.patch

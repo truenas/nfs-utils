@@ -1,0 +1,17 @@
+Index: nfs-utils/support/nfs/nfs_mntent.c
+===================================================================
+--- nfs-utils.orig/support/nfs/nfs_mntent.c	2011-06-07 12:08:56.000000000 +0200
++++ nfs-utils/support/nfs/nfs_mntent.c	2011-06-07 12:11:32.000000000 +0200
+@@ -143,7 +143,11 @@
+ 	free(m2);
+ 	free(m3);
+ 	free(m4);
+-	return (res < 0) ? 1 : 0;
++	if (res < 0)
++		return 1;
++	else {
++		return (fflush(mfp->mntent_fp) == 0) ? 0 : 1;
++	}
+ }
+ 
+ /* Read the next entry from the file fp. Stop reading at an incorrect entry. */

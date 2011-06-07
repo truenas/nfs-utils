@@ -139,7 +139,7 @@ case "$1" in
 	    log_progress_msg "statd"
 	    
 	    # See if rpcbind is running
-	    rpcinfo -p >/dev/null 2>&1
+	    /usr/sbin/rpcinfo -p >/dev/null 2>&1
 	    RET=$?
 	    if [ $RET != 0 ]; then
 		echo

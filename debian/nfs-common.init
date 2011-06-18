@@ -139,14 +139,15 @@ case "$1" in
 	    log_progress_msg "statd"
 	    
 	    # See if rpcbind is running
-	    /usr/sbin/rpcinfo -p >/dev/null 2>&1
-	    RET=$?
-	    if [ $RET != 0 ]; then
-		echo
-		log_warning_msg "Not starting: portmapper is not running"
-		exit 0
+	    if [ -x /usr/sbin/rpcinfo ]; then
+		/usr/sbin/rpcinfo -p >/dev/null 2>&1
+		RET=$?
+		if [ $RET != 0 ]; then
+		   echo
+		   log_warning_msg "Not starting: portmapper is not running"
+		   exit 0
+		fi
 	    fi
-
 	    start-stop-daemon --start --oknodo --quiet \
 		--pidfile /var/run/rpc.statd.pid \
 	        --exec $PREFIX/sbin/rpc.statd -- $STATDOPTS

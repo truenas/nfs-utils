@@ -16,7 +16,9 @@ endif
 # Temporary root
 DEBTMP := $(CURDIR)/debian/tmp
 
-build: build-stamp
+build: build-indep build-arch
+build-indep: build-stamp
+build-arch: build-stamp
 build-stamp:
 	dh_testdir
 	CFLAGS="$(CFLAGS)" ./configure \

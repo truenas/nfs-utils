@@ -17,7 +17,7 @@ nfs-utils (1:1.2.3-3) unstable; urgency=medium
   * exports.man: Fix syntax errors
   * nfs.man: Fix syntax errors and improve tabulation
 
- -- Luk Claes <luk@debian.org>  Sat, 18 Jun 2011 10:48:28 +0200
+ -- Luk Claes <luk@debian.org>  Sat, 18 Jun 2011 10:53:51 +0200
 
 nfs-utils (1:1.2.3-2) unstable; urgency=low
 

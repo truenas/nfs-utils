@@ -21,6 +21,7 @@ build-indep: build-stamp
 build-arch: build-stamp
 build-stamp:
 	dh_testdir
+	autoreconf
 	CFLAGS="$(CFLAGS)" ./configure \
 		--mandir='$${prefix}/share/man' \
 		--enable-nfsv41 \

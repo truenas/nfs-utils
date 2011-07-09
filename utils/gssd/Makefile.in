@@ -42,6 +42,7 @@ ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/aclocal/bsdsignals.m4 \
 	$(top_srcdir)/aclocal/ipv6.m4 \
 	$(top_srcdir)/aclocal/kerberos5.m4 \
+	$(top_srcdir)/aclocal/keyutils.m4 \
 	$(top_srcdir)/aclocal/libblkid.m4 \
 	$(top_srcdir)/aclocal/libcap.m4 \
 	$(top_srcdir)/aclocal/libevent.m4 \
@@ -98,7 +99,7 @@ am__objects_2 = svcgssd-context.$(OBJEXT) \
 am_svcgssd_OBJECTS = $(am__objects_2) svcgssd-svcgssd.$(OBJEXT) \
 	svcgssd-svcgssd_main_loop.$(OBJEXT) \
 	svcgssd-svcgssd_mech2file.$(OBJEXT) \
-	svcgssd-svcgssd_proc.$(OBJEXT)
+	svcgssd-svcgssd_proc.$(OBJEXT) svcgssd-svcgssd_krb5.$(OBJEXT)
 svcgssd_OBJECTS = $(am_svcgssd_OBJECTS)
 svcgssd_DEPENDENCIES = ../../support/nfs/libnfs.a \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
@@ -178,6 +179,7 @@ CXXFLAGS_FOR_BUILD = @CXXFLAGS_FOR_BUILD@
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
+DLLTOOL = @DLLTOOL@
 DSYMUTIL = @DSYMUTIL@
 DUMPBIN = @DUMPBIN@
 ECHO_C = @ECHO_C@
@@ -210,6 +212,8 @@ LIBBLKID = @LIBBLKID@
 LIBBSD = @LIBBSD@
 LIBCAP = @LIBCAP@
 LIBCRYPT = @LIBCRYPT@
+LIBKEYUTILS = @LIBKEYUTILS@
+LIBMOUNT = @LIBMOUNT@
 LIBNSL = @LIBNSL@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
@@ -221,6 +225,7 @@ LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
 MAINT = @MAINT@
 MAKEINFO = @MAKEINFO@
+MANIFEST_TOOL = @MANIFEST_TOOL@
 MKDIR_P = @MKDIR_P@
 NM = @NM@
 NMEDIT = @NMEDIT@
@@ -237,6 +242,8 @@ PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 PKG_CONFIG = @PKG_CONFIG@
+PKG_CONFIG_LIBDIR = @PKG_CONFIG_LIBDIR@
+PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
 RANLIB = @RANLIB@
 RELEASE = @RELEASE@
 RPCGEN_PATH = @RPCGEN_PATH@
@@ -252,6 +259,7 @@ abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
 abs_top_srcdir = @abs_top_srcdir@
+ac_ct_AR = @ac_ct_AR@
 ac_ct_CC = @ac_ct_CC@
 ac_ct_CXX = @ac_ct_CXX@
 ac_ct_DUMPBIN = @ac_ct_DUMPBIN@
@@ -292,7 +300,6 @@ libdir = @libdir@
 libexecdir = @libexecdir@
 localedir = @localedir@
 localstatedir = @localstatedir@
-lt_ECHO = @lt_ECHO@
 mandir = @mandir@
 mkdir_p = @mkdir_p@
 mountfile = @mountfile@
@@ -360,7 +367,9 @@ svcgssd_SOURCES = \
 	svcgssd_main_loop.c \
 	svcgssd_mech2file.c \
 	svcgssd_proc.c \
+	svcgssd_krb5.c \
 	\
+	svcgssd_krb5.h \
 	svcgssd.h
 
 svcgssd_LDADD = \
@@ -526,6 +535,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/svcgssd-gss_oids.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/svcgssd-gss_util.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/svcgssd-svcgssd.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/svcgssd-svcgssd_krb5.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/svcgssd-svcgssd_main_loop.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/svcgssd-svcgssd_mech2file.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/svcgssd-svcgssd_proc.Po@am__quote@
@@ -900,6 +910,20 @@ svcgssd-svcgssd_proc.obj: svcgssd_proc.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='svcgssd_proc.c' object='svcgssd-svcgssd_proc.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(svcgssd_CFLAGS) $(CFLAGS) -c -o svcgssd-svcgssd_proc.obj `if test -f 'svcgssd_proc.c'; then $(CYGPATH_W) 'svcgssd_proc.c'; else $(CYGPATH_W) '$(srcdir)/svcgssd_proc.c'; fi`
+
+svcgssd-svcgssd_krb5.o: svcgssd_krb5.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(svcgssd_CFLAGS) $(CFLAGS) -MT svcgssd-svcgssd_krb5.o -MD -MP -MF $(DEPDIR)/svcgssd-svcgssd_krb5.Tpo -c -o svcgssd-svcgssd_krb5.o `test -f 'svcgssd_krb5.c' || echo '$(srcdir)/'`svcgssd_krb5.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/svcgssd-svcgssd_krb5.Tpo $(DEPDIR)/svcgssd-svcgssd_krb5.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='svcgssd_krb5.c' object='svcgssd-svcgssd_krb5.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(svcgssd_CFLAGS) $(CFLAGS) -c -o svcgssd-svcgssd_krb5.o `test -f 'svcgssd_krb5.c' || echo '$(srcdir)/'`svcgssd_krb5.c
+
+svcgssd-svcgssd_krb5.obj: svcgssd_krb5.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(svcgssd_CFLAGS) $(CFLAGS) -MT svcgssd-svcgssd_krb5.obj -MD -MP -MF $(DEPDIR)/svcgssd-svcgssd_krb5.Tpo -c -o svcgssd-svcgssd_krb5.obj `if test -f 'svcgssd_krb5.c'; then $(CYGPATH_W) 'svcgssd_krb5.c'; else $(CYGPATH_W) '$(srcdir)/svcgssd_krb5.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/svcgssd-svcgssd_krb5.Tpo $(DEPDIR)/svcgssd-svcgssd_krb5.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='svcgssd_krb5.c' object='svcgssd-svcgssd_krb5.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(svcgssd_CFLAGS) $(CFLAGS) -c -o svcgssd-svcgssd_krb5.obj `if test -f 'svcgssd_krb5.c'; then $(CYGPATH_W) 'svcgssd_krb5.c'; else $(CYGPATH_W) '$(srcdir)/svcgssd_krb5.c'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo

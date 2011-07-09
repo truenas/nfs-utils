@@ -40,6 +40,7 @@ ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/aclocal/bsdsignals.m4 \
 	$(top_srcdir)/aclocal/ipv6.m4 \
 	$(top_srcdir)/aclocal/kerberos5.m4 \
+	$(top_srcdir)/aclocal/keyutils.m4 \
 	$(top_srcdir)/aclocal/libblkid.m4 \
 	$(top_srcdir)/aclocal/libcap.m4 \
 	$(top_srcdir)/aclocal/libevent.m4 \
@@ -71,7 +72,8 @@ am_libnfs_a_OBJECTS = exports.$(OBJEXT) rmtab.$(OBJEXT) xio.$(OBJEXT) \
 	nfsexport.$(OBJEXT) getfh.$(OBJEXT) nfsctl.$(OBJEXT) \
 	rpc_socket.$(OBJEXT) getport.$(OBJEXT) svc_socket.$(OBJEXT) \
 	cacheio.$(OBJEXT) closeall.$(OBJEXT) nfs_mntent.$(OBJEXT) \
-	conffile.$(OBJEXT) svc_create.$(OBJEXT)
+	conffile.$(OBJEXT) svc_create.$(OBJEXT) atomicio.$(OBJEXT) \
+	strlcpy.$(OBJEXT) strlcat.$(OBJEXT)
 libnfs_a_OBJECTS = $(am_libnfs_a_OBJECTS)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/support/include
 depcomp = $(SHELL) $(top_srcdir)/depcomp
@@ -118,6 +120,7 @@ CXXFLAGS_FOR_BUILD = @CXXFLAGS_FOR_BUILD@
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
+DLLTOOL = @DLLTOOL@
 DSYMUTIL = @DSYMUTIL@
 DUMPBIN = @DUMPBIN@
 ECHO_C = @ECHO_C@
@@ -150,6 +153,8 @@ LIBBLKID = @LIBBLKID@
 LIBBSD = @LIBBSD@
 LIBCAP = @LIBCAP@
 LIBCRYPT = @LIBCRYPT@
+LIBKEYUTILS = @LIBKEYUTILS@
+LIBMOUNT = @LIBMOUNT@
 LIBNSL = @LIBNSL@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
@@ -161,6 +166,7 @@ LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
 MAINT = @MAINT@
 MAKEINFO = @MAKEINFO@
+MANIFEST_TOOL = @MANIFEST_TOOL@
 MKDIR_P = @MKDIR_P@
 NM = @NM@
 NMEDIT = @NMEDIT@
@@ -177,6 +183,8 @@ PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 PKG_CONFIG = @PKG_CONFIG@
+PKG_CONFIG_LIBDIR = @PKG_CONFIG_LIBDIR@
+PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
 RANLIB = @RANLIB@
 RELEASE = @RELEASE@
 RPCGEN_PATH = @RPCGEN_PATH@
@@ -192,6 +200,7 @@ abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
 abs_top_srcdir = @abs_top_srcdir@
+ac_ct_AR = @ac_ct_AR@
 ac_ct_CC = @ac_ct_CC@
 ac_ct_CXX = @ac_ct_CXX@
 ac_ct_DUMPBIN = @ac_ct_DUMPBIN@
@@ -232,7 +241,6 @@ libdir = @libdir@
 libexecdir = @libexecdir@
 localedir = @localedir@
 localstatedir = @localstatedir@
-lt_ECHO = @lt_ECHO@
 mandir = @mandir@
 mkdir_p = @mkdir_p@
 mountfile = @mountfile@
@@ -257,7 +265,7 @@ libnfs_a_SOURCES = exports.c rmtab.c xio.c rpcmisc.c rpcdispatch.c \
 		   xlog.c xcommon.c wildmat.c nfsclient.c \
 		   nfsexport.c getfh.c nfsctl.c rpc_socket.c getport.c \
 		   svc_socket.c cacheio.c closeall.c nfs_mntent.c conffile.c \
-		   svc_create.c
+		   svc_create.c atomicio.c strlcpy.c strlcat.c
 
 MAINTAINERCLEANFILES = Makefile.in
 all: all-am
@@ -308,6 +316,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/atomicio.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cacheio.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/closeall.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/conffile.Po@am__quote@
@@ -322,6 +331,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rpc_socket.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rpcdispatch.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rpcmisc.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/strlcat.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/strlcpy.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/svc_create.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/svc_socket.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/wildmat.Po@am__quote@

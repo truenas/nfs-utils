@@ -41,6 +41,7 @@ ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/aclocal/bsdsignals.m4 \
 	$(top_srcdir)/aclocal/ipv6.m4 \
 	$(top_srcdir)/aclocal/kerberos5.m4 \
+	$(top_srcdir)/aclocal/keyutils.m4 \
 	$(top_srcdir)/aclocal/libblkid.m4 \
 	$(top_srcdir)/aclocal/libcap.m4 \
 	$(top_srcdir)/aclocal/libevent.m4 \
@@ -144,6 +145,7 @@ CXXFLAGS_FOR_BUILD = @CXXFLAGS_FOR_BUILD@
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
+DLLTOOL = @DLLTOOL@
 DSYMUTIL = @DSYMUTIL@
 DUMPBIN = @DUMPBIN@
 ECHO_C = @ECHO_C@
@@ -176,6 +178,8 @@ LIBBLKID = @LIBBLKID@
 LIBBSD = @LIBBSD@
 LIBCAP = @LIBCAP@
 LIBCRYPT = @LIBCRYPT@
+LIBKEYUTILS = @LIBKEYUTILS@
+LIBMOUNT = @LIBMOUNT@
 LIBNSL = @LIBNSL@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
@@ -187,6 +191,7 @@ LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
 MAINT = @MAINT@
 MAKEINFO = @MAKEINFO@
+MANIFEST_TOOL = @MANIFEST_TOOL@
 MKDIR_P = @MKDIR_P@
 NM = @NM@
 NMEDIT = @NMEDIT@
@@ -203,6 +208,8 @@ PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 PKG_CONFIG = @PKG_CONFIG@
+PKG_CONFIG_LIBDIR = @PKG_CONFIG_LIBDIR@
+PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
 RANLIB = @RANLIB@
 RELEASE = @RELEASE@
 RPCGEN_PATH = @RPCGEN_PATH@
@@ -218,6 +225,7 @@ abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
 abs_top_srcdir = @abs_top_srcdir@
+ac_ct_AR = @ac_ct_AR@
 ac_ct_CC = @ac_ct_CC@
 ac_ct_CXX = @ac_ct_CXX@
 ac_ct_DUMPBIN = @ac_ct_DUMPBIN@
@@ -258,7 +266,6 @@ libdir = @libdir@
 libexecdir = @libexecdir@
 localedir = @localedir@
 localstatedir = @localstatedir@
-lt_ECHO = @lt_ECHO@
 mandir = @mandir@
 mkdir_p = @mkdir_p@
 mountfile = @mountfile@

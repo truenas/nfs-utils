@@ -38,12 +38,16 @@ sbin_PROGRAMS = mount.nfs$(EXEEXT)
 @MOUNT_CONFIG_TRUE@am__append_1 = configfile.c
 @MOUNT_CONFIG_TRUE@am__append_2 = nfsmount.conf.man
 @MOUNT_CONFIG_TRUE@am__append_3 = nfsmount.conf
+@CONFIG_LIBMOUNT_TRUE@am__append_4 = mount_libmount.c
+@CONFIG_LIBMOUNT_TRUE@am__append_5 = $(LIBMOUNT)
+@CONFIG_LIBMOUNT_FALSE@am__append_6 = mount.c fstab.c nfsumount.c fstab.h
 subdir = utils/mount
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/aclocal/bsdsignals.m4 \
 	$(top_srcdir)/aclocal/ipv6.m4 \
 	$(top_srcdir)/aclocal/kerberos5.m4 \
+	$(top_srcdir)/aclocal/keyutils.m4 \
 	$(top_srcdir)/aclocal/libblkid.m4 \
 	$(top_srcdir)/aclocal/libcap.m4 \
 	$(top_srcdir)/aclocal/libevent.m4 \
@@ -68,20 +72,27 @@ CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(sbindir)" "$(DESTDIR)$(man5dir)" \
 	"$(DESTDIR)$(man8dir)"
 PROGRAMS = $(sbin_PROGRAMS)
-am__mount_nfs_SOURCES_DIST = mount.c error.c network.c fstab.c token.c \
-	parse_opt.c parse_dev.c nfsmount.c nfs4mount.c stropts.c \
-	nfsumount.c mount_constants.h error.h network.h fstab.h \
-	token.h parse_opt.h parse_dev.h nfs4_mount.h nfs_mount4.h \
-	stropts.h version.h mount_config.h configfile.c
+am__mount_nfs_SOURCES_DIST = error.c network.c token.c parse_opt.c \
+	parse_dev.c nfsmount.c nfs4mount.c stropts.c mount_constants.h \
+	error.h network.h token.h parse_opt.h parse_dev.h nfs4_mount.h \
+	nfs_mount4.h stropts.h version.h mount_config.h utils.c \
+	utils.h configfile.c mount_libmount.c mount.c fstab.c \
+	nfsumount.c fstab.h
 @MOUNT_CONFIG_TRUE@am__objects_1 = configfile.$(OBJEXT)
-am_mount_nfs_OBJECTS = mount.$(OBJEXT) error.$(OBJEXT) \
-	network.$(OBJEXT) fstab.$(OBJEXT) token.$(OBJEXT) \
+am__objects_2 = error.$(OBJEXT) network.$(OBJEXT) token.$(OBJEXT) \
 	parse_opt.$(OBJEXT) parse_dev.$(OBJEXT) nfsmount.$(OBJEXT) \
-	nfs4mount.$(OBJEXT) stropts.$(OBJEXT) nfsumount.$(OBJEXT) \
+	nfs4mount.$(OBJEXT) stropts.$(OBJEXT) utils.$(OBJEXT) \
 	$(am__objects_1)
+@CONFIG_LIBMOUNT_TRUE@am__objects_3 = mount_libmount.$(OBJEXT)
+@CONFIG_LIBMOUNT_FALSE@am__objects_4 = mount.$(OBJEXT) fstab.$(OBJEXT) \
+@CONFIG_LIBMOUNT_FALSE@	nfsumount.$(OBJEXT)
+am_mount_nfs_OBJECTS = $(am__objects_2) $(am__objects_3) \
+	$(am__objects_4)
 mount_nfs_OBJECTS = $(am_mount_nfs_OBJECTS)
+am__DEPENDENCIES_1 =
+@CONFIG_LIBMOUNT_TRUE@am__DEPENDENCIES_2 = $(am__DEPENDENCIES_1)
 mount_nfs_DEPENDENCIES = ../../support/nfs/libnfs.a \
-	../../support/export/libexport.a
+	../../support/export/libexport.a $(am__DEPENDENCIES_2)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/support/include
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -152,6 +163,7 @@ CXXFLAGS_FOR_BUILD = @CXXFLAGS_FOR_BUILD@
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
+DLLTOOL = @DLLTOOL@
 DSYMUTIL = @DSYMUTIL@
 DUMPBIN = @DUMPBIN@
 ECHO_C = @ECHO_C@
@@ -184,6 +196,8 @@ LIBBLKID = @LIBBLKID@
 LIBBSD = @LIBBSD@
 LIBCAP = @LIBCAP@
 LIBCRYPT = @LIBCRYPT@
+LIBKEYUTILS = @LIBKEYUTILS@
+LIBMOUNT = @LIBMOUNT@
 LIBNSL = @LIBNSL@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
@@ -195,6 +209,7 @@ LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
 MAINT = @MAINT@
 MAKEINFO = @MAKEINFO@
+MANIFEST_TOOL = @MANIFEST_TOOL@
 MKDIR_P = @MKDIR_P@
 NM = @NM@
 NMEDIT = @NMEDIT@
@@ -211,6 +226,8 @@ PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 PKG_CONFIG = @PKG_CONFIG@
+PKG_CONFIG_LIBDIR = @PKG_CONFIG_LIBDIR@
+PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
 RANLIB = @RANLIB@
 RELEASE = @RELEASE@
 RPCGEN_PATH = @RPCGEN_PATH@
@@ -226,6 +243,7 @@ abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
 abs_top_srcdir = @abs_top_srcdir@
+ac_ct_AR = @ac_ct_AR@
 ac_ct_CC = @ac_ct_CC@
 ac_ct_CXX = @ac_ct_CXX@
 ac_ct_DUMPBIN = @ac_ct_DUMPBIN@
@@ -266,7 +284,6 @@ libdir = @libdir@
 libexecdir = @libexecdir@
 localedir = @localedir@
 localstatedir = @localstatedir@
-lt_ECHO = @lt_ECHO@
 mandir = @mandir@
 mkdir_p = @mkdir_p@
 mountfile = @mountfile@
@@ -292,14 +309,14 @@ top_srcdir = @top_srcdir@
 man8_MANS = mount.nfs.man umount.nfs.man
 man5_MANS = nfs.man $(am__append_2)
 EXTRA_DIST = nfsmount.x $(man8_MANS) $(man5_MANS) $(am__append_3)
-mount_nfs_SOURCES = mount.c error.c network.c fstab.c token.c \
-	parse_opt.c parse_dev.c nfsmount.c nfs4mount.c stropts.c \
-	nfsumount.c mount_constants.h error.h network.h fstab.h \
-	token.h parse_opt.h parse_dev.h nfs4_mount.h nfs_mount4.h \
-	stropts.h version.h mount_config.h $(am__append_1)
+mount_common = error.c network.c token.c parse_opt.c parse_dev.c \
+	nfsmount.c nfs4mount.c stropts.c mount_constants.h error.h \
+	network.h token.h parse_opt.h parse_dev.h nfs4_mount.h \
+	nfs_mount4.h stropts.h version.h mount_config.h utils.c \
+	utils.h $(am__append_1)
 mount_nfs_LDADD = ../../support/nfs/libnfs.a \
-		  ../../support/export/libexport.a
-
+	../../support/export/libexport.a $(am__append_5)
+mount_nfs_SOURCES = $(mount_common) $(am__append_4) $(am__append_6)
 MAINTAINERCLEANFILES = Makefile.in
 all: all-am
 
@@ -392,6 +409,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/error.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fstab.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mount.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mount_libmount.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/network.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nfs4mount.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nfsmount.Po@am__quote@
@@ -400,6 +418,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/parse_opt.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stropts.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/token.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/utils.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<

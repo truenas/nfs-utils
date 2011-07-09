@@ -131,6 +131,9 @@
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
+/* Define to 1 if you have the <keyutils.h> header file. */
+#undef HAVE_KEYUTILS_H
+
 /* Define this if you have MIT Kerberos libraries */
 #undef HAVE_KRB5
 

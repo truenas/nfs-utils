@@ -64,6 +64,7 @@ enum nfsd_fsid {
  */
 static int cache_export_ent(char *domain, struct exportent *exp, char *p);
 
+#define INITIAL_MANAGED_GROUPS 100
 
 char *lbuf  = NULL;
 int lbuflen = 0;
@@ -114,7 +115,7 @@ static void auth_unix_ip(FILE *f)
 
 	qword_print(f, "nfsd");
 	qword_print(f, ipaddr);
-	qword_printint(f, time(0)+30*60);
+	qword_printuint(f, time(0) + DEFAULT_TTL);
 	if (use_ipaddr)
 		qword_print(f, ipaddr);
 	else if (client)
@@ -134,10 +135,22 @@ static void auth_unix_gid(FILE *f)
 	 */
 	uid_t uid;
 	struct passwd *pw;
-	gid_t glist[100], *groups = glist;
-	int ngroups = 100;
+	static gid_t *groups = NULL;
+	static int groups_len = 0;
+	gid_t *more_groups;
+	int ngroups;
 	int rv, i;
 	char *cp;
+
+	if (groups_len == 0) {
+		groups = malloc(sizeof(gid_t) * INITIAL_MANAGED_GROUPS);
+		if (!groups)
+			return;
+
+		groups_len = INITIAL_MANAGED_GROUPS;
+	}
+
+	ngroups = groups_len;
 
 	if (readline(fileno(f), &lbuf, &lbuflen) != 1)
 		return;
@@ -151,17 +164,20 @@ static void auth_unix_gid(FILE *f)
 		rv = -1;
 	else {
 		rv = getgrouplist(pw->pw_name, pw->pw_gid, groups, &ngroups);
-		if (rv == -1 && ngroups >= 100) {
-			groups = malloc(sizeof(gid_t)*ngroups);
-			if (!groups)
+		if (rv == -1 && ngroups >= groups_len) {
+			more_groups = realloc(groups, sizeof(gid_t)*ngroups);
+			if (!more_groups)
 				rv = -1;
-			else
+			else {
+				groups = more_groups;
+				groups_len = ngroups;
 				rv = getgrouplist(pw->pw_name, pw->pw_gid,
 						  groups, &ngroups);
+			}
 		}
 	}
 	qword_printuint(f, uid);
-	qword_printuint(f, time(0)+30*60);
+	qword_printuint(f, time(0) + DEFAULT_TTL);
 	if (rv >= 0) {
 		qword_printuint(f, ngroups);
 		for (i=0; i<ngroups; i++)
@@ -169,9 +185,6 @@ static void auth_unix_gid(FILE *f)
 	} else
 		qword_printuint(f, 0);
 	qword_eol(f);
-
-	if (groups != glist)
-		free(groups);
 }
 
 #if USE_BLKID
@@ -328,6 +341,160 @@ static char *next_mnt(void **v, char *p)
 	return me->mnt_dir;
 }
 
+/* True iff e1 is a child of e2 and e2 has crossmnt set: */
+static bool subexport(struct exportent *e1, struct exportent *e2)
+{
+	char *p1 = e1->e_path, *p2 = e2->e_path;
+	int l2 = strlen(p2);
+
+	return e2->e_flags & NFSEXP_CROSSMOUNT
+	       && strncmp(p1, p2, l2) == 0
+	       && p1[l2] == '/';
+}
+
+struct parsed_fsid {
+	int fsidtype;
+	/* We could use a union for this, but it would be more
+	 * complicated; why bother? */
+	unsigned int inode;
+	unsigned int minor;
+	unsigned int major;
+	unsigned int fsidnum;
+	int uuidlen;
+	char *fhuuid;
+};
+
+int parse_fsid(int fsidtype, int fsidlen, char *fsid, struct parsed_fsid *parsed)
+{
+	unsigned int dev;
+	unsigned long long inode64;
+
+	parsed->fsidtype = fsidtype;
+	switch(fsidtype) {
+	case FSID_DEV: /* 4 bytes: 2 major, 2 minor, 4 inode */
+		if (fsidlen != 8)
+			return -1;
+		memcpy(&dev, fsid, 4);
+		memcpy(&parsed->inode, fsid+4, 4);
+		parsed->major = ntohl(dev)>>16;
+		parsed->minor = ntohl(dev) & 0xFFFF;
+		break;
+
+	case FSID_NUM: /* 4 bytes - fsid */
+		if (fsidlen != 4)
+			return -1;
+		memcpy(&parsed->fsidnum, fsid, 4);
+		break;
+
+	case FSID_MAJOR_MINOR: /* 12 bytes: 4 major, 4 minor, 4 inode 
+		 * This format is never actually used but was
+		 * an historical accident
+		 */
+		if (fsidlen != 12)
+			return -1;
+		memcpy(&dev, fsid, 4);
+		parsed->major = ntohl(dev);
+		memcpy(&dev, fsid+4, 4);
+		parsed->minor = ntohl(dev);
+		memcpy(&parsed->inode, fsid+8, 4);
+		break;
+
+	case FSID_ENCODE_DEV: /* 8 bytes: 4 byte packed device number, 4 inode */
+		/* This is *host* endian, not net-byte-order, because
+		 * no-one outside this host has any business interpreting it
+		 */
+		if (fsidlen != 8)
+			return -1;
+		memcpy(&dev, fsid, 4);
+		memcpy(&parsed->inode, fsid+4, 4);
+		parsed->major = (dev & 0xfff00) >> 8;
+		parsed->minor = (dev & 0xff) | ((dev >> 12) & 0xfff00);
+		break;
+
+	case FSID_UUID4_INUM: /* 4 byte inode number and 4 byte uuid */
+		if (fsidlen != 8)
+			return -1;
+		memcpy(&parsed->inode, fsid, 4);
+		parsed->uuidlen = 4;
+		parsed->fhuuid = fsid+4;
+		break;
+	case FSID_UUID8: /* 8 byte uuid */
+		if (fsidlen != 8)
+			return -1;
+		parsed->uuidlen = 8;
+		parsed->fhuuid = fsid;
+		break;
+	case FSID_UUID16: /* 16 byte uuid */
+		if (fsidlen != 16)
+			return -1;
+		parsed->uuidlen = 16;
+		parsed->fhuuid = fsid;
+		break;
+	case FSID_UUID16_INUM: /* 8 byte inode number and 16 byte uuid */
+		if (fsidlen != 24)
+			return -1;
+		memcpy(&inode64, fsid, 8);
+		parsed->inode = inode64;
+		parsed->uuidlen = 16;
+		parsed->fhuuid = fsid+8;
+		break;
+	}
+	return 0;
+}
+
+static bool match_fsid(struct parsed_fsid *parsed, nfs_export *exp, char *path)
+{
+	struct stat stb;
+	int type;
+	char u[16];
+
+	if (stat(path, &stb) != 0)
+		return false;
+	if (!S_ISDIR(stb.st_mode) && !S_ISREG(stb.st_mode))
+		return false;
+
+	switch (parsed->fsidtype) {
+	case FSID_DEV:
+	case FSID_MAJOR_MINOR:
+	case FSID_ENCODE_DEV:
+		if (stb.st_ino != parsed->inode)
+			return false;
+		if (parsed->major != major(stb.st_dev) ||
+		    parsed->minor != minor(stb.st_dev))
+			return false;
+		return true;
+	case FSID_NUM:
+		if (((exp->m_export.e_flags & NFSEXP_FSID) == 0 ||
+		     exp->m_export.e_fsid != parsed->fsidnum))
+			return false;
+		return true;
+	case FSID_UUID4_INUM:
+	case FSID_UUID16_INUM:
+		if (stb.st_ino != parsed->inode)
+			return false;
+		goto check_uuid;
+	case FSID_UUID8:
+	case FSID_UUID16:
+		if (!is_mountpoint(path))
+			return false;
+	check_uuid:
+		if (exp->m_export.e_uuid)
+			get_uuid(exp->m_export.e_uuid, parsed->uuidlen, u);
+		else
+			for (type = 0;
+			     uuid_by_path(path, type, parsed->uuidlen, u);
+			     type++)
+				if (memcmp(u, parsed->fhuuid, parsed->uuidlen) == 0)
+					return true;
+
+		if (memcmp(u, parsed->fhuuid, parsed->uuidlen) != 0)
+			return false;
+		return true;
+	}
+	/* Well, unreachable, actually: */
+	return false;
+}
+
 static void nfsd_fh(FILE *f)
 {
 	/* request are:
@@ -339,19 +506,14 @@ static void nfsd_fh(FILE *f)
 	char *dom;
 	int fsidtype;
 	int fsidlen;
-	unsigned int dev, major=0, minor=0;
-	unsigned int inode=0;
-	unsigned long long inode64;
-	unsigned int fsidnum=0;
 	char fsid[32];
+	struct parsed_fsid parsed;
 	struct exportent *found = NULL;
 	struct addrinfo *ai = NULL;
 	char *found_path = NULL;
 	nfs_export *exp;
 	int i;
 	int dev_missing = 0;
-	int uuidlen = 0;
-	char *fhuuid = NULL;
 
 	if (readline(fileno(f), &lbuf, &lbuflen) != 1)
 		return;
@@ -359,7 +521,7 @@ static void nfsd_fh(FILE *f)
 	xlog(D_CALL, "nfsd_fh: inbuf '%s'", lbuf);
 
 	cp = lbuf;
-	
+
 	dom = malloc(strlen(cp));
 	if (dom == NULL)
 		return;
@@ -371,73 +533,8 @@ static void nfsd_fh(FILE *f)
 		goto out; /* unknown type */
 	if ((fsidlen = qword_get(&cp, fsid, 32)) <= 0)
 		goto out;
-	switch(fsidtype) {
-	case FSID_DEV: /* 4 bytes: 2 major, 2 minor, 4 inode */
-		if (fsidlen != 8)
-			goto out;
-		memcpy(&dev, fsid, 4);
-		memcpy(&inode, fsid+4, 4);
-		major = ntohl(dev)>>16;
-		minor = ntohl(dev) & 0xFFFF;
-		break;
-
-	case FSID_NUM: /* 4 bytes - fsid */
-		if (fsidlen != 4)
-			goto out;
-		memcpy(&fsidnum, fsid, 4);
-		break;
-
-	case FSID_MAJOR_MINOR: /* 12 bytes: 4 major, 4 minor, 4 inode 
-		 * This format is never actually used but was
-		 * an historical accident
-		 */
-		if (fsidlen != 12)
-			goto out;
-		memcpy(&dev, fsid, 4); major = ntohl(dev);
-		memcpy(&dev, fsid+4, 4); minor = ntohl(dev);
-		memcpy(&inode, fsid+8, 4);
-		break;
-
-	case FSID_ENCODE_DEV: /* 8 bytes: 4 byte packed device number, 4 inode */
-		/* This is *host* endian, not net-byte-order, because
-		 * no-one outside this host has any business interpreting it
-		 */
-		if (fsidlen != 8)
-			goto out;
-		memcpy(&dev, fsid, 4);
-		memcpy(&inode, fsid+4, 4);
-		major = (dev & 0xfff00) >> 8;
-		minor = (dev & 0xff) | ((dev >> 12) & 0xfff00);
-		break;
-
-	case FSID_UUID4_INUM: /* 4 byte inode number and 4 byte uuid */
-		if (fsidlen != 8)
-			goto out;
-		memcpy(&inode, fsid, 4);
-		uuidlen = 4;
-		fhuuid = fsid+4;
-		break;
-	case FSID_UUID8: /* 8 byte uuid */
-		if (fsidlen != 8)
-			goto out;
-		uuidlen = 8;
-		fhuuid = fsid;
-		break;
-	case FSID_UUID16: /* 16 byte uuid */
-		if (fsidlen != 16)
-			goto out;
-		uuidlen = 16;
-		fhuuid = fsid;
-		break;
-	case FSID_UUID16_INUM: /* 8 byte inode number and 16 byte uuid */
-		if (fsidlen != 24)
-			goto out;
-		memcpy(&inode64, fsid, 8);
-		inode = inode64;
-		uuidlen = 16;
-		fhuuid = fsid+8;
-		break;
-	}
+	if (parse_fsid(fsidtype, fsidlen, fsid, &parsed))
+		goto out;
 
 	auth_reload();
 
@@ -445,10 +542,7 @@ static void nfsd_fh(FILE *f)
 	for (i=0 ; i < MCL_MAXTYPES; i++) {
 		nfs_export *next_exp;
 		for (exp = exportlist[i].p_head; exp; exp = next_exp) {
-			struct stat stb;
-			char u[16];
 			char *path;
-			int type;
 
 			if (exp->m_export.e_flags & NFSEXP_CROSSMOUNT) {
 				static nfs_export *prev = NULL;
@@ -481,50 +575,9 @@ static void nfsd_fh(FILE *f)
 					   exp->m_export.e_mountpoint:
 					   exp->m_export.e_path))
 				dev_missing ++;
-			if (stat(path, &stb) != 0)
-				continue;
-			if (!S_ISDIR(stb.st_mode) && !S_ISREG(stb.st_mode)) {
-				continue;
-			}
-			switch(fsidtype){
-			case FSID_DEV:
-			case FSID_MAJOR_MINOR:
-			case FSID_ENCODE_DEV:
-				if (stb.st_ino != inode)
-					continue;
-				if (major != major(stb.st_dev) ||
-				    minor != minor(stb.st_dev))
-					continue;
-				break;
-			case FSID_NUM:
-				if (((exp->m_export.e_flags & NFSEXP_FSID) == 0 ||
-				     exp->m_export.e_fsid != fsidnum))
-					continue;
-				break;
-			case FSID_UUID4_INUM:
-			case FSID_UUID16_INUM:
-				if (stb.st_ino != inode)
-					continue;
-				goto check_uuid;
-			case FSID_UUID8:
-			case FSID_UUID16:
-				if (!is_mountpoint(path))
-					continue;
-			check_uuid:
-				if (exp->m_export.e_uuid)
-					get_uuid(exp->m_export.e_uuid,
-						 uuidlen, u);
-				else
-					for (type = 0;
-					     uuid_by_path(path, type, uuidlen, u);
-					     type++)
-						if (memcmp(u, fhuuid, uuidlen) == 0)
-							break;
 
-				if (memcmp(u, fhuuid, uuidlen) != 0)
-					continue;
-				break;
-			}
+			if (!match_fsid(&parsed, exp, path))
+				continue;
 			if (use_ipaddr) {
 				if (ai == NULL) {
 					struct addrinfo *tmp;
@@ -537,13 +590,14 @@ static void nfsd_fh(FILE *f)
 				if (!client_check(exp->m_client, ai))
 					continue;
 			}
-			/* It's a match !! */
-			if (!found) {
+			if (!found || subexport(&exp->m_export, found)) {
 				found = &exp->m_export;
+				free(found_path);
 				found_path = strdup(path);
 				if (found_path == NULL)
 					goto out;
-			} else if (strcmp(found->e_path, exp->m_export.e_path)!= 0)
+			} else if (strcmp(found->e_path, exp->m_export.e_path)
+				   && !subexport(found, &exp->m_export))
 			{
 				xlog(L_WARNING, "%s and %s have same filehandle for %s, using first",
 				     found_path, path, dom);
@@ -644,11 +698,11 @@ static int dump_to_cache(FILE *f, char *domain, char *path, struct exportent *ex
 {
 	qword_print(f, domain);
 	qword_print(f, path);
-	qword_printint(f, time(0)+30*60);
 	if (exp) {
 		int different_fs = strcmp(path, exp->e_path) != 0;
 		int flag_mask = different_fs ? ~NFSEXP_FSID : ~0;
 
+		qword_printuint(f, time(0) + exp->e_ttl);
 		qword_printint(f, exp->e_flags & flag_mask);
 		qword_printint(f, exp->e_anonuid);
 		qword_printint(f, exp->e_anongid);
@@ -667,7 +721,8 @@ static int dump_to_cache(FILE *f, char *domain, char *path, struct exportent *ex
  			qword_print(f, "uuid");
  			qword_printhex(f, u, 16);
  		}
-	}
+	} else
+		qword_printuint(f, time(0) + DEFAULT_TTL);
 	return qword_eol(f);
 }
 
@@ -813,12 +868,13 @@ struct {
 	char *cache_name;
 	void (*cache_handle)(FILE *f);
 	FILE *f;
+	char vbuf[RPC_CHAN_BUF_SIZE];
 } cachelist[] = {
-	{ "auth.unix.ip", auth_unix_ip, NULL},
-	{ "auth.unix.gid", auth_unix_gid, NULL},
-	{ "nfsd.export", nfsd_export, NULL},
-	{ "nfsd.fh", nfsd_fh, NULL},
-	{ NULL, NULL, NULL }
+	{ "auth.unix.ip", auth_unix_ip, NULL, ""},
+	{ "auth.unix.gid", auth_unix_gid, NULL, ""},
+	{ "nfsd.export", nfsd_export, NULL, ""},
+	{ "nfsd.fh", nfsd_fh, NULL, ""},
+	{ NULL, NULL, NULL, ""}
 };
 
 extern int manage_gids;
@@ -836,6 +892,10 @@ void cache_open(void)
 			continue;
 		sprintf(path, "/proc/net/rpc/%s/channel", cachelist[i].cache_name);
 		cachelist[i].f = fopen(path, "r+");
+		if (cachelist[i].f != NULL) {
+			setvbuf(cachelist[i].f, cachelist[i].vbuf, _IOLBF, 
+				RPC_CHAN_BUF_SIZE);
+		}
 	}
 }
 
@@ -874,8 +934,8 @@ int cache_process_req(fd_set *readfds)
 
 /*
  * Give IP->domain and domain+path->options to kernel
- * % echo nfsd $IP  $[now+30*60] $domain > /proc/net/rpc/auth.unix.ip/channel
- * % echo $domain $path $[now+30*60] $options $anonuid $anongid $fsid > /proc/net/rpc/nfsd.export/channel
+ * % echo nfsd $IP  $[now+DEFAULT_TTL] $domain > /proc/net/rpc/auth.unix.ip/channel
+ * % echo $domain $path $[now+DEFAULT_TTL] $options $anonuid $anongid $fsid > /proc/net/rpc/nfsd.export/channel
  */
 
 static int cache_export_ent(char *domain, struct exportent *exp, char *path)
@@ -955,7 +1015,7 @@ int cache_export(nfs_export *exp, char *path)
 	qword_print(f, "nfsd");
 	qword_print(f,
 		host_ntop(get_addrlist(exp->m_client, 0), buf, sizeof(buf)));
-	qword_printint(f, time(0)+30*60);
+	qword_printuint(f, time(0) + exp->m_export.e_ttl);
 	qword_print(f, exp->m_client->m_hostname);
 	err = qword_eol(f);
 	

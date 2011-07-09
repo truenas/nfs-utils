@@ -49,10 +49,6 @@
 #include "parse_dev.h"
 #include "conffile.h"
 
-#ifndef HAVE_DECL_AI_ADDRCONFIG
-#define AI_ADDRCONFIG	0
-#endif
-
 #ifndef NFS_PROGRAM
 #define NFS_PROGRAM	(100003)
 #endif
@@ -114,7 +110,7 @@ static void nfs_default_version(struct nfsmount_info *mi)
 	}
 }
 #else
-inline void nfs_default_version(struct nfsmount_info *mi) {}
+inline void nfs_default_version(__attribute__ ((unused)) struct nfsmount_info *mi) {}
 #endif /* MOUNT_CONFIG */
 
 /*
@@ -123,10 +119,12 @@ inline void nfs_default_version(struct nfsmount_info *mi) {}
  * Returns a time_t timeout timestamp, in seconds.
  */
 static time_t nfs_parse_retry_option(struct mount_options *options,
-				     unsigned int timeout_minutes)
+				     const time_t default_timeout)
 {
+	time_t timeout_minutes;
 	long tmp;
 
+	timeout_minutes = default_timeout;
 	switch (po_get_numeric(options, "retry", &tmp)) {
 	case PO_NOT_FOUND:
 		break;
@@ -135,6 +133,7 @@ static time_t nfs_parse_retry_option(struct mount_options *options,
 			timeout_minutes = tmp;
 			break;
 		}
+		/*FALLTHROUGH*/
 	case PO_BAD_VALUE:
 		if (verbose)
 			nfs_error(_("%s: invalid retry timeout was specified; "
@@ -142,7 +141,7 @@ static time_t nfs_parse_retry_option(struct mount_options *options,
 		break;
 	}
 
-	return time(NULL) + (time_t)(timeout_minutes * 60);
+	return time(NULL) + (timeout_minutes * 60);
 }
 
 /*
@@ -343,7 +342,6 @@ static int nfs_validate_options(struct nfsmount_info *mi)
 {
 	struct addrinfo hint = {
 		.ai_protocol	= (int)IPPROTO_UDP,
-		.ai_flags	= AI_ADDRCONFIG,
 	};
 	sa_family_t family;
 	int error;
@@ -570,16 +568,18 @@ static int nfs_sys_mount(struct nfsmount_info *mi, struct mount_options *opts)
 	char *options = NULL;
 	int result;
 
+	if (mi->fake)
+		return 1;
+
 	if (po_join(opts, &options) == PO_FAILED) {
 		errno = EIO;
 		return 0;
 	}
 
-	if (mi->fake)
-		return 1;
-
 	result = mount(mi->spec, mi->node, mi->type,
 			mi->flags & ~(MS_USER|MS_USERS), options);
+	free(options);
+
 	if (verbose && result) {
 		int save = errno;
 		nfs_error(_("%s: mount(2): %s"), progname, strerror(save));
@@ -650,7 +650,7 @@ out_fail:
 static int nfs_try_mount_v3v2(struct nfsmount_info *mi)
 {
 	struct addrinfo *ai;
-	int ret;
+	int ret = 0;
 
 	for (ai = mi->address; ai != NULL; ai = ai->ai_next) {
 		ret = nfs_do_mount_v3v2(mi, ai->ai_addr, ai->ai_addrlen);
@@ -737,7 +737,7 @@ out_fail:
 static int nfs_try_mount_v4(struct nfsmount_info *mi)
 {
 	struct addrinfo *ai;
-	int ret;
+	int ret = 0;
 
 	for (ai = mi->address; ai != NULL; ai = ai->ai_next) {
 		ret = nfs_do_mount_v4(mi, ai->ai_addr, ai->ai_addrlen);

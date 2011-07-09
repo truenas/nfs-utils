@@ -25,6 +25,12 @@
 #ifndef _PATH_EXPORTS
 #define _PATH_EXPORTS		"/etc/exports"
 #endif
+#ifndef _PATH_EXPORTS_D
+#define _PATH_EXPORTS_D         "/etc/exports.d"
+#endif
+#ifndef _EXT_EXPORT
+#define _EXT_EXPORT             ".exports"
+#endif
 #ifndef _PATH_IDMAPDCONF
 #define _PATH_IDMAPDCONF	"/etc/idmapd.conf"
 #endif
@@ -89,6 +95,7 @@ struct exportent {
 	char *          e_fslocdata;
 	char *		e_uuid;
 	struct sec_entry e_secinfo[SECFLAVOR_COUNT+1];
+	unsigned int	e_ttl;
 };
 
 struct rmtabent {
@@ -162,6 +169,12 @@ void closeall(int min);
 
 int			svctcp_socket (u_long __number, int __reuse);
 int			svcudp_socket (u_long __number);
+
+/* Misc shared code prototypes */
+size_t  strlcat(char *, const char *, size_t);
+size_t  strlcpy(char *, const char *, size_t);
+ssize_t atomicio(ssize_t (*f) (int, void*, size_t),
+		 int, void *, size_t);
 
 
 #define UNUSED(x) UNUSED_ ## x __attribute__((unused))

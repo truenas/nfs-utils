@@ -56,7 +56,9 @@
 #include "gss_util.h"
 #include "err_util.h"
 #include "context.h"
+#include "misc.h"
 #include "gss_oids.h"
+#include "svcgssd_krb5.h"
 
 extern char * mech2file(gss_OID mech);
 #define SVCGSSD_CONTEXT_CHANNEL "/proc/net/rpc/auth.rpcsec.context/channel"
@@ -70,6 +72,7 @@ struct svc_cred {
 	int	cr_ngroups;
 	gid_t	cr_groups[NGROUPS];
 };
+static char vbuf[RPC_CHAN_BUF_SIZE];
 
 static int
 do_svc_downcall(gss_buffer_desc *out_handle, struct svc_cred *cred,
@@ -91,6 +94,7 @@ do_svc_downcall(gss_buffer_desc *out_handle, struct svc_cred *cred,
 			     SVCGSSD_CONTEXT_CHANNEL, strerror(errno));
 		goto out_err;
 	}
+	setvbuf(f, vbuf, _IOLBF, RPC_CHAN_BUF_SIZE);
 	qword_printhex(f, out_handle->value, out_handle->length);
 	/* XXX are types OK for the rest of this? */
 	/* For context cache, use the actual context endtime */
@@ -241,7 +245,7 @@ get_ids(gss_name_t client_name, gss_OID mech, struct svc_cred *cred)
 			"file for name '%s'\n", sname);
 		goto out_free;
 	}
-	nfs4_init_name_mapping(NULL); /* XXX: should only do this once */
+
 	res = nfs4_gss_princ_to_ids(secname, sname, &uid, &gid);
 	if (res < 0) {
 		/*
@@ -441,6 +445,10 @@ handle_nullreq(FILE *f) {
 		/* in_handle is the context id stored in the out_handle
 		 * for the GSS_S_CONTINUE_NEEDED case below.  */
 		memcpy(&ctx, in_handle.value, in_handle.length);
+	}
+
+	if (svcgssd_limit_krb5_enctypes()) {
+		goto out_err;
 	}
 
 	maj_stat = gss_accept_sec_context(&min_stat, &ctx, gssd_creds,

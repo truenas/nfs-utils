@@ -69,10 +69,9 @@ for details on specifying raw IPv6 addresses.
 .P
 The
 .I fstype
-field contains "nfs", for whatever version of the protocol.
-The
-.B nfs
-allow several mount options, which are described below.
+field contains "nfs".  Use of the "nfs4" fstype in
+.I /etc/fstab
+is deprecated.
 .SH "MOUNT OPTIONS"
 Refer to
 .BR mount (8)
@@ -464,9 +463,9 @@ by other clients, but can impact application and server performance.
 .IP
 The DATA AND METADATA COHERENCE section contains a
 detailed discussion of these trade-offs.
-.SS "Options for versions 2 and 3 only"
+.SS "Options for NFS versions 2 and 3 only"
 Use these options, along with the options in the above subsection,
-for NFSv2/v3 only. They will be ignored for newer versions.
+for NFS versions 2 and 3 only.
 .TP 1.5i
 .BI proto= netid
 The transport protocol name and protocol family the NFS client uses
@@ -619,7 +618,7 @@ in such cases.
 .BI nfsvers= n
 The NFS protocol version number used to contact the server's NFS service.
 If the server does not support the requested version, the mount request fails.
-If this option is not specified, the client negociate a suitable version with
+If this option is not specified, the client negotiates a suitable version with
 the server, trying version 4 first, version 3 second, and version 2 last.
 .TP 1.5i
 .BI vers= n
@@ -717,9 +716,53 @@ If this option is not specified, the NFS client uses READDIRPLUS requests
 on NFS version 3 mounts to read small directories.
 Some applications perform better if the client uses only READDIR requests
 for all directories.
-.SS "Options for version 4 only"
+.TP 1.5i
+.BR local_lock= mechanism
+Specifies whether to use local locking for any or both of the flock and the
+POSIX locking mechanisms.
+.I mechanism
+can be one of
+.BR all ,
+.BR flock ,
+.BR posix ,
+or
+.BR none .
+This option is supported in kernels 2.6.37 and later.
+.IP
+The Linux NFS client provides a way to make locks local. This means, the
+applications can lock files, but such locks provide exclusion only against
+other applications running on the same client. Remote applications are not
+affected by these locks.
+.IP
+If this option is not specified, or if
+.B none
+is specified, the client assumes that the locks are not local.
+.IP
+If
+.BR all
+is specified, the client assumes that both flock and POSIX locks are local.
+.IP
+If
+.BR flock
+is specified, the client assumes that only flock locks are local and uses
+NLM sideband protocol to lock files when POSIX locks are used.
+.IP
+If
+.BR posix
+is specified, the client assumes that POSIX locks are local and uses NLM
+sideband protocol to lock files when flock locks are used.
+.IP
+To support legacy flock behavior similar to that of NFS clients < 2.6.12, use
+'local_lock=flock'. This option is required when exporting NFS mounts via
+Samba as Samba maps Windows share mode locks as flock. Since NFS clients >
+2.6.12 implement flock by emulating POSIX locks, this will result in
+conflicting locks.
+.IP
+NOTE: When used together, the 'local_lock' mount option will be overridden
+by 'nolock'/'lock' mount option.
+.SS "Options for NFS version 4 only"
 Use these options, along with the options in the first subsection above,
-for NFSv4 only. They will be ignored with older versions.
+for NFS version 4 and newer.
 .TP 1.5i
 .BI proto= netid
 The transport protocol name and protocol family the NFS client uses
@@ -1480,32 +1523,54 @@ of Access Control Lists that are semantically richer than POSIX ACLs.
 NFS version 4 ACLs are not fully compatible with POSIX ACLs; as such,
 some translation between the two is required
 in an environment that mixes POSIX ACLs and NFS version 4.
-.SH FILES
-.TP 1.5i
-.I /etc/fstab
-file system table
-.SH BUGS
-The generic
-.B remount
-option is not fully supported.
-Generic options, such as
-.BR rw " and " ro
-can be modified using the
-.B remount
-option,
-but NFS-specific options are not all supported.
+.SH "THE REMOUNT OPTION"
+Generic mount options such as
+.BR rw " and " sync
+can be modified on NFS mount points using the
+.BR remount
+option.
+See
+.BR mount (8)
+for more information on generic mount options.
+.P
+With few exceptions, NFS-specific options
+are not able to be modified during a remount.
 The underlying transport or NFS version
 cannot be changed by a remount, for example.
+.P
 Performing a remount on an NFS file system mounted with the
 .B noac
 option may have unintended consequences.
 The
 .B noac
-option is a mixture of a generic option,
+option is a combination of the generic option
 .BR sync ,
-and an NFS-specific option
+and the NFS-specific option
 .BR actimeo=0 .
+.SS "Unmounting after a remount"
+For mount points that use NFS versions 2 or 3, the NFS umount subcommand
+depends on knowing the original set of mount options used to perform the
+MNT operation.
+These options are stored on disk by the NFS mount subcommand,
+and can be erased by a remount.
 .P
+To ensure that the saved mount options are not erased during a remount,
+specify either the local mount directory, or the server hostname and
+export pathname, but not both, during a remount.  For example,
+.P
+.NF
+.TA 2.5i
+	mount -o remount,ro /mnt
+.FI
+.P
+merges the mount option
+.B ro
+with the mount options already saved on disk for the NFS server mounted at /mnt.
+.SH FILES
+.TP 1.5i
+.I /etc/fstab
+file system table
+.SH BUGS
 Before 2.4.7, the Linux NFS client did not support NFS over TCP.
 .P
 Before 2.4.20, the Linux NFS client used a heuristic

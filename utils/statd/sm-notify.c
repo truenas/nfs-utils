@@ -34,8 +34,9 @@
 #include "nsm.h"
 #include "nfsrpc.h"
 
-#ifndef HAVE_DECL_AI_ADDRCONFIG
-#define AI_ADDRCONFIG	0
+/* glibc before 2.3.4 */
+#ifndef AI_NUMERICSERV
+#define AI_NUMERICSERV	0
 #endif
 
 #define NSM_TIMEOUT	2
@@ -78,7 +79,6 @@ smn_lookup(const char *name)
 {
 	struct addrinfo	*ai = NULL;
 	struct addrinfo hint = {
-		.ai_flags	= AI_ADDRCONFIG,
 		.ai_family	= (nsm_family == AF_INET ? AF_INET: AF_UNSPEC),
 		.ai_protocol	= (int)IPPROTO_UDP,
 	};
@@ -253,6 +253,7 @@ smn_bind_address(const char *srcaddr, const char *srcport)
 	if (srcaddr == NULL)
 		hint.ai_flags |= AI_PASSIVE;
 
+	/* Do not allow "node" and "service" parameters both to be NULL */
 	if (srcport == NULL)
 		error = getaddrinfo(srcaddr, "", &hint, &ai);
 	else

@@ -1,7 +1,7 @@
 /*
- * version.h -- get running kernel version
+ * utils.h -- misc utils for mount and umount
  *
- * Copyright (C) 2008 Oracle.  All rights reserved.
+ * Copyright (C) 2010 Karel Zak <kzak@redhat.com>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public
@@ -20,32 +20,17 @@
  *
  */
 
-#ifndef _NFS_UTILS_MOUNT_VERSION_H
-#define _NFS_UTILS_MOUNT_VERSION_H
+#ifndef _NFS_UTILS_MOUNT_UTILS_H
+#define _NFS_UTILS_MOUNT_UTILS_H
 
-#include <stdlib.h>
-#include <string.h>
+#include "parse_opt.h"
 
-#include <sys/utsname.h>
+int discover_nfs_mount_data_version(int *string_ver);
+void print_one(char *spec, char *node, char *type, char *opts);
+void mount_usage(void);
+void umount_usage(void);
+int chk_mountpoint(const char *mount_point);
 
-static inline unsigned int MAKE_VERSION(unsigned int p, unsigned int q,
-					unsigned int r)
-{
-	return (65536 * p) + (256 * q) + r;
-}
+int nfs_umount23(const char *devname, char *string);
 
-static inline unsigned int linux_version_code(void)
-{
-	struct utsname my_utsname;
-	unsigned int p, q, r;
-
-	if (uname(&my_utsname))
-		return 0;
-
-	p = (unsigned int)atoi(strtok(my_utsname.release, "."));
-	q = (unsigned int)atoi(strtok(NULL, "."));
-	r = (unsigned int)atoi(strtok(NULL, "."));
-	return MAKE_VERSION(p, q, r);
-}
-
-#endif	/* _NFS_UTILS_MOUNT_VERSION_H */
+#endif	/* !_NFS_UTILS_MOUNT_UTILS_H */

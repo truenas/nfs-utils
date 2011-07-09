@@ -32,7 +32,12 @@ rpc_dispatch(struct svc_req *rqstp, SVCXPRT *transp,
 		return;
 	}
 	dtable += (rqstp->rq_vers - 1);
-	if (((int)rqstp->rq_proc) > dtable->nproc) {
+	if (rqstp->rq_proc > dtable->nproc) {
+		svcerr_noproc(transp);
+		return;
+	}
+
+	if (dtable->nproc <= rqstp->rq_proc) {
 		svcerr_noproc(transp);
 		return;
 	}

@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 dnl
-AC_INIT([linux nfs-utils],[1.2.3],[linux-nfs@vger.kernel.org],[nfs-utils])
+AC_INIT([linux nfs-utils],[1.2.4],[linux-nfs@vger.kernel.org],[nfs-utils])
 AC_CANONICAL_BUILD([])
 AC_CANONICAL_HOST([])
 AC_CONFIG_MACRO_DIR(aclocal)
@@ -132,11 +132,20 @@ AC_ARG_ENABLE(mount,
 	enable_mount=$enableval,
 	enable_mount=yes)
 	AM_CONDITIONAL(CONFIG_MOUNT, [test "$enable_mount" = "yes"])
+
+if test "$enable_mount" = yes; then
+	AC_ARG_ENABLE(libmount-mount,
+		[AC_HELP_STRING([--enable-libmount-mount],
+				[Link mount.nfs with libmount (EXPERIMENTAL)])],
+		enable_libmount=yes,
+		enable_libmount=no)
+fi
+
 AC_ARG_ENABLE(tirpc,
 	[AC_HELP_STRING([--enable-tirpc],
 			[enable use of TI-RPC @<:@default=yes@:>@])],
 	enable_tirpc=$enableval,
-	enable_tirpc='yes')
+	enable_tirpc='')
 AC_ARG_ENABLE(ipv6,
 	[AC_HELP_STRING([--enable-ipv6],
                         [enable support for IPv6 @<:@default=no@:>@])],
@@ -247,6 +256,12 @@ if test "$enable_nfsv4" = yes; then
   dnl check for nfsidmap libraries and headers
   AC_LIBNFSIDMAP
 
+  dnl enable nfsidmap when its support by libnfsidmap
+  AM_CONDITIONAL(CONFIG_NFSIDMAP, [test "$enable_nfsidmap" = "yes"])
+
+  dnl check for the keyutils libraries and headers
+  AC_KEYUTILS
+
   dnl librpcsecgss already has a dependency on libgssapi,
   dnl but we need to make sure we get the right version
   if test "$enable_gss" = yes; then
@@ -278,6 +293,13 @@ AC_SUBST(LIBSOCKET)
 AC_SUBST(LIBCRYPT)
 AC_SUBST(LIBBSD)
 AC_SUBST(LIBBLKID)
+
+if test "$enable_libmount" != no; then
+   AC_CHECK_LIB(mount, mnt_context_do_mount, [LIBMOUNT="-lmount"], AC_MSG_ERROR([libmount needed]))
+   AC_CHECK_HEADER(libmount/libmount.h, , AC_MSG_ERROR([Cannot find libmount header file libmount/libmount.h]))
+fi
+AM_CONDITIONAL(CONFIG_LIBMOUNT, [test "$enable_libmount" = "yes"])
+AC_SUBST(LIBMOUNT)
 
 if test "$enable_gss" = yes; then
   dnl 'gss' requires getnameinfo - at least for gssd_proc.c
@@ -435,6 +457,7 @@ AC_CONFIG_FILES([
 	utils/mountd/Makefile
 	utils/nfsd/Makefile
 	utils/nfsstat/Makefile
+	utils/nfsidmap/Makefile
 	utils/showmount/Makefile
 	utils/statd/Makefile
 	tests/Makefile

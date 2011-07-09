@@ -331,16 +331,43 @@ lock_mtab (void) {
 		int sig = 0;
 		struct sigaction sa;
 
-		sa.sa_handler = handler;
 		sa.sa_flags = 0;
 		sigfillset (&sa.sa_mask);
   
-		while (sigismember (&sa.sa_mask, ++sig) != -1
-		       && sig != SIGCHLD) {
-			if (sig == SIGALRM)
+		while (sigismember (&sa.sa_mask, ++sig) != -1) {
+			switch(sig) {
+			case SIGCHLD:
+			case SIGKILL:
+			case SIGCONT:
+			case SIGSTOP:
+				/* The cannot be caught, or should not,
+				 * so don't even try.
+				 */
+				continue;
+			case SIGALRM:
 				sa.sa_handler = setlkw_timeout;
-			else
+				break;
+			case SIGHUP:
+			case SIGINT:
+			case SIGQUIT:
+			case SIGWINCH:
+			case SIGTSTP:
+			case SIGTTIN:
+			case SIGTTOU:
+			case SIGPIPE:
+			case SIGXFSZ:
+			case SIGXCPU:
+				/* non-priv user can cause these to be
+				 * generated, so ignore them.
+				 */
+				sa.sa_handler = SIG_IGN;
+				break;
+			default:
+				/* The rest should not be possible, so just
+				 * print a message and unlock mtab.
+				 */
 				sa.sa_handler = handler;
+			}
 			sigaction (sig, &sa, (struct sigaction *) 0);
 		}
 		signals_have_been_setup = 1;
@@ -364,19 +391,22 @@ lock_mtab (void) {
 	/* Repeat until it was us who made the link */
 	while (!we_created_lockfile) {
 		struct flock flock;
-		int errsv, j;
+		int j;
 
 		j = link(linktargetfile, MOUNTED_LOCK);
-		errsv = errno;
 
-		if (j == 0)
-			we_created_lockfile = 1;
+		{
+			int errsv = errno;
 
-		if (j < 0 && errsv != EEXIST) {
-			(void) unlink(linktargetfile);
-			die (EX_FILEIO, _("can't link lock file %s: %s "
-			     "(use -n flag to override)"),
-			     MOUNTED_LOCK, strerror (errsv));
+			if (j == 0)
+				we_created_lockfile = 1;
+
+			if (j < 0 && errsv != EEXIST) {
+				(void) unlink(linktargetfile);
+				die (EX_FILEIO, _("can't link lock file %s: %s "
+				     "(use -n flag to override)"),
+				     MOUNTED_LOCK, strerror (errsv));
+			}
 		}
 
 		lockfile_fd = open (MOUNTED_LOCK, O_WRONLY);
@@ -414,7 +444,7 @@ lock_mtab (void) {
 			}
 			(void) unlink(linktargetfile);
 		} else {
-			static int tries = 0;
+			static int retries = 0;
 
 			/* Someone else made the link. Wait. */
 			alarm(LOCK_TIMEOUT);
@@ -428,10 +458,10 @@ lock_mtab (void) {
 			alarm(0);
 			/* Limit the number of iterations - maybe there
 			   still is some old /etc/mtab~ */
-			++tries;
-			if (tries % 200 == 0)
+			++retries;
+			if (retries % 200 == 0)
 			   usleep(30);
-			if (tries > 100000) {
+			if (retries > 100000) {
 				(void) unlink(linktargetfile);
 				close(lockfile_fd);
 				die (EX_FILEIO, _("Cannot create link %s\n"

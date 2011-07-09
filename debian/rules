@@ -25,6 +25,7 @@ build-stamp:
 		--mandir='$${prefix}/share/man' \
 		--enable-nfsv41 \
 		--enable-ipv6 \
+		--enable-tirpc \
 		--with-tcp-wrappers
 	$(MAKE) $(MAKEFLAGS)
 	touch build-stamp

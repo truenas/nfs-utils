@@ -2,12 +2,10 @@
 02-524255-manpages.patch
 03-handle-mtab-symlink.patch
 11-532048-reduce-verbosity.patch
-12-svcgssd-document-n-option.patch
 13-preserve-explicit-port-2049.patch
 16-mount.nfs.man-update-distinction-between-fstype.patch
 17-Fix-statd.8-manpage-syntax-visible.patch
 18-Fix-nfsiostat.8-manpage-syntax-missing-.I.patch
 19-exports.man-Fix-comment-syntax.patch
 20-nfs.man-Fix-fstab-example.patch
-21-anticipate-RLIMIT_FSIZE.patch
 22-start-statd-Use-bash.patch

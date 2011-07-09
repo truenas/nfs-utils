@@ -1,3 +1,15 @@
+nfs-utils (1:1.2.4-1) unstable; urgency=low
+
+  * New upstream version
+    - Fix host_reliable_addrinfo (Closes: #633155)
+    - Allow multiple RPC listeners to share listener port number
+    (Closes: #619877)
+    - Add --enable-libmount-mount (Closes: #626478)
+    - 12-svcgssd-document-n-option.patch applied upstream
+    - 21-anticipate-RLIMIT_FSIZE.patch applied upstream 
+
+ -- Luk Claes <luk@debian.org>  Sat, 09 Jul 2011 15:07:34 +0200
+
 nfs-utils (1:1.2.3-3) unstable; urgency=medium
 
   [ Luk Claes ]

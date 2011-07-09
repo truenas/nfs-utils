@@ -9,10 +9,10 @@ Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
 
 --- a/utils/exportfs/exports.man
 +++ b/utils/exportfs/exports.man
-@@ -72,25 +72,25 @@ For example, either `/255.255.252.0' or `/22' appended
- to the network base IPv4 address results in identical subnetworks with 10 bits of
- host. Wildcard characters generally do not work on IP addresses, though they
- may work by accident when reverse DNS lookups fail.
+@@ -80,25 +80,25 @@ For example, either `/255.255.252.0' or `/22' appended
+ character (not to be confused with the
+ .I wildcard
+ entry above) and will match all clients.
 -'''.TP
 -'''.B =public
 -'''This is a special ``hostname'' that identifies the given directory name
@@ -52,9 +52,9 @@ Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
 +.\".B \-\-public\-root
 +.\"option. Multiple specifications of a public root will be ignored.
  .PP
- .SS RPCSEC_GSS security
- You may use the special strings "gss/krb5", "gss/krb5i", or "gss/krb5p"
-@@ -295,24 +295,24 @@ with ACL support (i.e. by default,
+ If a client matches more than one of the specifications above, then
+ the first match from the above list order takes precedence - regardless of
+@@ -311,24 +311,24 @@ with ACL support (i.e. by default,
  .I no_acl
  is off).
  
@@ -97,7 +97,7 @@ Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
  
  .TP
  .IR mountpoint= path
-@@ -409,21 +409,21 @@ and can be turned off with
+@@ -411,21 +411,21 @@ and can be turned off with
  .IR no_root_squash .
  .PP
  By default,
@@ -128,19 +128,19 @@ Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
  Finally, you can map all user requests to the
  anonymous uid by specifying the
  .IR all_squash " option.
-@@ -468,7 +468,7 @@ is supposedly that of user joe).
- /home/joe       pc001(rw,all_squash,anonuid=150,anongid=100)
- /pub            *(ro,insecure,all_squash)
+@@ -490,7 +490,7 @@ is supposedly that of user joe).
  /srv/www        \-sync,rw server @trusted @external(ro)
+ /foo            2001:db8:9:e54::/64(rw) 192.0.2.0/24(rw)
+ /build          buildhost[0-9].local.domain(rw)
 -'''/pub/private    (noaccess)
 +.\"/pub/private    (noaccess)
  .fi
  .PP
  The first line exports the entire filesystem to machines master and trusty.
-@@ -484,21 +484,21 @@ don't use a reserved port for NFS.
- The sixth line exports a directory read-write to the machine 'server'
- as well as the `@trusted' netgroup, and read-only to netgroup `@external',
- all three mounts with the `sync' option enabled.
+@@ -508,21 +508,21 @@
+ all three mounts with the `sync' option enabled. The seventh line exports
+ a directory to both an IPv6 and an IPv4 subnet. The eighth line demonstrates
+ a character class wildcard match.
 -''' The last line denies all NFS clients
 -'''access to the private directory.
 -'''.SH CAVEATS
@@ -173,8 +173,8 @@ Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
 +.\"entry.
  .SH FILES
  /etc/exports
- .SH SEE ALSO
-@@ -507,17 +507,17 @@ all three mounts with the `sync' option enabled.
+ /etc/exports.d
+@@ -532,17 +532,17 @@ all three mounts with the `sync' option enabled.
  .BR mountd (8),
  .BR nfsd (8),
  .BR showmount (8).

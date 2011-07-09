@@ -6,9 +6,10 @@ nfs-utils (1:1.2.4-1) unstable; urgency=low
     (Closes: #619877)
     - Add --enable-libmount-mount (Closes: #626478)
     - 12-svcgssd-document-n-option.patch applied upstream
+    - Refresh 19-exports.man-Fix-comment-syntax.patch
     - 21-anticipate-RLIMIT_FSIZE.patch applied upstream 
 
- -- Luk Claes <luk@debian.org>  Sat, 09 Jul 2011 15:07:34 +0200
+ -- Luk Claes <luk@debian.org>  Sat, 09 Jul 2011 15:51:47 +0200
 
 nfs-utils (1:1.2.3-3) unstable; urgency=medium
 

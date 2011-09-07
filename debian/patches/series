@@ -9,3 +9,4 @@
 19-exports.man-Fix-comment-syntax.patch
 20-nfs.man-Fix-fstab-example.patch
 22-start-statd-Use-bash.patch
+23-nfs.man-escape-nroff-for-proper-rendering.patch

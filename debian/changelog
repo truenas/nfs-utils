@@ -1,6 +1,11 @@
 nfs-utils (1:1.2.4-2) UNRELEASED; urgency=low
 
+  [ Luk Claes ]
   * nfs-kernel-server-default: Add comment about how to disable NFSv4
+
+  [ Ben Hutchings ]
+  * nfs.man: escape ' nroff for proper rendering, thanks to Simon Paillard
+    (Closes: #636278)
 
  -- Luk Claes <luk@debian.org>  Sat, 06 Aug 2011 07:38:48 +0200
 

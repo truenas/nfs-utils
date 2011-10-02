@@ -14,8 +14,9 @@ nfs-utils (1:1.2.5-1) UNRELEASED; urgency=low
     - svcgssd: use correct defaults in call to gss_set_allowable_enctypes
       (Closes: #637660).
     - rpc.statd: Bind downcall socket to loopback address (Closes: #457095). 
+  * Add version to build-dep on libnfsidmap-dev (Closes: #639691).
 
- -- Luk Claes <luk@debian.org>  Sun, 02 Oct 2011 17:26:11 +0200
+ -- Luk Claes <luk@debian.org>  Sun, 02 Oct 2011 17:28:53 +0200
 
 nfs-utils (1:1.2.4-2) UNRELEASED; urgency=low
 

@@ -7,9 +7,15 @@ nfs-utils (1:1.2.5-1) UNRELEASED; urgency=low
     - deleted: 19-exports.man-Fix-comment-syntax.patch
     - deleted: 20-nfs.man-Fix-fstab-example.patch
     - deleted: 22-start-statd-Use-bash.patch
-    - deleted: 23-nfs.man-escape-nroff-for-proper-rendering.patch 
+    - deleted: 23-nfs.man-escape-nroff-for-proper-rendering.patch
+      (Closes: #636278).
+    - support less components in version number (Closes: #632457).
+    - idmapd: correctly convert ocal encoded fields (Closes: #640105).
+    - svcgssd: use correct defaults in call to gss_set_allowable_enctypes
+      (Closes: #637660).
+    - rpc.statd: Bind downcall socket to loopback address (Closes: #457095). 
 
- -- Luk Claes <luk@debian.org>  Sun, 02 Oct 2011 17:01:07 +0200
+ -- Luk Claes <luk@debian.org>  Sun, 02 Oct 2011 17:26:11 +0200
 
 nfs-utils (1:1.2.4-2) UNRELEASED; urgency=low
 

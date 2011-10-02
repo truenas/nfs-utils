@@ -15,8 +15,9 @@ nfs-utils (1:1.2.5-1) UNRELEASED; urgency=low
       (Closes: #637660).
     - rpc.statd: Bind downcall socket to loopback address (Closes: #457095). 
   * Add version to build-dep on libnfsidmap-dev (Closes: #639691).
+  * debian/idmapd.conf: Comment Domain (Closes: #638607).
 
- -- Luk Claes <luk@debian.org>  Sun, 02 Oct 2011 17:28:53 +0200
+ -- Luk Claes <luk@debian.org>  Sun, 02 Oct 2011 17:31:48 +0200
 
 nfs-utils (1:1.2.4-2) UNRELEASED; urgency=low
 

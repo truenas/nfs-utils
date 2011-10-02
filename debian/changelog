@@ -17,9 +17,10 @@ nfs-utils (1:1.2.5-1) UNRELEASED; urgency=low
   * Add version to build-dep on libnfsidmap-dev (Closes: #639691).
   * debian/idmapd.conf: Comment Domain (Closes: #638607).
   * debian/patches/17-multiarch-kerberos-paths.patch (Closes: #642797).
-  * Add build dependency on libdevmapper-dev for blkmapd
+  * Add build dependency on libdevmapper-dev for blkmapd.
+  * Use dh_autoreconf to make sure original files are restored.
 
- -- Luk Claes <luk@debian.org>  Sun, 02 Oct 2011 18:10:41 +0200
+ -- Luk Claes <luk@debian.org>  Sun, 02 Oct 2011 18:15:35 +0200
 
 nfs-utils (1:1.2.4-2) UNRELEASED; urgency=low
 

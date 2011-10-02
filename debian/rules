@@ -21,7 +21,7 @@ build-indep: build-stamp
 build-arch: build-stamp
 build-stamp:
 	dh_testdir
-	autoreconf
+	dh_autoreconf
 	CFLAGS="$(CFLAGS)" ./configure \
 		--mandir='$${prefix}/share/man' \
 		--enable-nfsv41 \
@@ -37,6 +37,7 @@ clean:
 	rm -f build-stamp
 	rm -rf $(DEBTMP)
 	[ ! -f Makefile ] || $(MAKE) distclean
+	dh_autoreconf_clean
 	dh_clean
 
 binary-indep: build

@@ -1,3 +1,9 @@
+nfs-utils (1:1.2.5-2) unstable; urgency=low
+
+  * debian/patches/18-dont-use-PAGE_SIZE.patch
+
+ -- Luk Claes <luk@debian.org>  Sun, 02 Oct 2011 22:21:10 +0200
+
 nfs-utils (1:1.2.5-1) unstable; urgency=low
 
   * New upstream version

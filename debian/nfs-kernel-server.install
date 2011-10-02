@@ -7,5 +7,3 @@ debian/tmp/var/lib/nfs/etab
 debian/tmp/var/lib/nfs/rmtab
 debian/nfs-kernel-server.default /usr/share/nfs-kernel-server/conffiles/
 debian/etc.exports /usr/share/nfs-kernel-server/conffiles/
-debian/nfs-kernel-server.default.md5sum /usr/share/nfs-kernel-server/conffiles/
-debian/etc.exports.md5sum /usr/share/nfs-kernel-server/conffiles/

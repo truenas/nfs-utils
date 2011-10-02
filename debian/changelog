@@ -1,4 +1,4 @@
-nfs-utils (1:1.2.5-1) UNRELEASED; urgency=low
+nfs-utils (1:1.2.5-1) unstable; urgency=low
 
   * New upstream version
     - deleted: 13-preserve-explicit-port-2049.patch
@@ -21,7 +21,7 @@ nfs-utils (1:1.2.5-1) UNRELEASED; urgency=low
   * Use dh_autoreconf to make sure original files are restored.
   * Install blkmapd and its manpage.
 
- -- Luk Claes <luk@debian.org>  Sun, 02 Oct 2011 18:21:09 +0200
+ -- Luk Claes <luk@debian.org>  Sun, 02 Oct 2011 18:29:53 +0200
 
 nfs-utils (1:1.2.4-2) UNRELEASED; urgency=low
 

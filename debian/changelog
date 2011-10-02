@@ -1,3 +1,16 @@
+nfs-utils (1:1.2.5-1) UNRELEASED; urgency=low
+
+  * New upstream version
+    - deleted: 13-preserve-explicit-port-2049.patch
+    - deleted: 17-Fix-statd.8-manpage-syntax-visible.patch
+    - deleted: 18-Fix-nfsiostat.8-manpage-syntax-missing-.I.patch
+    - deleted: 19-exports.man-Fix-comment-syntax.patch
+    - deleted: 20-nfs.man-Fix-fstab-example.patch
+    - deleted: 22-start-statd-Use-bash.patch
+    - deleted: 23-nfs.man-escape-nroff-for-proper-rendering.patch 
+
+ -- Luk Claes <luk@debian.org>  Sun, 02 Oct 2011 17:01:07 +0200
+
 nfs-utils (1:1.2.4-2) UNRELEASED; urgency=low
 
   [ Luk Claes ]

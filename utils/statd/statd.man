@@ -219,7 +219,10 @@ for details.
 Specifies the port number used for RPC listener sockets.
 If this option is not specified,
 .B rpc.statd
-chooses a random ephemeral port for each listener socket.
+will try to consult
+.IR /etc/services ,
+if gets port succeed, set the same port for all listener socket,
+otherwise chooses a random ephemeral port for each listener socket.
 .IP
 This option can be used to fix the port value of its listeners when
 SM_NOTIFY requests must traverse a firewall between clients and servers.
@@ -347,8 +350,7 @@ of the requesting lock manager.
 TI-RPC is a pre-requisite for supporting NFS on IPv6.
 If TI-RPC support is built into
 .BR rpc.statd ,
-it attempts to start listeners on network transports marked
-'visible' in
+it attempts to start listeners on network transports marked 'visible' in
 .IR /etc/netconfig .
 As long as at least one network transport listener starts successfully,
 .B rpc.statd

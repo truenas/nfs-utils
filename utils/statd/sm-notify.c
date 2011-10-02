@@ -45,8 +45,9 @@
 struct nsm_host {
 	struct nsm_host *	next;
 	char *			name;
-	char *			mon_name;
-	char *			my_name;
+	const char *		mon_name;
+	const char *		my_name;
+	char *			notify_arg;
 	struct addrinfo		*ai;
 	time_t			last_used;
 	time_t			send_next;
@@ -93,6 +94,101 @@ smn_lookup(const char *name)
 	return ai;
 }
 
+#ifdef HAVE_GETNAMEINFO
+static char *
+smn_get_hostname(const struct sockaddr *sap, const socklen_t salen,
+		const char *name)
+{
+	char buf[NI_MAXHOST];
+	int error;
+
+	error = getnameinfo(sap, salen, buf, sizeof(buf), NULL, 0, NI_NAMEREQD);
+	if (error != 0) {
+		xlog(L_ERROR, "my_name '%s' is unusable: %s",
+			name, gai_strerror(error));
+		return NULL;
+	}
+	return strdup(buf);
+}
+#else	/* !HAVE_GETNAMEINFO */
+static char *
+smn_get_hostname(const struct sockaddr *sap,
+		__attribute__ ((unused)) const socklen_t salen,
+		const char *name)
+{
+	const struct sockaddr_in *sin = (const struct sockaddr_in *)(char *)sap;
+	const struct in_addr *addr = &sin->sin_addr;
+	struct hostent *hp;
+
+	if (sap->sa_family != AF_INET) {
+		xlog(L_ERROR, "my_name '%s' is unusable: Bad address family",
+			name);
+		return NULL;
+	}
+
+	hp = gethostbyaddr(addr, (socklen_t)sizeof(addr), AF_INET);
+	if (hp == NULL) {
+		xlog(L_ERROR, "my_name '%s' is unusable: %s",
+			name, hstrerror(h_errno));
+		return NULL;
+	}
+	return strdup(hp->h_name);
+}
+#endif	/* !HAVE_GETNAMEINFO */
+
+/*
+ * Presentation addresses are converted to their canonical hostnames.
+ * If the IP address does not map to a hostname, it is an error:
+ * we never send a presentation address as the argument of SM_NOTIFY.
+ *
+ * If "name" is not a presentation address, it is left alone.  This
+ * allows the administrator some flexibility if DNS isn't configured
+ * exactly how sm-notify prefers it.
+ *
+ * Returns NUL-terminated C string containing the result, or NULL
+ * if the canonical name doesn't exist or cannot be determined.
+ * The caller must free the result with free(3).
+ */
+__attribute_malloc__
+static char *
+smn_verify_my_name(const char *name)
+{
+	struct addrinfo *ai = NULL;
+	struct addrinfo hint = {
+#ifdef IPV6_SUPPORTED
+		.ai_family	= AF_UNSPEC,
+#else	/* !IPV6_SUPPORTED */
+		.ai_family	= AF_INET,
+#endif	/* !IPV6_SUPPORTED */
+		.ai_flags	= AI_NUMERICHOST,
+	};
+	char *retval;
+	int error;
+
+	error = getaddrinfo(name, NULL, &hint, &ai);
+	switch (error) {
+	case 0:
+		/* @name was a presentation address */
+		retval = smn_get_hostname(ai->ai_addr, ai->ai_addrlen, name);
+		freeaddrinfo(ai);
+		if (retval == NULL)
+			return NULL;
+		break;
+	case EAI_NONAME:
+		/* @name was not a presentation address */
+		retval = strdup(name);
+		break;
+	default:
+		xlog(L_ERROR, "my_name '%s' is unusable: %s",
+			name, gai_strerror(error));
+		return NULL;
+	}
+
+	xlog(D_GENERAL, "Canonical name for my_name '%s': %s",
+			name, retval);
+	return retval;
+}
+
 __attribute_malloc__
 static struct nsm_host *
 smn_alloc_host(const char *hostname, const char *mon_name,
@@ -104,14 +200,23 @@ smn_alloc_host(const char *hostname, const char *mon_name,
 	if (host == NULL)
 		goto out_nomem;
 
+	/*
+	 * mon_name and my_name are preserved so sm-notify can
+	 * find the right monitor record to remove when it is
+	 * done processing this host.
+	 */
 	host->name = strdup(hostname);
-	host->mon_name = strdup(mon_name);
-	host->my_name = strdup(my_name);
+	host->mon_name = (const char *)strdup(mon_name);
+	host->my_name = (const char *)strdup(my_name);
+	host->notify_arg = strdup(opt_srcaddr != NULL ?
+					nsm_hostname : my_name);
 	if (host->name == NULL ||
 	    host->mon_name == NULL ||
-	    host->my_name == NULL) {
-		free(host->my_name);
-		free(host->mon_name);
+	    host->my_name == NULL ||
+	    host->notify_arg == NULL) {
+		free(host->notify_arg);
+		free((void *)host->my_name);
+		free((void *)host->mon_name);
 		free(host->name);
 		free(host);
 		goto out_nomem;
@@ -135,8 +240,9 @@ static void smn_forget_host(struct nsm_host *host)
 
 	nsm_delete_notified_host(host->name, host->mon_name, host->my_name);
 
-	free(host->my_name);
-	free(host->mon_name);
+	free(host->notify_arg);
+	free((void *)host->my_name);
+	free((void *)host->mon_name);
 	free(host->name);
 	if (host->ai)
 		freeaddrinfo(host->ai);
@@ -157,7 +263,6 @@ smn_get_host(const char *hostname,
 		return 0;
 
 	insert_host(host);
-	xlog(D_GENERAL, "Added host %s to notify list", hostname);
 	return 1;
 }
 
@@ -395,12 +500,14 @@ usage:		fprintf(stderr,
 		exit(1);
 	}
 
-	xlog_syslog(1);
 	if (opt_debug) {
+		xlog_syslog(0);
 		xlog_stderr(1);
 		xlog_config(D_ALL, 1);
-	} else
+	} else {
+		xlog_syslog(1);
 		xlog_stderr(0);
+	}
 
 	xlog_open(progname);
 	xlog(L_NOTICE, "Version " VERSION " starting");
@@ -414,32 +521,14 @@ usage:		fprintf(stderr,
 	}
 
 	if (opt_srcaddr != NULL) {
-		struct addrinfo *ai = NULL;
-		struct addrinfo hint = {
-			.ai_family	= AF_UNSPEC,
-			.ai_flags	= AI_NUMERICHOST,
-		};
+		char *name;
 
-		if (getaddrinfo(opt_srcaddr, NULL, &hint, &ai))
-			/* not a presentation address - use it */
-			strncpy(nsm_hostname, opt_srcaddr, sizeof(nsm_hostname));
-		else {
-			/* was a presentation address - look it up in
-			 * /etc/hosts, so it can be used for my_name */
-			int error;
+		name = smn_verify_my_name(opt_srcaddr);
+		if (name == NULL)
+			exit(1);
 
-			freeaddrinfo(ai);
-			hint.ai_flags = AI_CANONNAME;
-			error = getaddrinfo(opt_srcaddr, NULL, &hint, &ai);
-			if (error != 0) {
-				xlog(L_ERROR, "Bind address %s is unusable: %s",
-						opt_srcaddr, gai_strerror(error));
-				exit(1);
-			}
-			strncpy(nsm_hostname, ai->ai_canonname,
-							sizeof(nsm_hostname));
-			freeaddrinfo(ai);
-		}
+		strncpy(nsm_hostname, name, sizeof(nsm_hostname));
+		free(name);
 	}
 
 	(void)nsm_retire_monitored_hosts();
@@ -557,8 +646,6 @@ notify(const int sock)
 static int
 notify_host(int sock, struct nsm_host *host)
 {
-	const char *my_name = (opt_srcaddr != NULL ?
-					nsm_hostname : host->my_name);
 	struct sockaddr *sap;
 	socklen_t salen;
 
@@ -604,9 +691,28 @@ notify_host(int sock, struct nsm_host *host)
 		host->xid = nsm_xmit_rpcbind(sock, sap, SM_PROG, SM_VERS);
 	else
 		host->xid = nsm_xmit_notify(sock, sap, salen,
-					SM_PROG, my_name, nsm_state);
+					SM_PROG, host->notify_arg, nsm_state);
 
 	return 0;
+}
+
+static void
+smn_defer(struct nsm_host *host)
+{
+	host->xid = 0;
+	host->send_next = time(NULL) + NSM_MAX_TIMEOUT;
+	host->timeout = NSM_MAX_TIMEOUT;
+	insert_host(host);
+}
+
+static void
+smn_schedule(struct nsm_host *host)
+{
+	host->retries = 0;
+	host->xid = 0;
+	host->send_next = time(NULL);
+	host->timeout = NSM_TIMEOUT;
+	insert_host(host);
 }
 
 /*
@@ -617,21 +723,16 @@ recv_rpcbind_reply(struct sockaddr *sap, struct nsm_host *host, XDR *xdr)
 {
 	uint16_t port = nsm_recv_rpcbind(sap->sa_family, xdr);
 
-	host->send_next = time(NULL);
-	host->xid = 0;
-
 	if (port == 0) {
 		/* No binding for statd... */
 		xlog(D_GENERAL, "No statd on host %s", host->name);
-		host->timeout = NSM_MAX_TIMEOUT;
-		host->send_next += NSM_MAX_TIMEOUT;
+		smn_defer(host);
 	} else {
+		xlog(D_GENERAL, "Processing rpcbind reply for %s (port %u)",
+			host->name, port);
 		nfs_set_port(sap, port);
-		if (host->timeout >= NSM_MAX_TIMEOUT / 4)
-			host->timeout = NSM_MAX_TIMEOUT / 4;
+		smn_schedule(host);
 	}
-
-	insert_host(host);
 }
 
 /*
@@ -644,15 +745,11 @@ recv_rpcbind_reply(struct sockaddr *sap, struct nsm_host *host, XDR *xdr)
 static void
 recv_notify_reply(struct nsm_host *host)
 {
-	char *dot = strchr(host->my_name, '.');
+	char *dot = strchr(host->notify_arg, '.');
 
 	if (dot != NULL) {
 		*dot = '\0';
-		host->send_next = time(NULL);
-		host->xid = 0;
-		if (host->timeout >= NSM_MAX_TIMEOUT / 4)
-			host->timeout = NSM_MAX_TIMEOUT / 4;
-		insert_host(host);
+		smn_schedule(host);
 	} else {
 		xlog(D_GENERAL, "Host %s notified successfully", host->name);
 		smn_forget_host(host);
@@ -701,7 +798,7 @@ out:
 }
 
 /*
- * Insert host into sorted list
+ * Insert host into notification list, sorted by next send time
  */
 static void
 insert_host(struct nsm_host *host)
@@ -726,6 +823,7 @@ insert_host(struct nsm_host *host)
 
 	host->next = *where;
 	*where = host;
+	xlog(D_GENERAL, "Added host %s to notify list", host->name);
 }
 
 /*

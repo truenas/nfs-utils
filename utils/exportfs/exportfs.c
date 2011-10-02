@@ -401,7 +401,7 @@ validate_export(nfs_export *exp)
 	int fs_has_fsid = 0;
 
 	if (stat(path, &stb) < 0) {
-		xlog(L_ERROR, "Failed to stat %s: %m \n", path);
+		xlog(L_ERROR, "Failed to stat %s: %m", path);
 		return;
 	}
 	if (!S_ISDIR(stb.st_mode) && !S_ISREG(stb.st_mode)) {
@@ -448,6 +448,36 @@ is_hostname(const char *sp)
 	return true;
 }
 
+/*
+ * Take care to perform an explicit reverse lookup on presentation
+ * addresses.  Otherwise we don't get a real canonical name or a
+ * complete list of addresses.
+ */
+static struct addrinfo *
+address_list(const char *hostname)
+{
+	struct addrinfo *ai;
+	char *cname;
+
+	ai = host_pton(hostname);
+	if (ai != NULL) {
+		/* @hostname was a presentation address */
+		cname = host_canonname(ai->ai_addr);
+		freeaddrinfo(ai);
+		if (cname != NULL)
+			goto out;
+	}
+	/* @hostname was a hostname or had no reverse mapping */
+	cname = strdup(hostname);
+	if (cname == NULL)
+		return NULL;
+
+out:
+	ai = host_addrinfo(cname);
+	free(cname);
+	return ai;
+}
+
 static int
 matchhostname(const char *hostname1, const char *hostname2)
 {
@@ -464,10 +494,10 @@ matchhostname(const char *hostname1, const char *hostname2)
 	if (!is_hostname(hostname1) || !is_hostname(hostname2))
 		return 0;
 
-	results1 = host_addrinfo(hostname1);
+	results1 = address_list(hostname1);
 	if (results1 == NULL)
 		goto out;
-	results2 = host_addrinfo(hostname2);
+	results2 = address_list(hostname2);
 	if (results2 == NULL)
 		goto out;
 
@@ -499,9 +529,12 @@ export_d_read(const char *dname)
 
 
 	n = scandir(dname, &namelist, NULL, versionsort);
-	if (n < 0)
-		xlog(L_NOTICE, "scandir %s: %s\n", dname, strerror(errno));
-	else if (n == 0)
+	if (n < 0) {
+		if (errno == ENOENT)
+			/* Silently return */
+			return;
+		xlog(L_NOTICE, "scandir %s: %s", dname, strerror(errno));
+	} else if (n == 0)
 		return;
 
 	for (i = 0; i < n; i++) {
@@ -528,7 +561,7 @@ export_d_read(const char *dname)
 
 		fname_len = snprintf(fname, PATH_MAX +1, "%s/%s", dname, d->d_name);
 		if (fname_len > PATH_MAX) {
-			xlog(L_WARNING, "Too long file name: %s in %s\n", d->d_name, dname);
+			xlog(L_WARNING, "Too long file name: %s in %s", d->d_name, dname);
 			continue;
 		}
 
@@ -642,7 +675,7 @@ dump(int verbose)
 static void
 error(nfs_export *exp, int err)
 {
-	xlog(L_ERROR, "%s:%s: %s\n", exp->m_client->m_hostname,
+	xlog(L_ERROR, "%s:%s: %s", exp->m_client->m_hostname,
 		exp->m_export.e_path, strerror(err));
 }
 

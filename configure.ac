@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 dnl
-AC_INIT([linux nfs-utils],[1.2.4],[linux-nfs@vger.kernel.org],[nfs-utils])
+AC_INIT([linux nfs-utils],[1.2.5],[linux-nfs@vger.kernel.org],[nfs-utils])
 AC_CANONICAL_BUILD([])
 AC_CANONICAL_HOST([])
 AC_CONFIG_MACRO_DIR(aclocal)
@@ -18,10 +18,19 @@ AC_ARG_WITH(release,
 	RELEASE=1)
 	AC_SUBST(RELEASE)
 AC_ARG_WITH(statedir,
-	[  --with-statedir=/foo    use state dir /foo [/var/lib/nfs]],
+	[AC_HELP_STRING([--with-statedir=/foo],
+			[use state dir /foo @<:@default=/var/lib/nfs@:>@])],
 	statedir=$withval,
 	statedir=/var/lib/nfs)
 	AC_SUBST(statedir)
+AC_ARG_WITH(statdpath,
+	[AC_HELP_STRING([--with-statdpath=/foo @<:@default=/var/lib/nfs@:>@],
+		[define statd's state dir as /foo instead of the NFS statedir]
+	)],
+	statdpath=$withval,
+	statdpath=$statedir
+	)
+	AC_SUBST(statdpath)
 AC_ARG_WITH(statduser,
 	[AC_HELP_STRING([--with-statduser=rpcuser],
                         [statd to run under @<:@rpcuser or nobody@:>@]
@@ -46,24 +55,12 @@ AC_ARG_WITH(start-statd,
 	)
 	AC_SUBST(startstatd)
 	AC_DEFINE_UNQUOTED(START_STATD, "$startstatd", [Define this to a script which can start statd on mount])
-AC_ARG_ENABLE(nfsv3,
-	[AC_HELP_STRING([--enable-nfsv3],
-                        [enable support for NFSv3 @<:@default=yes@:>@])],
-	enable_nfsv3=$enableval,
-	enable_nfsv3=yes)
-	if test "$enable_nfsv3" = yes; then
-		AC_DEFINE(NFS3_SUPPORTED, 1, [Define this if you want NFSv3 support compiled in])
-	else
-		enable_nfsv3=
-	fi
-	AC_SUBST(enable_nfsv3)
 AC_ARG_ENABLE(nfsv4,
 	[AC_HELP_STRING([--enable-nfsv4],
                         [enable support for NFSv4 @<:@default=yes@:>@])],
 	enable_nfsv4=$enableval,
 	enable_nfsv4=yes)
 	if test "$enable_nfsv4" = yes; then
-		AC_DEFINE(NFS4_SUPPORTED, 1, [Define this if you want NFSv4 support compiled in])
 		IDMAPD=idmapd
 	else
 		enable_nfsv4=
@@ -75,13 +72,17 @@ AC_ARG_ENABLE(nfsv4,
 
 AC_ARG_ENABLE(nfsv41,
 	[AC_HELP_STRING([--enable-nfsv41],
-                        [enable support for NFSv41 @<:@default=no@:>@])],
+                        [enable support for NFSv41 @<:@default=yes@:>@])],
 	enable_nfsv41=$enableval,
-	enable_nfsv41=no)
+	enable_nfsv41=yes)
 	if test "$enable_nfsv41" = yes; then
-		AC_DEFINE(NFS41_SUPPORTED, 1, [Define this if you want NFSv41 support compiled in])
+		if test "$enable_nfsv4" != yes; then
+			AC_MSG_ERROR([NFS v4.1 is enabled but NFS v4 is not. Use --disable-nfsv41])
+		fi
+		BLKMAPD=blkmapd
 	else
 		enable_nfsv41=
+		BLKMAPD=
 	fi
 	AC_SUBST(enable_nfsv41)
 	AM_CONDITIONAL(CONFIG_NFSV41, [test "$enable_nfsv41" = "yes"])
@@ -92,7 +93,6 @@ AC_ARG_ENABLE(gss,
 	enable_gss=$enableval,
 	enable_gss=yes)
 	if test "$enable_gss" = yes; then
-		AC_DEFINE(GSS_SUPPORTED, 1, [Define this if you want rpcsec_gss support compiled in])
 		GSSD=gssd
 		SVCGSSD=svcgssd
 	else
@@ -114,21 +114,21 @@ AC_ARG_WITH(rpcgen,
 	rpcgen_path=$withval,
 	rpcgen_path=yes )
 	RPCGEN_PATH=
-	if test "$rpcgen_path" == "yes"; then
+	if test "$rpcgen_path" = "yes"; then
 	    for p in /usr/local/bin/rpcgen /usr/bin/rpcgen /bin/rpcgen
 	    do if test -f $p ; then RPCGEN_PATH=$p ; break; fi ; done
 	elif test "$rpcgen_path" != "internal"; then
 	    RPCGEN_PATH=$rpcgen_path
 	fi
 	AC_SUBST(RPCGEN_PATH)
-	AM_CONDITIONAL(CONFIG_RPCGEN, [test "$RPCGEN_PATH" == ""])
+	AM_CONDITIONAL(CONFIG_RPCGEN, [test "$RPCGEN_PATH" = ""])
 AC_ARG_ENABLE(uuid,
 	[AC_HELP_STRING([--disable-uuid], [Exclude uuid support to avoid buggy libblkid])],
 	if test "$enableval" = "yes" ; then choose_blkid=yes; else choose_blkid=no; fi,
 	choose_blkid=default)
 AC_ARG_ENABLE(mount,
 	[AC_HELP_STRING([--enable-mount],
-			[Create mount.nfs and don't use the util-linux mount(8) functionality. @<:@default=yes@:>@])],
+			[Create mount.nfs and do not use the util-linux mount(8) functionality. @<:@default=yes@:>@])],
 	enable_mount=$enableval,
 	enable_mount=yes)
 	AM_CONDITIONAL(CONFIG_MOUNT, [test "$enable_mount" = "yes"])
@@ -137,7 +137,7 @@ if test "$enable_mount" = yes; then
 	AC_ARG_ENABLE(libmount-mount,
 		[AC_HELP_STRING([--enable-libmount-mount],
 				[Link mount.nfs with libmount (EXPERIMENTAL)])],
-		enable_libmount=yes,
+		enable_libmount=$enableval,
 		enable_libmount=no)
 fi
 
@@ -256,9 +256,6 @@ if test "$enable_nfsv4" = yes; then
   dnl check for nfsidmap libraries and headers
   AC_LIBNFSIDMAP
 
-  dnl enable nfsidmap when its support by libnfsidmap
-  AM_CONDITIONAL(CONFIG_NFSIDMAP, [test "$enable_nfsidmap" = "yes"])
-
   dnl check for the keyutils libraries and headers
   AC_KEYUTILS
 
@@ -268,6 +265,9 @@ if test "$enable_nfsv4" = yes; then
     AC_RPCSEC_VERSION
   fi
 fi
+dnl enable nfsidmap when its support by libnfsidmap
+AM_CONDITIONAL(CONFIG_NFSIDMAP, [test "$ac_cv_header_keyutils_h$ac_cv_lib_nfsidmap_nfs4_owner_to_uid" = "yesyes"])
+
 
 if test "$knfsd_cv_glibc2" = no; then
     AC_CHECK_LIB(bsd, daemon, [LIBBSD="-lbsd"])
@@ -386,6 +386,7 @@ dnl *************************************************************
 dnl Export some path names to config.h
 dnl *************************************************************
 AC_DEFINE_UNQUOTED(NFS_STATEDIR, "$statedir", [This defines the location of the NFS state files. Warning: this must match definitions in config.mk!])
+AC_DEFINE_UNQUOTED(NSM_DEFAULT_STATEDIR, "$statdpath", [Define this to the pathname where statd keeps its state file])
 
 if test "x$cross_compiling" = "xno"; then
 	CFLAGS_FOR_BUILD=${CFLAGS_FOR_BUILD-"$CFLAGS"}
@@ -450,6 +451,7 @@ AC_CONFIG_FILES([
 	tools/mountstats/Makefile
 	tools/nfs-iostat/Makefile
 	utils/Makefile
+	utils/blkmapd/Makefile
 	utils/exportfs/Makefile
 	utils/gssd/Makefile
 	utils/idmapd/Makefile

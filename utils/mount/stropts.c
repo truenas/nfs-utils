@@ -16,8 +16,8 @@
  *
  * You should have received a copy of the GNU General Public
  * License along with this program; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 021110-1307, USA.
+ * Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 0211-1301 USA
  *
  */
 
@@ -437,8 +437,8 @@ static int nfs_construct_new_options(struct mount_options *options,
 	if (po_append(options, new_option) == PO_FAILED)
 		return 0;
 
-	po_remove_all(options, "port");
-	if (nfs_pmap->pm_port != NFS_PORT) {
+	if(po_remove_all(options, "port") == PO_FOUND ||
+	   nfs_pmap->pm_port != NFS_PORT) {
 		snprintf(new_option, sizeof(new_option) - 1,
 			 "port=%lu", nfs_pmap->pm_port);
 		if (po_append(options, new_option) == PO_FAILED)
@@ -538,6 +538,8 @@ nfs_rewrite_pmap_mount_options(struct mount_options *options)
 		errno = ESPIPE;
 		if (rpc_createerr.cf_stat == RPC_PROGNOTREGISTERED)
 			errno = EOPNOTSUPP;
+		else if (rpc_createerr.cf_stat == RPC_AUTHERROR)
+			errno = EACCES;
 		else if (rpc_createerr.cf_error.re_errno != 0)
 			errno = rpc_createerr.cf_error.re_errno;
 		return 0;

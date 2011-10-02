@@ -19,8 +19,9 @@ nfs-utils (1:1.2.5-1) UNRELEASED; urgency=low
   * debian/patches/17-multiarch-kerberos-paths.patch (Closes: #642797).
   * Add build dependency on libdevmapper-dev for blkmapd.
   * Use dh_autoreconf to make sure original files are restored.
+  * Install blkmapd and its manpage.
 
- -- Luk Claes <luk@debian.org>  Sun, 02 Oct 2011 18:15:35 +0200
+ -- Luk Claes <luk@debian.org>  Sun, 02 Oct 2011 18:21:09 +0200
 
 nfs-utils (1:1.2.4-2) UNRELEASED; urgency=low
 

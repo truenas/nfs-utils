@@ -37,6 +37,11 @@ case "$1" in
                 dpkg-statoverride --remove /sbin/mount.nfs
             fi
         fi
+
+	# Migrate /lib/init/rw/sendsigs.omit.statd to /run.
+	if [ -f /lib/init/rw/sendsigs.omit.d/statd ]; then 
+	    mv /lib/init/rw/sendsigs.omit.d/statd /run/sendsigs.omit.d/statd
+	fi
     ;;
 esac
 

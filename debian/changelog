@@ -1,3 +1,14 @@
+nfs-utils (1:1.2.5-2.1) unstable; urgency=low
+
+  [ Roger Leigh ]
+  * /run transition: nfs-common migrates
+    /lib/init/rw/sendsigs.omit.d/statd to /run/sendsigs.omit.d on upgrade,
+    and uses /run/sendsigs.omit.d.  Depend on initscripts
+    (>= 2.88dsf-13.3) to guarantee the existence of
+    /run/sendsigs.omit.d (Closes: #633034).
+
+ -- Luk Claes <luk@debian.org>  Fri, 09 Dec 2011 11:26:56 +0100
+
 nfs-utils (1:1.2.5-2) unstable; urgency=low
 
   * debian/patches/18-dont-use-PAGE_SIZE.patch

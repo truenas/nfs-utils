@@ -156,9 +156,10 @@ case "$1" in
 	        log_end_msg $RET
 	        exit $RET
 	    else
-		mkdir -p /lib/init/rw/sendsigs.omit.d
-		rm -f /lib/init/rw/sendsigs.omit.d/statd
-		ln -s /var/run/rpc.statd.pid /lib/init/rw/sendsigs.omit.d/statd
+		if [ -d /run/sendsigs.omit.d ]; then
+		    rm -f /run/sendsigs.omit.d/statd
+		    ln -s /var/run/rpc.statd.pid /run/sendsigs.omit.d/statd
+		fi
 	    fi
 	fi
 

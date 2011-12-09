@@ -10,7 +10,11 @@ nfs-utils (1:1.2.5-3) unstable; urgency=low
   [ Luk Claes ]
   * Version libgssglue-dev build dependency (Closes: #651354).
 
- -- Luk Claes <luk@debian.org>  Fri, 09 Dec 2011 11:52:18 +0100
+  [ Luca Capello ]
+  * debian/control:
+    + add mount.nfs to the long Description: (Closes: #644358).
+
+ -- Luk Claes <luk@debian.org>  Fri, 09 Dec 2011 11:55:31 +0100
 
 nfs-utils (1:1.2.5-2) unstable; urgency=low
 

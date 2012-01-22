@@ -1,3 +1,9 @@
+nfs-utils (1:1.2.5-4) unstable; urgency=low
+
+  * Add libmount-dev to Build-Depends and explicitly enable it.
+
+ -- Luk Claes <luk@debian.org>  Sun, 22 Jan 2012 15:21:48 +0100
+
 nfs-utils (1:1.2.5-3) unstable; urgency=low
 
   [ Roger Leigh ]

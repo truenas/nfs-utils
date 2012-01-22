@@ -36,7 +36,7 @@ Depends: ${shlibs:Depends}, ${misc:Depends}, rpcbind, adduser, ucf, lsb-base (>=
 Recommends: python
 Provides: nfs-client
 Conflicts: nfs-client
-Replaces: nfs-client, nfs-kernel-server (<< 1:1.0.7-5), mount (<< 2.13~)
+Replaces: nfs-client, nfs-kernel-server (<< 1:1.2.5-4), mount (<< 2.13~)
 Description: NFS support files common to client and server
  Use this package on any machine that uses NFS, either as client or
  server.  Programs included: lockd, statd, showmount, nfsstat, gssd,

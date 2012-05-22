@@ -57,7 +57,7 @@
 
 char pipefs_dir[PATH_MAX] = GSSD_PIPEFS_DIR;
 char keytabfile[PATH_MAX] = GSSD_DEFAULT_KEYTAB_FILE;
-char ccachedir[PATH_MAX] = GSSD_DEFAULT_CRED_DIR;
+char ccachedir[PATH_MAX] = GSSD_DEFAULT_CRED_DIR ":" GSSD_USER_CRED_DIR;
 char *ccachesearch[GSSD_MAX_CCACHE_SEARCH + 1];
 int  use_memcache = 0;
 int  root_uses_machine_creds = 1;
@@ -85,7 +85,7 @@ sig_hup(int signal)
 static void
 usage(char *progname)
 {
-	fprintf(stderr, "usage: %s [-f] [-M] [-n] [-v] [-r] [-p pipefsdir] [-k keytab] [-d ccachedir] [-t timeout] [-R preferred realm]\n",
+	fprintf(stderr, "usage: %s [-f] [-l] [-M] [-n] [-v] [-r] [-p pipefsdir] [-k keytab] [-d ccachedir] [-t timeout] [-R preferred realm]\n",
 		progname);
 	exit(1);
 }
@@ -102,7 +102,7 @@ main(int argc, char *argv[])
 	char *progname;
 
 	memset(ccachesearch, 0, sizeof(ccachesearch));
-	while ((opt = getopt(argc, argv, "fvrmnMp:k:d:t:R:")) != -1) {
+	while ((opt = getopt(argc, argv, "fvrlmnMp:k:d:t:R")) != -1) {
 		switch (opt) {
 			case 'f':
 				fg = 1;
@@ -142,6 +142,13 @@ main(int argc, char *argv[])
 				break;
 			case 'R':
 				preferred_realm = strdup(optarg);
+				break;
+			case 'l':
+#ifdef HAVE_SET_ALLOWABLE_ENCTYPES
+				limit_to_legacy_enctypes = 1;
+#else 
+				errx(1, "Setting encryption type not support by Kerberos libraries.");
+#endif
 				break;
 			default:
 				usage(argv[0]);

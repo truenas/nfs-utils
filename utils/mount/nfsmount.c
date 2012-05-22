@@ -294,18 +294,6 @@ parse_options(char *old_opts, struct nfs_mount_data *data,
 					data->pseudoflavor = AUTH_GSS_KRB5I;
 				else if (!strcmp(secflavor, "krb5p"))
 					data->pseudoflavor = AUTH_GSS_KRB5P;
-				else if (!strcmp(secflavor, "lipkey"))
-					data->pseudoflavor = AUTH_GSS_LKEY;
-				else if (!strcmp(secflavor, "lipkey-i"))
-					data->pseudoflavor = AUTH_GSS_LKEYI;
-				else if (!strcmp(secflavor, "lipkey-p"))
-					data->pseudoflavor = AUTH_GSS_LKEYP;
-				else if (!strcmp(secflavor, "spkm3"))
-					data->pseudoflavor = AUTH_GSS_SPKM;
-				else if (!strcmp(secflavor, "spkm3i"))
-					data->pseudoflavor = AUTH_GSS_SPKMI;
-				else if (!strcmp(secflavor, "spkm3p"))
-					data->pseudoflavor = AUTH_GSS_SPKMP;
 				else if (sloppy)
 					continue;
 				else {

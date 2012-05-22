@@ -112,15 +112,23 @@ auth_reload()
 	return counter;
 }
 
+static char *get_client_ipaddr_name(const struct sockaddr *caller)
+{
+	char buf[INET6_ADDRSTRLEN + 1];
+
+	buf[0] = '$';
+	host_ntop(caller, buf + 1, sizeof(buf) - 1);
+	return strdup(buf);
+}
+
 static char *
 get_client_hostname(const struct sockaddr *caller, struct addrinfo *ai,
 		enum auth_error *error)
 {
-	char buf[INET6_ADDRSTRLEN];
 	char *n;
 
 	if (use_ipaddr)
-		return strdup(host_ntop(caller, buf, sizeof(buf)));
+		return get_client_ipaddr_name(caller);
 	n = client_compose(ai);
 	*error = unknown_host;
 	if (!n)
@@ -129,6 +137,23 @@ get_client_hostname(const struct sockaddr *caller, struct addrinfo *ai,
 		return n;
 	free(n);
 	return strdup("DEFAULT");
+}
+
+bool ipaddr_client_matches(nfs_export *exp, struct addrinfo *ai)
+{
+	return client_check(exp->m_client, ai);
+}
+
+bool namelist_client_matches(nfs_export *exp, char *dom)
+{
+	return client_member(dom, exp->m_client->m_hostname);
+}
+
+bool client_matches(nfs_export *exp, char *dom, struct addrinfo *ai)
+{
+	if (is_ipaddr_client(dom))
+		return ipaddr_client_matches(exp, ai);
+	return namelist_client_matches(exp, dom);
 }
 
 /* return static nfs_export with details filled in */
@@ -155,9 +180,10 @@ auth_authenticate_newcache(const struct sockaddr *caller,
 		for (exp = exportlist[i].p_head; exp; exp = exp->m_next) {
 			if (strcmp(path, exp->m_export.e_path))
 				continue;
-			if (!use_ipaddr && !client_member(my_client.m_hostname, exp->m_client->m_hostname))
+			if (!client_matches(exp, my_client.m_hostname, ai))
 				continue;
-			if (use_ipaddr && !client_check(exp->m_client, ai))
+			if (exp->m_export.e_flags & NFSEXP_V4ROOT)
+				/* not acceptable for v[23] export */
 				continue;
 			break;
 		}
@@ -186,10 +212,6 @@ auth_authenticate_internal(const struct sockaddr *caller, const char *path,
 			*error = no_entry;
 			return NULL;
 		}
-	}
-	if (exp->m_export.e_flags & NFSEXP_V4ROOT) {
-		*error = no_entry;
-		return NULL;
 	}
 	if (!(exp->m_export.e_flags & NFSEXP_INSECURE_PORT) &&
 		     nfs_get_port(caller) >= IPPORT_RESERVED) {

@@ -17,7 +17,6 @@ COMMON_SRCS = \
 	context_mit.c \
 	context_heimdal.c \
 	context_lucid.c \
-	context_spkm3.c \
 	gss_util.c \
 	gss_oids.c \
 	err_util.c \
@@ -40,7 +39,7 @@ gssd_SOURCES = \
 
 gssd_LDADD =	../../support/nfs/libnfs.a \
 		$(RPCSECGSS_LIBS) $(GSSGLUE_LIBS) $(KRBLIBS)
-gssd_LDFLAGS = $(KRBLDFLAGS)
+gssd_LDFLAGS = $(KRBLDFLAGS) $(LIBTIRPC)
 
 gssd_CFLAGS = $(AM_CFLAGS) $(CFLAGS) \
 	      $(RPCSECGSS_CFLAGS) $(GSSGLUE_CFLAGS) $(KRBCFLAGS)
@@ -58,8 +57,8 @@ svcgssd_SOURCES = \
 
 svcgssd_LDADD = \
 	../../support/nfs/libnfs.a \
-	$(RPCSECGSS_LIBS) $(GSSGLUE_LIBS) -lnfsidmap \
-	$(KRBLIBS)
+	$(RPCSECGSS_LIBS) $(GSSGLUE_LIBS) $(LIBNFSIDMAP) \
+	$(KRBLIBS) $(LIBTIRPC)
 
 svcgssd_LDFLAGS = $(KRBLDFLAGS)
 

@@ -540,6 +540,8 @@ nfs_rewrite_pmap_mount_options(struct mount_options *options)
 			errno = EOPNOTSUPP;
 		else if (rpc_createerr.cf_stat == RPC_AUTHERROR)
 			errno = EACCES;
+		else if (rpc_createerr.cf_stat == RPC_TIMEDOUT)
+			errno = ETIMEDOUT;
 		else if (rpc_createerr.cf_error.re_errno != 0)
 			errno = rpc_createerr.cf_error.re_errno;
 		return 0;
@@ -665,9 +667,10 @@ static int nfs_try_mount_v3v2(struct nfsmount_info *mi)
 		case EHOSTUNREACH:
 			continue;
 		default:
-			break;
+			goto out;
 		}
 	}
+out:
 	return ret;
 }
 
@@ -751,9 +754,10 @@ static int nfs_try_mount_v4(struct nfsmount_info *mi)
 		case EHOSTUNREACH:
 			continue;
 		default:
-			break;
+			goto out;
 		}
 	}
+out:
 	return ret;
 }
 
@@ -907,7 +911,8 @@ static int nfsmount_parent(struct nfsmount_info *mi)
 	if (nfs_try_mount(mi))
 		return EX_SUCCESS;
 
-	if (nfs_is_permanent_error(errno)) {
+	/* retry background mounts when the server is not up */
+	if (nfs_is_permanent_error(errno) && errno != EOPNOTSUPP) {
 		mount_error(mi->spec, mi->node, errno);
 		return EX_FAIL;
 	}
@@ -942,7 +947,8 @@ static int nfsmount_child(struct nfsmount_info *mi)
 		if (nfs_try_mount(mi))
 			return EX_SUCCESS;
 
-		if (nfs_is_permanent_error(errno))
+		/* retry background mounts when the server is not up */
+		if (nfs_is_permanent_error(errno) && errno != EOPNOTSUPP)
 			break;
 
 		if (time(NULL) > timeout)

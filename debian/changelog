@@ -7,6 +7,7 @@ nfs-utils (1:1.2.6-1) UNRELEASED; urgency=low
       - Add open-iscsi and watchdog to Recommends.
   * Check for blank exports file (Closes: #673798).
   * Add 18-osd_login-sbindir.patch to avoid FTBFS
+  * Add 19-iscsiadm-path.patch so osd_login works
 
  -- Luk Claes <luk@debian.org>  Fri, 25 May 2012 19:16:54 +0200
 

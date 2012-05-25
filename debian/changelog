@@ -4,6 +4,7 @@ nfs-utils (1:1.2.6-1) UNRELEASED; urgency=low
     - Remove 18-dont-use-PAGE_SIZE.patch: merged upstream.
     - Update other patches.
   * Check for blank exports file (Closes: #673798).
+  * Add 18-osd_login-sbindir.patch to avoid FTBFS
 
  -- Luk Claes <luk@debian.org>  Fri, 25 May 2012 19:16:54 +0200
 

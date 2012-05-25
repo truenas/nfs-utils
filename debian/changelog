@@ -1,4 +1,4 @@
-nfs-utils (1:1.2.6-1) UNRELEASED; urgency=low
+nfs-utils (1:1.2.6-1) unstable; urgency=low
 
   * New upstream version
     - Remove 18-dont-use-PAGE_SIZE.patch: merged upstream.
@@ -9,7 +9,7 @@ nfs-utils (1:1.2.6-1) UNRELEASED; urgency=low
   * Add 18-osd_login-sbindir.patch to avoid FTBFS
   * Add 19-iscsiadm-path.patch so osd_login works
 
- -- Luk Claes <luk@debian.org>  Fri, 25 May 2012 19:16:54 +0200
+ -- Luk Claes <luk@debian.org>  Fri, 25 May 2012 20:41:58 +0200
 
 nfs-utils (1:1.2.5-4) unstable; urgency=low
 

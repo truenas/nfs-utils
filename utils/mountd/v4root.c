@@ -46,6 +46,7 @@ static nfs_export pseudo_root = {
 		.e_nsqgids = 0,
 		.e_fsid = 0,
 		.e_mountpoint = NULL,
+		.e_ttl = DEFAULT_TTL,
 	},
 	.m_exported = 0,
 	.m_xtabent = 1,
@@ -83,7 +84,7 @@ v4root_create(char *path, nfs_export *export)
 	struct exportent *curexp = &export->m_export;
 
 	dupexportent(&eep, &pseudo_root.m_export);
-	eep.e_hostname = strdup(curexp->e_hostname);
+	eep.e_hostname = curexp->e_hostname;
 	strncpy(eep.e_path, path, sizeof(eep.e_path));
 	if (strcmp(path, "/") != 0)
 		eep.e_flags &= ~NFSEXP_FSID;
@@ -149,13 +150,13 @@ static int v4root_add_parents(nfs_export *exp)
 				"pseudo export for '%s'", exp->m_export.e_path);
 		return -ENOMEM;
 	}
-	for (ptr = path + 1; ptr; ptr = strchr(ptr, '/')) {
+	for (ptr = path; ptr; ptr = strchr(ptr, '/')) {
 		int ret;
 		char saved;
 
 		saved = *ptr;
 		*ptr = '\0';
-		ret = pseudofs_update(hostname, path, exp);
+		ret = pseudofs_update(hostname, *path ? path : "/", exp);
 		if (ret)
 			return ret;
 		*ptr = saved;
@@ -191,6 +192,13 @@ v4root_set()
 				 * parents are already dealt with!
 				 */
 				continue;
+
+			if (strcmp(exp->m_export.e_path, "/") == 0 &&
+			    !(exp->m_export.e_flags & NFSEXP_FSID)) {
+				/* Force '/' to be exported as fsid == 0*/
+				exp->m_export.e_flags |= NFSEXP_FSID;
+				exp->m_export.e_fsid = 0;
+			}
 
 			v4root_add_parents(exp);
 			/* XXX: error handling! */

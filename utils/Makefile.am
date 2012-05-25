@@ -21,6 +21,10 @@ if CONFIG_MOUNT
 OPTDIRS += mount
 endif
 
+if CONFIG_NFSDCLD
+OPTDIRS += nfsdcld
+endif
+
 SUBDIRS = \
 	exportfs \
 	mountd \
@@ -28,6 +32,7 @@ SUBDIRS = \
 	nfsstat \
 	showmount \
 	statd \
+	osd_login \
 	$(OPTDIRS)
 
 MAINTAINERCLEANFILES = Makefile.in

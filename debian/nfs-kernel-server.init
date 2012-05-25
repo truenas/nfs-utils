@@ -60,7 +60,7 @@ do_mount() {
 # See how we were called.
 case "$1" in
   start)
-	if [ -f /etc/exports ]
+	if [ -f /etc/exports ] && grep -q '^[[:space:]]*[^#]*/' /etc/exports
 	then
 		do_modprobe nfsd
 

@@ -676,7 +676,7 @@ do_error_downcall(int k5_fd, uid_t uid, int err)
 	unsigned int timeout = 0;
 	int	zero = 0;
 
-	printerr(1, "doing error downcall\n");
+	printerr(2, "doing error downcall\n");
 
 	if (WRITE_BYTES(&p, end, uid)) goto out_err;
 	if (WRITE_BYTES(&p, end, timeout)) goto out_err;
@@ -953,7 +953,7 @@ process_krb5_upcall(struct clnt_info *clp, uid_t uid, int fd, char *tgtname,
 	int			create_resp = -1;
 	int			err, downcall_err = -EACCES;
 
-	printerr(1, "handling krb5 upcall (%s)\n", clp->dirname);
+	printerr(2, "handling krb5 upcall (%s)\n", clp->dirname);
 
 	if (tgtname) {
 		if (clp->servicename) {
@@ -1071,7 +1071,7 @@ process_krb5_upcall(struct clnt_info *clp, uid_t uid, int fd, char *tgtname,
 	}
 
 	if (!authgss_get_private_data(auth, &pd)) {
-		printerr(1, "WARNING: Failed to obtain authentication "
+		printerr(2, "WARNING: Failed to obtain authentication "
 			    "data for user with uid %d for server %s\n",
 			 uid, clp->servername);
 		goto out_return_error;

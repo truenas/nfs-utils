@@ -29,6 +29,7 @@ AC_DEFUN([AC_KERBEROS_V5],[
     elif test -f "/usr/lib/mit/bin/krb5-config"; then
       K5CONFIG="/usr/lib/mit/bin/krb5-config"
     fi
+    MULTIARCH=`dpkg-architecture -qDEB_HOST_MULTIARCH 2>/dev/null || true`
     if test "$K5CONFIG" != ""; then
       KRBCFLAGS=`$K5CONFIG --cflags`
       KRBLIBS=`$K5CONFIG --libs`
@@ -38,6 +39,7 @@ AC_DEFUN([AC_KERBEROS_V5],[
                 \( -f $dir/lib/libgssapi_krb5.a -o \
                    -f $dir/lib64/libgssapi_krb5.a -o \
                    -f $dir/lib64/libgssapi_krb5.so -o \
+                   -f $dir/lib/$MULTIARCH/libgssapi_krb5.so -o \
                    -f $dir/lib/libgssapi_krb5.so \) ; then
          AC_DEFINE(HAVE_KRB5, 1, [Define this if you have MIT Kerberos libraries])
          KRBDIR="$dir"

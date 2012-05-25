@@ -15,9 +15,6 @@
    this is either `int' or `gid_t'. */
 #undef GETGROUPS_T
 
-/* Define this if you want rpcsec_gss support compiled in */
-#undef GSS_SUPPORTED
-
 /* Define to 1 if you have the `alarm' function. */
 #undef HAVE_ALARM
 
@@ -37,17 +34,11 @@
 /* Define to 1 if you have the `authgss_set_debug_level' function. */
 #undef HAVE_AUTHGSS_SET_DEBUG_LEVEL
 
-/* Define to 1 if you have the `bindresvport_sa' function. */
-#undef HAVE_BINDRESVPORT_SA
-
 /* Define this if you want to use BSD signal semantics */
 #undef HAVE_BSD_SIGNALS
 
 /* Define to 1 if you have the <com_err.h> header file. */
 #undef HAVE_COM_ERR_H
-
-/* Define this to 1 if AI_ADDRCONFIG macro is defined */
-#undef HAVE_DECL_AI_ADDRCONFIG
 
 /* Define to 1 if you have the <dirent.h> header file, and it defines `DIR'.
    */
@@ -144,10 +135,13 @@
    available */
 #undef HAVE_KRB5_GET_INIT_CREDS_OPT_SET_ADDRESSLESS
 
+/* Define to 1 if you have the <libgen.h> header file. */
+#undef HAVE_LIBGEN_H
+
 /* Define to 1 if you have the <libintl.h> header file. */
 #undef HAVE_LIBINTL_H
 
-/* Define to 1 if you have the `tirpc' library (-ltirpc). */
+/* Define to 1 if you have and wish to use libtirpc. */
 #undef HAVE_LIBTIRPC
 
 /* tcp-wrapper */
@@ -191,6 +185,9 @@
 /* Define to 1 if you have the <nfsidmap.h> header file. */
 #undef HAVE_NFSIDMAP_H
 
+/* Define to 1 if you have the <nfs-plugin.h> header file. */
+#undef HAVE_NFS_PLUGIN_H
+
 /* Define to 1 if you have the `pathconf' function. */
 #undef HAVE_PATHCONF
 
@@ -216,8 +213,8 @@
 /* Define to 1 if you have the `socket' function. */
 #undef HAVE_SOCKET
 
-/* Define to 1 if you have the <spkm3.h> header file. */
-#undef HAVE_SPKM3_H
+/* Define to 1 if you have the <sqlite3.h> header file. */
+#undef HAVE_SQLITE3_H
 
 /* Define to 1 if `stat' has the bug that it succeeds when given the
    zero-length file name argument. */
@@ -268,6 +265,9 @@
 
 /* Define to 1 if you have the <sys/file.h> header file. */
 #undef HAVE_SYS_FILE_H
+
+/* Define to 1 if you have the <sys/inotify.h> header file. */
+#undef HAVE_SYS_INOTIFY_H
 
 /* Define to 1 if you have the <sys/ioctl.h> header file. */
 #undef HAVE_SYS_IOCTL_H
@@ -352,21 +352,15 @@
 /* Define this if you want mount to read a configuration file */
 #undef MOUNT_CONFIG
 
-/* Define this if you want NFSv3 support compiled in */
-#undef NFS3_SUPPORTED
-
-/* Define this if you want NFSv41 support compiled in */
-#undef NFS41_SUPPORTED
-
-/* Define this if you want NFSv4 support compiled in */
-#undef NFS4_SUPPORTED
-
 /* This defines the location of the NFS state files. Warning: this must match
    definitions in config.mk! */
 #undef NFS_STATEDIR
 
 /* Define to 1 if your C compiler doesn't accept -c and -o together. */
 #undef NO_MINUS_C_MINUS_O
+
+/* Define this to the pathname where statd keeps its state file */
+#undef NSM_DEFAULT_STATEDIR
 
 /* Name of package */
 #undef PACKAGE

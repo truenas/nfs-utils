@@ -1,3 +1,10 @@
+nfs-utils (1:1.2.6-1) UNRELEASED; urgency=low
+
+  * New upstream version
+    - Remove 18-dont-use-PAGE_SIZE.patch: merged upstream.
+
+ -- Luk Claes <luk@debian.org>  Fri, 25 May 2012 19:16:54 +0200
+
 nfs-utils (1:1.2.5-4) unstable; urgency=low
 
   * Add libmount-dev to Build-Depends and explicitly enable it.

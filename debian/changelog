@@ -3,6 +3,8 @@ nfs-utils (1:1.2.6-1) UNRELEASED; urgency=low
   * New upstream version
     - Remove 18-dont-use-PAGE_SIZE.patch: merged upstream.
     - Update other patches.
+    - Install osd_login (part of the autologin feature).
+      - Add open-iscsi and watchdog to Recommends.
   * Check for blank exports file (Closes: #673798).
   * Add 18-osd_login-sbindir.patch to avoid FTBFS
 

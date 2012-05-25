@@ -2,6 +2,7 @@ debian/tmp/sbin/mount.nfs
 debian/tmp/sbin/mount.nfs4
 debian/tmp/sbin/umount.nfs
 debian/tmp/sbin/umount.nfs4
+debian/tmp/sbin/osd_login
 debian/tmp/usr/sbin/blkmapd
 debian/tmp/usr/sbin/rpc.statd sbin/
 debian/tmp/usr/sbin/sm-notify sbin/

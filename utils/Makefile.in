@@ -35,8 +35,10 @@ build_triplet = @build@
 host_triplet = @host@
 @CONFIG_NFSV4_TRUE@am__append_1 = idmapd
 @CONFIG_NFSIDMAP_TRUE@@CONFIG_NFSV4_TRUE@am__append_2 = nfsidmap
-@CONFIG_GSS_TRUE@am__append_3 = gssd
-@CONFIG_MOUNT_TRUE@am__append_4 = mount
+@CONFIG_NFSV41_TRUE@am__append_3 = blkmapd
+@CONFIG_GSS_TRUE@am__append_4 = gssd
+@CONFIG_MOUNT_TRUE@am__append_5 = mount
+@CONFIG_NFSDCLD_TRUE@am__append_6 = nfsdcld
 subdir = utils
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -49,12 +51,8 @@ am__aclocal_m4_deps = $(top_srcdir)/aclocal/bsdsignals.m4 \
 	$(top_srcdir)/aclocal/libevent.m4 \
 	$(top_srcdir)/aclocal/libnfsidmap.m4 \
 	$(top_srcdir)/aclocal/librpcsecgss.m4 \
+	$(top_srcdir)/aclocal/libsqlite3.m4 \
 	$(top_srcdir)/aclocal/libtirpc.m4 \
-	$(top_srcdir)/aclocal/libtool.m4 \
-	$(top_srcdir)/aclocal/ltoptions.m4 \
-	$(top_srcdir)/aclocal/ltsugar.m4 \
-	$(top_srcdir)/aclocal/ltversion.m4 \
-	$(top_srcdir)/aclocal/lt~obsolete.m4 \
 	$(top_srcdir)/aclocal/nfs-utils.m4 \
 	$(top_srcdir)/aclocal/rpcsec_vers.m4 \
 	$(top_srcdir)/aclocal/tcp-wrappers.m4 \
@@ -81,8 +79,8 @@ AM_RECURSIVE_TARGETS = $(RECURSIVE_TARGETS:-recursive=) \
 	distdir
 ETAGS = etags
 CTAGS = ctags
-DIST_SUBDIRS = exportfs mountd nfsd nfsstat showmount statd idmapd \
-	nfsidmap gssd mount
+DIST_SUBDIRS = exportfs mountd nfsd nfsstat showmount statd osd_login \
+	idmapd nfsidmap blkmapd gssd mount nfsdcld
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 am__relativize = \
   dir0=`pwd`; \
@@ -169,12 +167,17 @@ LIBBLKID = @LIBBLKID@
 LIBBSD = @LIBBSD@
 LIBCAP = @LIBCAP@
 LIBCRYPT = @LIBCRYPT@
+LIBDL = @LIBDL@
+LIBEVENT = @LIBEVENT@
 LIBKEYUTILS = @LIBKEYUTILS@
 LIBMOUNT = @LIBMOUNT@
+LIBNFSIDMAP = @LIBNFSIDMAP@
 LIBNSL = @LIBNSL@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LIBSOCKET = @LIBSOCKET@
+LIBSQLITE = @LIBSQLITE@
+LIBTIRPC = @LIBTIRPC@
 LIBTOOL = @LIBTOOL@
 LIBWRAP = @LIBWRAP@
 LIPO = @LIPO@
@@ -239,7 +242,6 @@ dvidir = @dvidir@
 enable_gss = @enable_gss@
 enable_ipv6 = @enable_ipv6@
 enable_mountconfig = @enable_mountconfig@
-enable_nfsv3 = @enable_nfsv3@
 enable_nfsv4 = @enable_nfsv4@
 enable_nfsv41 = @enable_nfsv41@
 exec_prefix = @exec_prefix@
@@ -269,6 +271,7 @@ sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@
 startstatd = @startstatd@
+statdpath = @statdpath@
 statduser = @statduser@
 statedir = @statedir@
 sysconfdir = @sysconfdir@
@@ -277,7 +280,7 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 OPTDIRS = $(am__append_1) $(am__append_2) $(am__append_3) \
-	$(am__append_4)
+	$(am__append_4) $(am__append_5) $(am__append_6)
 SUBDIRS = \
 	exportfs \
 	mountd \
@@ -285,6 +288,7 @@ SUBDIRS = \
 	nfsstat \
 	showmount \
 	statd \
+	osd_login \
 	$(OPTDIRS)
 
 MAINTAINERCLEANFILES = Makefile.in

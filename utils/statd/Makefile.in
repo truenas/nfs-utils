@@ -49,12 +49,8 @@ am__aclocal_m4_deps = $(top_srcdir)/aclocal/bsdsignals.m4 \
 	$(top_srcdir)/aclocal/libevent.m4 \
 	$(top_srcdir)/aclocal/libnfsidmap.m4 \
 	$(top_srcdir)/aclocal/librpcsecgss.m4 \
+	$(top_srcdir)/aclocal/libsqlite3.m4 \
 	$(top_srcdir)/aclocal/libtirpc.m4 \
-	$(top_srcdir)/aclocal/libtool.m4 \
-	$(top_srcdir)/aclocal/ltoptions.m4 \
-	$(top_srcdir)/aclocal/ltsugar.m4 \
-	$(top_srcdir)/aclocal/ltversion.m4 \
-	$(top_srcdir)/aclocal/lt~obsolete.m4 \
 	$(top_srcdir)/aclocal/nfs-utils.m4 \
 	$(top_srcdir)/aclocal/rpcsec_vers.m4 \
 	$(top_srcdir)/aclocal/tcp-wrappers.m4 \
@@ -73,7 +69,7 @@ sm_notify_OBJECTS = $(am_sm_notify_OBJECTS)
 am__DEPENDENCIES_1 =
 sm_notify_DEPENDENCIES = ../../support/nsm/libnsm.a \
 	../../support/nfs/libnfs.a $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_statd_OBJECTS = callback.$(OBJEXT) notlist.$(OBJEXT) misc.$(OBJEXT) \
 	monitor.$(OBJEXT) hostname.$(OBJEXT) simu.$(OBJEXT) \
 	stat.$(OBJEXT) statd.$(OBJEXT) svc_run.$(OBJEXT) \
@@ -82,7 +78,7 @@ statd_OBJECTS = $(am_statd_OBJECTS)
 statd_DEPENDENCIES = ../../support/nsm/libnsm.a \
 	../../support/nfs/libnfs.a ../../support/misc/libmisc.a \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
 am__vpath_adj = case $$p in \
     $(srcdir)/*) f=`echo "$$p" | sed "s|^$$srcdirstrip/||"`;; \
@@ -186,12 +182,17 @@ LIBBLKID = @LIBBLKID@
 LIBBSD = @LIBBSD@
 LIBCAP = @LIBCAP@
 LIBCRYPT = @LIBCRYPT@
+LIBDL = @LIBDL@
+LIBEVENT = @LIBEVENT@
 LIBKEYUTILS = @LIBKEYUTILS@
 LIBMOUNT = @LIBMOUNT@
+LIBNFSIDMAP = @LIBNFSIDMAP@
 LIBNSL = @LIBNSL@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LIBSOCKET = @LIBSOCKET@
+LIBSQLITE = @LIBSQLITE@
+LIBTIRPC = @LIBTIRPC@
 LIBTOOL = @LIBTOOL@
 LIBWRAP = @LIBWRAP@
 LIPO = @LIPO@
@@ -256,7 +257,6 @@ dvidir = @dvidir@
 enable_gss = @enable_gss@
 enable_ipv6 = @enable_ipv6@
 enable_mountconfig = @enable_mountconfig@
-enable_nfsv3 = @enable_nfsv3@
 enable_nfsv4 = @enable_nfsv4@
 enable_nfsv41 = @enable_nfsv41@
 exec_prefix = @exec_prefix@
@@ -286,6 +286,7 @@ sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@
 startstatd = @startstatd@
+statdpath = @statdpath@
 statduser = @statduser@
 statedir = @statedir@
 sysconfdir = @sysconfdir@
@@ -306,11 +307,11 @@ BUILT_SOURCES = $(GENFILES)
 statd_LDADD = ../../support/nsm/libnsm.a \
 	      ../../support/nfs/libnfs.a \
 	      ../../support/misc/libmisc.a \
-	      $(LIBWRAP) $(LIBNSL) $(LIBCAP)
+	      $(LIBWRAP) $(LIBNSL) $(LIBCAP) $(LIBTIRPC)
 
 sm_notify_LDADD = ../../support/nsm/libnsm.a \
 		  ../../support/nfs/libnfs.a \
-		  $(LIBNSL) $(LIBCAP)
+		  $(LIBNSL) $(LIBCAP) $(LIBTIRPC)
 
 EXTRA_DIST = sim_sm_inter.x $(man8_MANS) COPYRIGHT simulate.c
 @CONFIG_RPCGEN_FALSE@RPCGEN = @RPCGEN_PATH@

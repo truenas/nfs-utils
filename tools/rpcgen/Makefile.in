@@ -47,12 +47,8 @@ am__aclocal_m4_deps = $(top_srcdir)/aclocal/bsdsignals.m4 \
 	$(top_srcdir)/aclocal/libevent.m4 \
 	$(top_srcdir)/aclocal/libnfsidmap.m4 \
 	$(top_srcdir)/aclocal/librpcsecgss.m4 \
+	$(top_srcdir)/aclocal/libsqlite3.m4 \
 	$(top_srcdir)/aclocal/libtirpc.m4 \
-	$(top_srcdir)/aclocal/libtool.m4 \
-	$(top_srcdir)/aclocal/ltoptions.m4 \
-	$(top_srcdir)/aclocal/ltsugar.m4 \
-	$(top_srcdir)/aclocal/ltversion.m4 \
-	$(top_srcdir)/aclocal/lt~obsolete.m4 \
 	$(top_srcdir)/aclocal/nfs-utils.m4 \
 	$(top_srcdir)/aclocal/rpcsec_vers.m4 \
 	$(top_srcdir)/aclocal/tcp-wrappers.m4 \
@@ -71,7 +67,8 @@ am_rpcgen_OBJECTS = rpcgen-rpc_clntout.$(OBJEXT) \
 	rpcgen-rpc_tblout.$(OBJEXT) rpcgen-rpc_util.$(OBJEXT) \
 	rpcgen-rpc_sample.$(OBJEXT)
 rpcgen_OBJECTS = $(am_rpcgen_OBJECTS)
-rpcgen_LDADD = $(LDADD)
+am__DEPENDENCIES_1 =
+rpcgen_DEPENDENCIES = $(am__DEPENDENCIES_1)
 rpcgen_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(rpcgen_CFLAGS) $(CFLAGS) \
 	$(rpcgen_LDFLAGS) $(LDFLAGS) -o $@
@@ -153,12 +150,17 @@ LIBBLKID = @LIBBLKID@
 LIBBSD = @LIBBSD@
 LIBCAP = @LIBCAP@
 LIBCRYPT = @LIBCRYPT@
+LIBDL = @LIBDL@
+LIBEVENT = @LIBEVENT@
 LIBKEYUTILS = @LIBKEYUTILS@
 LIBMOUNT = @LIBMOUNT@
+LIBNFSIDMAP = @LIBNFSIDMAP@
 LIBNSL = @LIBNSL@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LIBSOCKET = @LIBSOCKET@
+LIBSQLITE = @LIBSQLITE@
+LIBTIRPC = @LIBTIRPC@
 LIBTOOL = @LIBTOOL@ --tag=CC
 LIBWRAP = @LIBWRAP@
 LIPO = @LIPO@
@@ -223,7 +225,6 @@ dvidir = @dvidir@
 enable_gss = @enable_gss@
 enable_ipv6 = @enable_ipv6@
 enable_mountconfig = @enable_mountconfig@
-enable_nfsv3 = @enable_nfsv3@
 enable_nfsv4 = @enable_nfsv4@
 enable_nfsv41 = @enable_nfsv41@
 exec_prefix = @exec_prefix@
@@ -253,6 +254,7 @@ sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@
 startstatd = @startstatd@
+statdpath = @statdpath@
 statduser = @statduser@
 statedir = @statedir@
 sysconfdir = @sysconfdir@
@@ -268,6 +270,7 @@ rpcgen_SOURCES = rpc_clntout.c rpc_cout.c rpc_hout.c rpc_main.c \
 rpcgen_CFLAGS = $(CFLAGS_FOR_BUILD)
 rpcgen_CPPLAGS = $(CPPFLAGS_FOR_BUILD)
 rpcgen_LDFLAGS = $(LDFLAGS_FOR_BUILD)
+rpcgen_LDADD = $(LIBTIRPC)
 MAINTAINERCLEANFILES = Makefile.in
 EXTRA_DIST = rpcgen.new.1
 all: all-am

@@ -126,7 +126,7 @@ display_status_1(char *m, u_int32_t code, int type, const gss_OID mech)
 				"gss_display_status called from %s\n", m);
 			break;
 		} else {
-			printerr(2, "ERROR: GSS-API: (%s) error in %s(): %s\n",
+			printerr(0, "ERROR: GSS-API: (%s) error in %s(): %s\n",
 			    typestr, m, (char *)msg.value);
 		}
 

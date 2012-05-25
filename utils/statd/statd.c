@@ -190,7 +190,7 @@ static void run_sm_notify(int outport)
 	char *av[6];
 	int ac = 0;
 
-	av[ac++] = "/sbin/sm-notify";
+	av[ac++] = "/usr/sbin/sm-notify";
 	if (run_mode & MODE_NODAEMON)
 		av[ac++] = "-d";
 	if (outport) {

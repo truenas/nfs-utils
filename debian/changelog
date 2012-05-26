@@ -1,3 +1,9 @@
+nfs-utils (1:1.2.6-2) unstable; urgency=low
+
+  * Move open-iscsi and watchdog to Suggests.
+
+ -- Luk Claes <luk@debian.org>  Sat, 26 May 2012 07:45:41 +0200
+
 nfs-utils (1:1.2.6-1) unstable; urgency=low
 
   * New upstream version

@@ -33,7 +33,8 @@ Homepage: http://nfs.sourceforge.net/
 Package: nfs-common
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, rpcbind, adduser, ucf, lsb-base (>= 1.3-9ubuntu3), initscripts (>= 2.88dsf-13.3)
-Recommends: python, open-iscsi, watchdog
+Recommends: python
+Suggests: open-iscsi, watchdog
 Provides: nfs-client
 Conflicts: nfs-client
 Replaces: nfs-client, nfs-kernel-server (<< 1:1.2.5-4), mount (<< 2.13~)

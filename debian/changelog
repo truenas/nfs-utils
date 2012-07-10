@@ -1,8 +1,8 @@
-nfs-utils (1:1.2.6-3) UNRELEASED; urgency=low
+nfs-utils (1:1.2.6-3) unstable; urgency=low
 
   * Iterate through exports.d to look for expors (Closes: #676604).
 
- -- Luk Claes <luk@zomers.be>  Tue, 10 Jul 2012 19:35:56 +0200
+ -- Luk Claes <luk@zomers.be>  Tue, 10 Jul 2012 19:38:22 +0200
 
 nfs-utils (1:1.2.6-2) unstable; urgency=low
 

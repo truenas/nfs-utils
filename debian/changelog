@@ -13,6 +13,7 @@ nfs-utils (1:1.2.8-1) UNRELEASED; urgency=low
   * Add nfsdcltrack to nfs-kernel-server.
   * Add libsqlite3-dev build dependency for nfsdcltrack.
   * Do not try to install dropped ChangeLog.
+  * Adjust version of replaces due to manpage move.
 
  -- Luk Claes <luk@zomers.be>  Fri, 10 May 2013 09:08:08 +0200
 

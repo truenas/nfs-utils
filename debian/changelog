@@ -1,3 +1,9 @@
+nfs-utils (1:1.2.6-4) UNRELEASED; urgency=low
+
+  * Use rpcbind's rpcinfo everywhere (Closes: #707589).
+
+ -- Luk Claes <luk@zomers.be>  Fri, 10 May 2013 09:08:08 +0200
+
 nfs-utils (1:1.2.6-3) unstable; urgency=low
 
   * Iterate through exports.d to look for expors (Closes: #676604).

@@ -17,7 +17,6 @@ DESC="NFS common utilities"
 
 # Read config
 DEFAULTFILE=/etc/default/nfs-common
-PREFIX=
 NEED_STATD=
 NEED_IDMAPD=
 NEED_GSSD=
@@ -30,7 +29,7 @@ fi
 . /lib/lsb/init-functions
 
 # Exit if required binaries are missing.
-[ -x $PREFIX/sbin/rpc.statd ] || exit 0
+[ -x /sbin/rpc.statd ] || exit 0
 
 #
 # Parse the fstab file, and determine whether we need idmapd and gssd. (The
@@ -150,7 +149,7 @@ case "$1" in
 	    fi
 	    start-stop-daemon --start --oknodo --quiet \
 		--pidfile /var/run/rpc.statd.pid \
-	        --exec $PREFIX/sbin/rpc.statd -- $STATDOPTS
+	        --exec /sbin/rpc.statd -- $STATDOPTS
 	    RET=$?
 	    if [ $RET != 0 ]; then
 	        log_end_msg $RET

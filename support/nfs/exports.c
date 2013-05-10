@@ -469,7 +469,7 @@ static void clearflags(int mask, unsigned int active, struct exportent *ep)
  * ensure that the export flags agree with the flags on each
  * pseudoflavor:
  */
-static void fix_pseudoflavor_flags(struct exportent *ep)
+void fix_pseudoflavor_flags(struct exportent *ep)
 {
 	struct export_features *ef;
 	struct sec_entry *p;
@@ -643,6 +643,8 @@ bad_option:
 			cp++;
 	}
 
+	if (ep->e_secinfo[0].flav == NULL)
+		secinfo_addflavor(find_flavor("sys"), ep);
 	fix_pseudoflavor_flags(ep);
 	ep->e_squids = squids;
 	ep->e_sqgids = sqgids;

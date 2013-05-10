@@ -29,7 +29,6 @@
 #include "nfslib.h"
 #include "exportfs.h"
 #include "mountd.h"
-#include "xmalloc.h"
 #include "fsloc.h"
 #include "pseudoflavors.h"
 
@@ -81,7 +80,7 @@ static void auth_unix_ip(FILE *f)
 	 */
 	char *cp;
 	char class[20];
-	char ipaddr[INET6_ADDRSTRLEN];
+	char ipaddr[INET6_ADDRSTRLEN + 1];
 	char *client = NULL;
 	struct addrinfo *tmp = NULL;
 	if (readline(fileno(f), &lbuf, &lbuflen) != 1)
@@ -95,7 +94,7 @@ static void auth_unix_ip(FILE *f)
 	    strcmp(class, "nfsd") != 0)
 		return;
 
-	if (qword_get(&cp, ipaddr, sizeof(ipaddr)) <= 0)
+	if (qword_get(&cp, ipaddr, sizeof(ipaddr) - 1) <= 0)
 		return;
 
 	tmp = host_pton(ipaddr);
@@ -109,25 +108,24 @@ static void auth_unix_ip(FILE *f)
 		struct addrinfo *ai = NULL;
 
 		ai = client_resolve(tmp->ai_addr);
-		if (ai == NULL)
-			goto out;
-		client = client_compose(ai);
-		freeaddrinfo(ai);
-		if (!client)
-			goto out;
+		if (ai) {
+			client = client_compose(ai);
+			freeaddrinfo(ai);
+		}
 	}
 	qword_print(f, "nfsd");
 	qword_print(f, ipaddr);
-	qword_printuint(f, time(0) + DEFAULT_TTL);
-	if (use_ipaddr)
+	qword_printtimefrom(f, DEFAULT_TTL);
+	if (use_ipaddr) {
+		memmove(ipaddr + 1, ipaddr, strlen(ipaddr) + 1);
+		ipaddr[0] = '$';
 		qword_print(f, ipaddr);
-	else if (client)
+	} else if (client)
 		qword_print(f, *client?client:"DEFAULT");
 	qword_eol(f);
 	xlog(D_CALL, "auth_unix_ip: client %p '%s'", client, client?client: "DEFAULT");
 
 	free(client);
-out:
 	freeaddrinfo(tmp);
 
 }
@@ -183,7 +181,7 @@ static void auth_unix_gid(FILE *f)
 		}
 	}
 	qword_printuint(f, uid);
-	qword_printuint(f, time(0) + DEFAULT_TTL);
+	qword_printtimefrom(f, DEFAULT_TTL);
 	if (rv >= 0) {
 		qword_printuint(f, ngroups);
 		for (i=0; i<ngroups; i++)
@@ -238,17 +236,17 @@ static const char *get_uuid_blkdev(char *path)
 #define get_uuid_blkdev(path) (NULL)
 #endif
 
-static int get_uuid(const char *val, int uuidlen, char *u)
+static int get_uuid(const char *val, size_t uuidlen, char *u)
 {
 	/* extract hex digits from uuidstr and compose a uuid
 	 * of the given length (max 16), xoring bytes to make
 	 * a smaller uuid.
 	 */
-	int i = 0;
+	size_t i = 0;
 	
 	memset(u, 0, uuidlen);
 	for ( ; *val ; val++) {
-		char c = *val;
+		int c = *val;
 		if (!isxdigit(c))
 			continue;
 		if (isalpha(c)) {
@@ -260,7 +258,7 @@ static int get_uuid(const char *val, int uuidlen, char *u)
 			c = c - '0' + 0;
 		if ((i&1) == 0)
 			c <<= 4;
-		u[i/2] ^= c;
+		u[i/2] ^= (char)c;
 		i++;
 		if (i == uuidlen*2)
 			i = 0;
@@ -268,7 +266,7 @@ static int get_uuid(const char *val, int uuidlen, char *u)
 	return 1;
 }
 
-static int uuid_by_path(char *path, int type, int uuidlen, char *uuid)
+static int uuid_by_path(char *path, int type, size_t uuidlen, char *uuid)
 {
 	/* get a uuid for the filesystem found at 'path'.
 	 * There are several possible ways of generating the
@@ -329,7 +327,7 @@ static char *next_mnt(void **v, char *p)
 {
 	FILE *f;
 	struct mntent *me;
-	int l = strlen(p);
+	size_t l = strlen(p);
 	if (*v == NULL) {
 		f = setmntent("/etc/mtab", "r");
 		*v = f;
@@ -347,15 +345,39 @@ static char *next_mnt(void **v, char *p)
 	return me->mnt_dir;
 }
 
+static int is_subdirectory(char *child, char *parent)
+{
+	size_t l = strlen(parent);
+
+	if (strcmp(parent, "/") == 0)
+		return 1;
+
+	return strcmp(child, parent) == 0
+		|| (strncmp(child, parent, l) == 0 && child[l] == '/');
+}
+
+static int path_matches(nfs_export *exp, char *path)
+{
+	if (exp->m_export.e_flags & NFSEXP_CROSSMOUNT)
+		return is_subdirectory(path, exp->m_export.e_path);
+	return strcmp(path, exp->m_export.e_path) == 0;
+}
+
+static int
+export_matches(nfs_export *exp, char *dom, char *path, struct addrinfo *ai)
+{
+	return path_matches(exp, path) && client_matches(exp, dom, ai);
+}
+
 /* True iff e1 is a child of e2 and e2 has crossmnt set: */
 static bool subexport(struct exportent *e1, struct exportent *e2)
 {
 	char *p1 = e1->e_path, *p2 = e2->e_path;
-	int l2 = strlen(p2);
+	size_t l2 = strlen(p2);
 
 	return e2->e_flags & NFSEXP_CROSSMOUNT
-	       && strncmp(p1, p2, l2) == 0
-	       && p1[l2] == '/';
+		&& strncmp(p1, p2, l2) == 0
+		&& p1[l2] == '/';
 }
 
 struct parsed_fsid {
@@ -366,15 +388,17 @@ struct parsed_fsid {
 	unsigned int minor;
 	unsigned int major;
 	unsigned int fsidnum;
-	int uuidlen;
+	size_t uuidlen;
 	char *fhuuid;
 };
 
-int parse_fsid(int fsidtype, int fsidlen, char *fsid, struct parsed_fsid *parsed)
+static int parse_fsid(int fsidtype, int fsidlen, char *fsid,
+		struct parsed_fsid *parsed)
 {
 	unsigned int dev;
 	unsigned long long inode64;
 
+	memset(parsed, 0, sizeof(*parsed));
 	parsed->fsidtype = fsidtype;
 	switch(fsidtype) {
 	case FSID_DEV: /* 4 bytes: 2 major, 2 minor, 4 inode */
@@ -501,7 +525,7 @@ static bool match_fsid(struct parsed_fsid *parsed, nfs_export *exp, char *path)
 	return false;
 }
 
-struct addrinfo *lookup_client_addr(char *dom)
+static struct addrinfo *lookup_client_addr(char *dom)
 {
 	struct addrinfo *ret;
 	struct addrinfo *tmp;
@@ -713,6 +737,7 @@ static void write_secinfo(FILE *f, struct exportent *ep, int flag_mask)
 		/* There was no sec= option */
 		return;
 	}
+	fix_pseudoflavor_flags(ep);
 	qword_print(f, "secinfo");
 	qword_printint(f, p - ep->e_secinfo);
 	for (p = ep->e_secinfo; p->flav; p++) {
@@ -730,7 +755,7 @@ static int dump_to_cache(FILE *f, char *domain, char *path, struct exportent *ex
 		int different_fs = strcmp(path, exp->e_path) != 0;
 		int flag_mask = different_fs ? ~NFSEXP_FSID : ~0;
 
-		qword_printuint(f, time(0) + exp->e_ttl);
+		qword_printtimefrom(f, exp->e_ttl);
 		qword_printint(f, exp->e_flags & flag_mask);
 		qword_printint(f, exp->e_anonuid);
 		qword_printint(f, exp->e_anongid);
@@ -750,29 +775,8 @@ static int dump_to_cache(FILE *f, char *domain, char *path, struct exportent *ex
  			qword_printhex(f, u, 16);
  		}
 	} else
-		qword_printuint(f, time(0) + DEFAULT_TTL);
+		qword_printtimefrom(f, DEFAULT_TTL);
 	return qword_eol(f);
-}
-
-static int is_subdirectory(char *child, char *parent)
-{
-	int l = strlen(parent);
-
-	return strcmp(child, parent) == 0
-		|| (strncmp(child, parent, l) == 0 && child[l] == '/');
-}
-
-static int path_matches(nfs_export *exp, char *path)
-{
-	if (exp->m_export.e_flags & NFSEXP_CROSSMOUNT)
-		return is_subdirectory(path, exp->m_export.e_path);
-	return strcmp(path, exp->m_export.e_path) == 0;
-}
-
-static int
-export_matches(nfs_export *exp, char *dom, char *path, struct addrinfo *ai)
-{
-	return path_matches(exp, path) && client_matches(exp, dom, ai);
 }
 
 static nfs_export *
@@ -828,15 +832,70 @@ lookup_export(char *dom, char *path, struct addrinfo *ai)
 
 #ifdef HAVE_NFS_PLUGIN_H
 #include <dlfcn.h>
+#include <link.h>
 #include <nfs-plugin.h>
 
 /*
- * Walk through a set of FS locations and build a set of export options.
+ * Find the export entry for the parent of "pathname".
+ * Caller must not free returned exportent.
+ */
+static struct exportent *lookup_parent_export(char *dom,
+		const char *pathname, struct addrinfo *ai)
+{
+	char *parent, *slash;
+	nfs_export *result;
+
+	parent = strdup(pathname);
+	if (parent == NULL) {
+		xlog(D_GENERAL, "%s: failed to allocate parent path buffer",
+			__func__);
+		goto out_default;
+	}
+	xlog(D_CALL, "%s: pathname = '%s'", __func__, pathname);
+
+again:
+	/* shorten pathname by one component */
+	slash = strrchr(parent, '/');
+	if (slash == NULL) {
+		xlog(D_GENERAL, "%s: no slash found in pathname",
+			__func__);
+		goto out_default;
+	}
+	*slash = '\0';
+
+	if (strlen(parent) == 0) {
+		result = lookup_export(dom, "/", ai);
+		if (result == NULL) {
+			xlog(L_ERROR, "%s: no root export found.", __func__);
+			goto out_default;
+		}
+		goto out;
+	}
+
+	result = lookup_export(dom, parent, ai);
+	if (result == NULL) {
+		xlog(D_GENERAL, "%s: lookup_export(%s) found nothing",
+			__func__, parent);
+		goto again;
+	}
+
+out:
+	xlog(D_CALL, "%s: found export for %s", __func__, parent);
+	free(parent);
+	return &result->m_export;
+
+out_default:
+	free(parent);
+	return mkexportent("*", "/", "insecure");
+}
+
+/*
+ * Walk through a set of FS locations and build an e_fslocdata string.
  * Returns true if all went to plan; otherwise, false.
  */
-static _Bool
-locations_to_options(struct jp_ops *ops, nfs_fsloc_set_t locations,
-		char *options, size_t remaining, int *ttl)
+static bool locations_to_fslocdata(struct jp_ops *ops,
+		nfs_fsloc_set_t locations, char *fslocdata,
+		size_t remaining, int *ttl)
 {
 	char *server, *last_path, *rootpath, *ptr;
 	_Bool seen = false;
@@ -844,7 +903,7 @@ locations_to_options(struct jp_ops *ops, nfs_fsloc_set_t locations,
 	last_path = NULL;
 	rootpath = NULL;
 	server = NULL;
-	ptr = options;
+	ptr = fslocdata;
 	*ttl = 0;
 
 	for (;;) {
@@ -870,14 +929,14 @@ locations_to_options(struct jp_ops *ops, nfs_fsloc_set_t locations,
 				goto out_false;
 			}
 			if ((size_t)len >= remaining) {
-				xlog(D_GENERAL, "%s: options buffer overflow", __func__);
+				xlog(D_GENERAL, "%s: fslocdata buffer overflow", __func__);
 				goto out_false;
 			}
 			remaining -= (size_t)len;
 			ptr += len;
 		} else {
 			if (last_path == NULL)
-				len = snprintf(ptr, remaining, "refer=%s@%s",
+				len = snprintf(ptr, remaining, "%s@%s",
 							rootpath, server);
 			else
 				len = snprintf(ptr, remaining, ":%s@%s",
@@ -887,7 +946,7 @@ locations_to_options(struct jp_ops *ops, nfs_fsloc_set_t locations,
 				goto out_false;
 			}
 			if ((size_t)len >= remaining) {
-				xlog(D_GENERAL, "%s: options buffer overflow",
+				xlog(D_GENERAL, "%s: fslocdata buffer overflow",
 					__func__);
 				goto out_false;
 			}
@@ -901,8 +960,8 @@ locations_to_options(struct jp_ops *ops, nfs_fsloc_set_t locations,
 		free(server);
 	}
 
-	xlog(D_CALL, "%s: options='%s', ttl=%d",
-		__func__, options, *ttl);
+	xlog(D_CALL, "%s: fslocdata='%s', ttl=%d",
+		__func__, fslocdata, *ttl);
 	return seen;
 
 out_false:
@@ -912,71 +971,72 @@ out_false:
 }
 
 /*
- * Walk through the set of FS locations and build an exportent.
- * Returns pointer to an exportent if "junction" refers to a junction.
- *
- * Returned exportent points to static memory.
+ * Duplicate the junction's parent's export options and graft in
+ * the fslocdata we constructed from the locations list.
  */
-static struct exportent *do_locations_to_export(struct jp_ops *ops,
-		nfs_fsloc_set_t locations, const char *junction,
-		char *options, size_t options_len)
+static struct exportent *create_junction_exportent(struct exportent *parent,
+		const char *junction, const char *fslocdata, int ttl)
 {
-	struct exportent *exp;
-	int ttl;
+	static struct exportent *eep;
 
-	if (!locations_to_options(ops, locations, options, options_len, &ttl))
-		return NULL;
+	eep = (struct exportent *)malloc(sizeof(*eep));
+	if (eep == NULL)
+		goto out_nomem;
 
-	exp = mkexportent("*", (char *)junction, options);
-	if (exp == NULL) {
-		xlog(L_ERROR, "%s: Failed to construct exportent", __func__);
-		return NULL;
+	dupexportent(eep, parent);
+	strcpy(eep->e_path, junction);
+	eep->e_hostname = strdup(parent->e_hostname);
+	if (eep->e_hostname == NULL) {
+		free(eep);
+		goto out_nomem;
 	}
+	free(eep->e_uuid);
+	eep->e_uuid = NULL;
+	eep->e_ttl = (unsigned int)ttl;
 
-	exp->e_uuid = NULL;
-	exp->e_ttl = ttl;
-	return exp;
+	free(eep->e_fslocdata);
+	eep->e_fslocdata = strdup(fslocdata);
+	if (eep->e_fslocdata == NULL) {
+		free(eep->e_hostname);
+		free(eep);
+		goto out_nomem;
+	}
+	eep->e_fslocmethod = FSLOC_REFER;
+	return eep;
+
+out_nomem:
+	xlog(L_ERROR, "%s: No memory", __func__);
+	return NULL;
 }
 
 /*
- * Convert set of FS locations to an exportent.  Returns pointer to
- * an exportent if "junction" refers to a junction.
- *
- * Returned exportent points to static memory.
+ * Walk through the set of FS locations and build an exportent.
+ * Returns pointer to an exportent if "junction" refers to a junction.
  */
 static struct exportent *locations_to_export(struct jp_ops *ops,
-		nfs_fsloc_set_t locations, const char *junction)
+		nfs_fsloc_set_t locations, const char *junction,
+		struct exportent *parent)
 {
-	struct exportent *exp;
-	char *options;
+	static char fslocdata[BUFSIZ];
+	int ttl;
 
-	options = malloc(BUFSIZ);
-	if (options == NULL) {
-		xlog(D_GENERAL, "%s: failed to allocate options buffer",
-			__func__);
+	fslocdata[0] = '\0';
+	if (!locations_to_fslocdata(ops, locations,
+					fslocdata, sizeof(fslocdata), &ttl))
 		return NULL;
-	}
-	options[0] = '\0';
-
-	exp = do_locations_to_export(ops, locations, junction,
-						options, BUFSIZ);
-
-	free(options);
-	return exp;
+	return create_junction_exportent(parent, junction, fslocdata, ttl);
 }
 
 /*
  * Retrieve locations information in "junction" and dump it to the
  * kernel.  Returns pointer to an exportent if "junction" refers
  * to a junction.
- *
- * Returned exportent points to static memory.
  */
-static struct exportent *invoke_junction_ops(void *handle,
-		const char *junction)
+static struct exportent *invoke_junction_ops(void *handle, char *dom,
+		const char *junction, struct addrinfo *ai)
 {
+	struct exportent *parent, *exp = NULL;
 	nfs_fsloc_set_t locations;
-	struct exportent *exp;
 	enum jp_status status;
 	struct jp_ops *ops;
 	char *error;
@@ -1002,15 +1062,28 @@ static struct exportent *invoke_junction_ops(void *handle,
 	}
 
 	status = ops->jp_get_locations(junction, &locations);
-	if (status != JP_OK) {
-		xlog(D_GENERAL, "%s: failed to resolve %s: %s",
-			__func__, junction, ops->jp_error(status));
-		return NULL;
+	switch (status) {
+	case JP_OK:
+		break;
+	case JP_NOTJUNCTION:
+		xlog(D_GENERAL, "%s: %s is not a junction",
+			__func__, junction);
+		goto out;
+	default:
+		xlog(L_WARNING, "Dangling junction %s: %s",
+			junction, ops->jp_error(status));
+		goto out;
 	}
 
-	exp = locations_to_export(ops, locations, junction);
+	parent = lookup_parent_export(dom, junction, ai);
+	if (parent == NULL)
+		goto out;
+
+	exp = locations_to_export(ops, locations, junction, parent);
 
 	ops->jp_put_locations(locations);
+
+out:
 	ops->jp_done();
 	return exp;
 }
@@ -1019,12 +1092,12 @@ static struct exportent *invoke_junction_ops(void *handle,
  * Load the junction plug-in, then try to resolve "pathname".
  * Returns pointer to an initialized exportent if "junction"
  * refers to a junction, or NULL if not.
- *
- * Returned exportent points to static memory.
  */
-static struct exportent *lookup_junction(const char *pathname)
+static struct exportent *lookup_junction(char *dom, const char *pathname,
+		struct addrinfo *ai)
 {
 	struct exportent *exp;
+	struct link_map *map;
 	void *handle;
 
 	handle = dlopen("libnfsjunct.so", RTLD_NOW);
@@ -1032,9 +1105,14 @@ static struct exportent *lookup_junction(const char *pathname)
 		xlog(D_GENERAL, "%s: dlopen: %s", __func__, dlerror());
 		return NULL;
 	}
+
+	if (dlinfo(handle, RTLD_DI_LINKMAP, &map) == 0)
+		xlog(D_GENERAL, "%s: loaded plug-in %s",
+			__func__, map->l_name);
+
 	(void)dlerror();	/* Clear any error */
 
-	exp = invoke_junction_ops(handle, pathname);
+	exp = invoke_junction_ops(handle, dom, pathname, ai);
 
 	/* We could leave it loaded to make junction resolution
 	 * faster next time.  However, if we want to replace the
@@ -1042,10 +1120,24 @@ static struct exportent *lookup_junction(const char *pathname)
 	(void)dlclose(handle);
 	return exp;
 }
-#else	/* !HAVE_NFS_PLUGIN_H */
-static inline struct exportent *lookup_junction(const char *UNUSED(pathname))
+
+static void lookup_nonexport(FILE *f, char *dom, char *path,
+		struct addrinfo *ai)
 {
-	return NULL;
+	struct exportent *eep;
+
+	eep = lookup_junction(dom, path, ai);
+	dump_to_cache(f, dom, path, eep);
+	if (eep == NULL)
+		return;
+	exportent_release(eep);
+	free(eep);
+}
+#else	/* !HAVE_NFS_PLUGIN_H */
+static void lookup_nonexport(FILE *f, char *dom, char *path,
+		struct addrinfo *UNUSED(ai))
+{
+	dump_to_cache(f, dom, path, NULL);
 }
 #endif	/* !HAVE_NFS_PLUGIN_H */
 
@@ -1096,9 +1188,9 @@ static void nfsd_export(FILE *f)
 			     " or fsid= required", path);
 			dump_to_cache(f, dom, path, NULL);
 		}
-	} else {
-		dump_to_cache(f, dom, path, lookup_junction(path));
-	}
+	} else
+		lookup_nonexport(f, dom, path, ai);
+
  out:
 	xlog(D_CALL, "nfsd_export: found %p path %s", found, path ? path : NULL);
 	if (dom) free(dom);
@@ -1258,7 +1350,7 @@ int cache_export(nfs_export *exp, char *path)
 	qword_print(f, "nfsd");
 	qword_print(f,
 		host_ntop(get_addrlist(exp->m_client, 0), buf, sizeof(buf)));
-	qword_printuint(f, time(0) + exp->m_export.e_ttl);
+	qword_printtimefrom(f, exp->m_export.e_ttl);
 	qword_print(f, exp->m_client->m_hostname);
 	err = qword_eol(f);
 	

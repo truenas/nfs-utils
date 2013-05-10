@@ -140,14 +140,14 @@ static int try_mount(struct libmnt_context *cxt, int bg)
 	return ret;
 }
 
-/* returns: error = -1, success = 0 , unknown = 1 */
+/* returns: error = -1, success = 1 , not vers4 == 0 */
 static int is_vers4(struct libmnt_context *cxt)
 {
 	struct libmnt_fs *fs = mnt_context_get_fs(cxt);
 	struct libmnt_table *tb = NULL;
 	const char *src = mnt_context_get_source(cxt),
 		   *tgt = mnt_context_get_target(cxt);
-	int rc = 1;
+	int rc = 0;
 
 	if (!src || !tgt)
 		return -1;
@@ -163,7 +163,7 @@ static int is_vers4(struct libmnt_context *cxt)
 	if (fs) {
 		const char *type = mnt_fs_get_fstype(fs);
 		if (type && strcmp(type, "nfs4") == 0)
-			rc = 0;
+			rc = 1;
 	}
 	mnt_free_table(tb);
 	return rc;
@@ -173,6 +173,7 @@ static int umount_main(struct libmnt_context *cxt, int argc, char **argv)
 {
 	int rc, c;
 	char *spec = NULL, *opts = NULL;
+	int ret = EX_FAIL;
 
 	static const struct option longopts[] = {
 		{ "force", 0, 0, 'f' },
@@ -209,14 +210,20 @@ static int umount_main(struct libmnt_context *cxt, int argc, char **argv)
 
 	if (mnt_context_set_target(cxt, spec))
 		goto err;
-	if (mnt_context_set_fstype_pattern(cxt, "nfs,nfs4"))	/* restrict filesystems */
-		goto err;
 
 	/* read mtab/fstab, evaluate permissions, etc. */
 	rc = mnt_context_prepare_umount(cxt);
 	if (rc) {
 		nfs_error(_("%s: failed to prepare umount: %s\n"),
 					progname, strerror(-rc));
+		goto err;
+	}
+
+	if (mnt_context_get_fstype(cxt) &&
+	    !mnt_match_fstype(mnt_context_get_fstype(cxt), "nfs,nfs4")) {
+
+		nfs_error(_("%s: %s: is not an NFS filesystem"), progname, spec);
+		ret = EX_USAGE;
 		goto err;
 	}
 
@@ -244,6 +251,7 @@ static int umount_main(struct libmnt_context *cxt, int argc, char **argv)
 			nfs_umount23(spec, "tcp,v3");
 	}
 
+	ret = EX_FILEIO;
 	rc = mnt_context_do_umount(cxt);	/* call umount(2) syscall */
 	mnt_context_finalize_mount(cxt);	/* mtab update */
 
@@ -252,12 +260,10 @@ static int umount_main(struct libmnt_context *cxt, int argc, char **argv)
 		umount_error(rc, spec);
 		goto err;
 	}
-
-	free(opts);
-	return EX_SUCCESS;
+	ret = EX_SUCCESS;
 err:
 	free(opts);
-	return EX_FAIL;
+	return ret;
 }
 
 static int mount_main(struct libmnt_context *cxt, int argc, char **argv)

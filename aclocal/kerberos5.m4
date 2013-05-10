@@ -32,6 +32,8 @@ AC_DEFUN([AC_KERBEROS_V5],[
     if test "$K5CONFIG" != ""; then
       KRBCFLAGS=`$K5CONFIG --cflags`
       KRBLIBS=`$K5CONFIG --libs`
+      GSSKRB_CFLAGS=`$K5CONFIG --cflags gssapi`
+      GSSKRB_LIBS=`$K5CONFIG --libs gssapi`
       K5VERS=`$K5CONFIG --version | head -n 1 | awk '{split($(4),v,"."); if (v@<:@"3"@:>@ == "") v@<:@"3"@:>@ = "0"; print v@<:@"1"@:>@v@<:@"2"@:>@v@<:@"3"@:>@ }'`
       AC_DEFINE_UNQUOTED(KRB5_VERSION, $K5VERS, [Define this as the Kerberos version number])
       if test -f $dir/include/gssapi/gssapi_krb5.h -a \
@@ -92,6 +94,8 @@ AC_DEFUN([AC_KERBEROS_V5],[
     AC_DEFINE(HAVE_SET_ALLOWABLE_ENCTYPES, 1, [Define this if the Kerberos GSS library supports gss_krb5_set_allowable_enctypes]), ,$KRBLIBS)
   AC_CHECK_LIB($gssapi_lib, gss_krb5_ccache_name,
     AC_DEFINE(HAVE_GSS_KRB5_CCACHE_NAME, 1, [Define this if the Kerberos GSS library supports gss_krb5_ccache_name]), ,$KRBLIBS)
+  AC_CHECK_LIB($gssapi_lib, gss_krb5_free_lucid_sec_context,
+    AC_DEFINE(HAVE_GSS_KRB5_FREE_LUCID_SEC_CONTEXT, 1, [Define this if the Kerberos GSS library supports gss_krb5_free_lucid_sec_context]), ,$KRBLIBS)
 
   dnl Check for newer error message facility
   AC_CHECK_LIB($gssapi_lib, krb5_get_error_message,
@@ -111,5 +115,7 @@ AC_DEFUN([AC_KERBEROS_V5],[
   AC_SUBST([KRBCFLAGS])
   AC_SUBST([KRBLDFLAGS])
   AC_SUBST([K5VERS])
+  AC_SUBST([GSSKRB_CFLAGS])
+  AC_SUBST([GSSKRB_LIBS])
 
 ])

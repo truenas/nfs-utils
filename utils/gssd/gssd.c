@@ -71,7 +71,7 @@ sig_die(int signal)
 	if (root_uses_machine_creds)
 		gssd_destroy_krb5_machine_creds();
 	printerr(1, "exiting on signal %d\n", signal);
-	exit(1);
+	exit(0);
 }
 
 void
@@ -85,7 +85,7 @@ sig_hup(int signal)
 static void
 usage(char *progname)
 {
-	fprintf(stderr, "usage: %s [-f] [-l] [-M] [-n] [-v] [-r] [-p pipefsdir] [-k keytab] [-d ccachedir] [-t timeout] [-R preferred realm]\n",
+	fprintf(stderr, "usage: %s [-f] [-l] [-M] [-n] [-v] [-r] [-p pipefsdir] [-k keytab] [-d ccachedir] [-t timeout] [-R preferred realm] [-D]\n",
 		progname);
 	exit(1);
 }
@@ -102,7 +102,7 @@ main(int argc, char *argv[])
 	char *progname;
 
 	memset(ccachesearch, 0, sizeof(ccachesearch));
-	while ((opt = getopt(argc, argv, "fvrlmnMp:k:d:t:R")) != -1) {
+	while ((opt = getopt(argc, argv, "DfvrlmnMp:k:d:t:R:")) != -1) {
 		switch (opt) {
 			case 'f':
 				fg = 1;
@@ -147,8 +147,11 @@ main(int argc, char *argv[])
 #ifdef HAVE_SET_ALLOWABLE_ENCTYPES
 				limit_to_legacy_enctypes = 1;
 #else 
-				errx(1, "Setting encryption type not support by Kerberos libraries.");
+				errx(1, "Encryption type limits not supported by Kerberos libraries.");
 #endif
+				break;
+			case 'D':
+				avoid_dns = 0;
 				break;
 			default:
 				usage(argv[0]);

@@ -31,6 +31,9 @@
 /* Define to 1 if you have the `atexit' function. */
 #undef HAVE_ATEXIT
 
+/* Define to 1 if your rpcsec library provides authgss_free_private_data, */
+#undef HAVE_AUTHGSS_FREE_PRIVATE_DATA
+
 /* Define to 1 if you have the `authgss_set_debug_level' function. */
 #undef HAVE_AUTHGSS_SET_DEBUG_LEVEL
 
@@ -104,6 +107,10 @@
 /* Define this if the Kerberos GSS library supports gss_krb5_ccache_name */
 #undef HAVE_GSS_KRB5_CCACHE_NAME
 
+/* Define this if the Kerberos GSS library supports
+   gss_krb5_free_lucid_sec_context */
+#undef HAVE_GSS_KRB5_FREE_LUCID_SEC_CONTEXT
+
 /* Define to 1 if you have the `hasmntopt' function. */
 #undef HAVE_HASMNTOPT
 
@@ -138,8 +145,14 @@
 /* Define to 1 if you have the <libgen.h> header file. */
 #undef HAVE_LIBGEN_H
 
+/* Define to 1 if you have the `gssglue' library (-lgssglue). */
+#undef HAVE_LIBGSSGLUE
+
 /* Define to 1 if you have the <libintl.h> header file. */
 #undef HAVE_LIBINTL_H
+
+/* Define to 1 if you have the <libio.h> header file. */
+#undef HAVE_LIBIO_H
 
 /* Define to 1 if you have and wish to use libtirpc. */
 #undef HAVE_LIBTIRPC
@@ -193,6 +206,9 @@
 
 /* Define to 1 if you have the <paths.h> header file. */
 #undef HAVE_PATHS_H
+
+/* Define to 1 if you have the `ppoll' function. */
+#undef HAVE_PPOLL
 
 /* Define to 1 if you have the `realpath' function. */
 #undef HAVE_REALPATH
@@ -440,6 +456,11 @@
 
 /* Version number of package */
 #undef VERSION
+
+/* Enable large inode numbers on Mac OS X 10.5.  */
+#ifndef _DARWIN_USE_64_BIT_INODE
+# define _DARWIN_USE_64_BIT_INODE 1
+#endif
 
 /* Number of bits in a file offset, on hosts where this is settable. */
 #undef _FILE_OFFSET_BITS

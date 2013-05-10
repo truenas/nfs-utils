@@ -61,9 +61,6 @@
 
 /* global variables */
 
-/* top level DB directory */
-static char *sqlite_topdir;
-
 /* reusable pathname and sql command buffer */
 static char buf[PATH_MAX];
 
@@ -74,7 +71,7 @@ static sqlite3 *dbh;
 
 /* make a directory, ignoring EEXIST errors unless it's not a directory */
 static int
-mkdir_if_not_exist(char *dirname)
+mkdir_if_not_exist(const char *dirname)
 {
 	int ret;
 	struct stat statbuf;
@@ -93,6 +90,39 @@ mkdir_if_not_exist(char *dirname)
 	return ret;
 }
 
+/* Open the database and set up the database handle for it */
+int
+sqlite_prepare_dbh(const char *topdir)
+{
+	int ret;
+
+	/* Do nothing if the database handle is already set up */
+	if (dbh)
+		return 0;
+
+	ret = snprintf(buf, PATH_MAX - 1, "%s/main.sqlite", topdir);
+	if (ret < 0)
+		return ret;
+
+	buf[PATH_MAX - 1] = '\0';
+
+	ret = sqlite3_open(buf, &dbh);
+	if (ret != SQLITE_OK) {
+		xlog(L_ERROR, "Unable to open main database: %d", ret);
+		dbh = NULL;
+		return ret;
+	}
+
+	ret = sqlite3_busy_timeout(dbh, CLD_SQLITE_BUSY_TIMEOUT);
+	if (ret != SQLITE_OK) {
+		xlog(L_ERROR, "Unable to set sqlite busy timeout: %d", ret);
+		sqlite3_close(dbh);
+		dbh = NULL;
+	}
+
+	return ret;
+}
+
 /*
  * Open the "main" database, and attempt to initialize it by creating the
  * parameters table and inserting the schema version into it. Ignore any errors
@@ -102,35 +132,19 @@ mkdir_if_not_exist(char *dirname)
  * the "clients" table.
  */
 int
-sqlite_maindb_init(char *topdir)
+sqlite_maindb_init(const char *topdir)
 {
 	int ret;
 	char *err = NULL;
 	sqlite3_stmt *stmt = NULL;
 
-	sqlite_topdir = topdir;
-
-	ret = mkdir_if_not_exist(sqlite_topdir);
+	ret = mkdir_if_not_exist(topdir);
 	if (ret)
 		return ret;
 
-	ret = snprintf(buf, PATH_MAX - 1, "%s/main.sqlite", sqlite_topdir);
-	if (ret < 0)
+	ret = sqlite_prepare_dbh(topdir);
+	if (ret)
 		return ret;
-
-	buf[PATH_MAX - 1] = '\0';
-
-	ret = sqlite3_open(buf, &dbh);
-	if (ret != SQLITE_OK) {
-		xlog(L_ERROR, "Unable to open main database: %d", ret);
-		return ret;
-	}
-
-	ret = sqlite3_busy_timeout(dbh, CLD_SQLITE_BUSY_TIMEOUT);
-	if (ret != SQLITE_OK) {
-		xlog(L_ERROR, "Unable to set sqlite busy timeout: %d", ret);
-		goto out_err;
-	}
 
 	/* Try to create table */
 	ret = sqlite3_exec(dbh, "CREATE TABLE IF NOT EXISTS parameters "
@@ -320,7 +334,7 @@ sqlite_check_client(const unsigned char *clname, const size_t namelen)
 	}
 
 	ret = sqlite3_column_int(stmt, 0);
-	xlog(D_GENERAL, "%s: select returned %d rows", ret);
+	xlog(D_GENERAL, "%s: select returned %d rows", __func__, ret);
 	if (ret != 1) {
 		ret = -EACCES;
 		goto out_err;

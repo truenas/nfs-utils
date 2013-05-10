@@ -141,6 +141,7 @@ nfs_export *			export_find(const struct addrinfo *ai,
 nfs_export *			export_allowed(const struct addrinfo *ai,
 						const char *path);
 nfs_export *			export_create(struct exportent *, int canonical);
+void				exportent_release(struct exportent *);
 void				export_freeall(void);
 int				export_export(nfs_export *);
 int				export_unexport(nfs_export *);
@@ -176,6 +177,7 @@ struct export_features {
 };
 
 struct export_features *get_export_features(void);
+void fix_pseudoflavor_flags(struct exportent *ep);
 
 /* Record export error.  */
 extern int export_errno;

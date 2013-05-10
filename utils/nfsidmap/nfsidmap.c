@@ -12,6 +12,7 @@
 
 #include <unistd.h>
 #include "xlog.h"
+#include "conffile.h"
 
 int verbose = 0;
 char *usage="Usage: %s [-v] [-c || [-u|-g|-r key] || [-t timeout] key desc]";
@@ -24,6 +25,10 @@ char *usage="Usage: %s [-v] [-c || [-u|-g|-r key] || [-t timeout] key desc]";
 #define PROCKEYS "/proc/keys"
 #ifndef DEFAULT_KEYRING
 #define DEFAULT_KEYRING "id_resolver"
+#endif
+
+#ifndef PATH_IDMAPDCONF
+#define PATH_IDMAPDCONF "/etc/idmapd.conf"
 #endif
 
 static int keyring_clear(char *keyring);
@@ -266,6 +271,13 @@ int main(int argc, char **argv)
 			break;
 		}
 	}
+
+	if (nfs4_init_name_mapping(PATH_IDMAPDCONF))  {
+		xlog_err("Unable to create name to user id mappings.");
+		return 1;
+	}
+	if (!verbose)
+		verbose = conf_get_num("General", "Verbosity", 0);
 
 	if (keystr) {
 		rc = key_revoke(keystr, keymask);

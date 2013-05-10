@@ -542,6 +542,8 @@ nfs_rewrite_pmap_mount_options(struct mount_options *options)
 			errno = EACCES;
 		else if (rpc_createerr.cf_stat == RPC_TIMEDOUT)
 			errno = ETIMEDOUT;
+		else if (rpc_createerr.cf_stat == RPC_PROGVERSMISMATCH)
+			errno = EPROTONOSUPPORT;
 		else if (rpc_createerr.cf_error.re_errno != 0)
 			errno = rpc_createerr.cf_error.re_errno;
 		return 0;
@@ -665,6 +667,8 @@ static int nfs_try_mount_v3v2(struct nfsmount_info *mi)
 		case ECONNREFUSED:
 		case EOPNOTSUPP:
 		case EHOSTUNREACH:
+		case ETIMEDOUT:
+		case EACCES:
 			continue;
 		default:
 			goto out;
@@ -679,6 +683,7 @@ static int nfs_do_mount_v4(struct nfsmount_info *mi,
 {
 	struct mount_options *options = po_dup(mi->options);
 	int result = 0;
+	char *extra_opts = NULL;
 
 	if (!options) {
 		errno = ENOMEM;
@@ -714,19 +719,25 @@ static int nfs_do_mount_v4(struct nfsmount_info *mi,
 		goto out_fail;
 	}
 
-	/*
-	 * Update option string to be recorded in /etc/mtab.
-	 */
-	if (po_join(options, mi->extra_opts) == PO_FAILED) {
+	if (po_join(options, &extra_opts) == PO_FAILED) {
 		errno = ENOMEM;
 		goto out_fail;
 	}
 
 	if (verbose)
 		printf(_("%s: trying text-based options '%s'\n"),
-			progname, *mi->extra_opts);
+			progname, extra_opts);
 
 	result = nfs_sys_mount(mi, options);
+
+	/*
+	 * If success, update option string to be recorded in /etc/mtab.
+	 */
+	if (result) {
+	    free(*mi->extra_opts);
+	    *mi->extra_opts = extra_opts;
+	} else
+	    free(extra_opts);
 
 out_fail:
 	po_destroy(options);
@@ -752,6 +763,8 @@ static int nfs_try_mount_v4(struct nfsmount_info *mi)
 		switch (errno) {
 		case ECONNREFUSED:
 		case EHOSTUNREACH:
+		case ETIMEDOUT:
+		case EACCES:
 			continue;
 		default:
 			goto out;

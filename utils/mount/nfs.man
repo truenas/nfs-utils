@@ -1,5 +1,5 @@
 .\"@(#)nfs.5"
-.TH NFS 5 "2 November 2007"
+.TH NFS 5 "9 October 2012"
 .SH NAME
 nfs \- fstab format and options for the
 .B nfs
@@ -347,6 +347,13 @@ using an automounter (refer to
 .BR automount (8)
 for details).
 .TP 1.5i
+.BR rdirplus " / " nordirplus
+Selects whether to use NFS v3 or v4 READDIRPLUS requests.
+If this option is not specified, the NFS client uses READDIRPLUS requests
+on NFS v3 or v4 mounts to read small directories.
+Some applications perform better if the client uses only READDIR requests
+for all directories.
+.TP 1.5i
 .BI retry= n
 The number of minutes that the
 .BR mount (8)
@@ -359,21 +366,22 @@ If a value of zero is specified, the
 .BR mount (8)
 command exits immediately after the first failure.
 .TP 1.5i
-.BI sec= mode
-The RPCGSS security flavor to use for accessing files on this mount point.
-If the
-.B sec
-option is not specified, or if
-.B sec=sys
-is specified, the NFS client uses the AUTH_SYS security flavor
-for all NFS requests on this mount point.
-Valid security flavors are
+.BI sec= flavor
+The security flavor to use for accessing files on this mount point.
+If the server does not support this flavor, the mount operation fails.
+If
+.B sec=
+is not specified, the client attempts to find
+a security flavor that both the client and the server supports.
+Valid
+.I flavors
+are
 .BR none ,
 .BR sys ,
 .BR krb5 ,
 .BR krb5i ,
 and
-.BR krb5p ,
+.BR krb5p .
 Refer to the SECURITY CONSIDERATIONS section for details.
 .TP 1.5i
 .BR sharecache " / " nosharecache
@@ -460,29 +468,27 @@ by other clients, but can impact application and server performance.
 .IP
 The DATA AND METADATA COHERENCE section contains a
 detailed discussion of these trade-offs.
+.TP 1.5i
+.BR fsc " / " nofsc
+Enable/Disables the cache of (read-only) data pages to the local disk 
+using the FS-Cache facility. See cachefilesd(8) 
+and <kernel_soruce>/Documentation/filesystems/caching
+for detail on how to configure the FS-Cache facility.
+Default value is nofsc.
 .SS "Options for NFS versions 2 and 3 only"
 Use these options, along with the options in the above subsection,
 for NFS versions 2 and 3 only.
 .TP 1.5i
 .BI proto= netid
-The transport protocol name and protocol family the NFS client uses
-to transmit requests to the NFS server for this mount point.
-If an NFS server has both an IPv4 and an IPv6 address, using a specific
-netid will force the use of IPv4 or IPv6 networking to communicate
-with that server.
-.IP
-If support for TI-RPC is built into the
-.B mount.nfs
-command,
+The
 .I netid
-is a valid netid listed in
-.IR /etc/netconfig .
-The value "rdma" may also be specified.
-If the
-.B mount.nfs
-command does not have TI-RPC support, then
-.I netid
-is one of "tcp," "udp," or "rdma," and only IPv4 may be used.
+determines the transport that is used to communicate with the NFS
+server.  Available options are
+.BR udp ", " udp6 ", "tcp ", " tcp6 ", and " rdma .
+Those which end in
+.B 6
+use IPv6 addresses and are only available if support for TI-RPC is
+built in. Others use IPv4 addresses.
 .IP
 Each transport protocol uses different default
 .B retrans
@@ -562,19 +568,18 @@ This option can be used when mounting an NFS server
 through a firewall that blocks the rpcbind protocol.
 .TP 1.5i
 .BI mountproto= netid
-The transport protocol name and protocol family the NFS client uses
+The transport the NFS client uses
 to transmit requests to the NFS server's mountd service when performing
 this mount request, and when later unmounting this mount point.
 .IP
-If support for TI-RPC is built into the
+.I netid
+may be one of
+.BR udp ", and " tcp
+which use IPv4 address or, if TI-RPC is built into the
 .B mount.nfs
 command,
-.I netid
-is a valid netid listed in
-.IR /etc/netconfig .
-Otherwise,
-.I netid
-is one of "tcp" or "udp," and only IPv4 may be used.
+.BR udp6 ", and " tcp6
+which use IPv6 addresses.
 .IP
 This option can be used when mounting an NFS server
 through a firewall that blocks a particular transport.
@@ -711,13 +716,6 @@ Disabling the NFSACL sideband protocol may be necessary
 if the negotiation causes problems on the client or server.
 Refer to the SECURITY CONSIDERATIONS section for more details.
 .TP 1.5i
-.BR rdirplus " / " nordirplus
-Selects whether to use NFS version 3 READDIRPLUS requests.
-If this option is not specified, the NFS client uses READDIRPLUS requests
-on NFS version 3 mounts to read small directories.
-Some applications perform better if the client uses only READDIR requests
-for all directories.
-.TP 1.5i
 .BR local_lock= mechanism
 Specifies whether to use local locking for any or both of the flock and the
 POSIX locking mechanisms.
@@ -766,21 +764,14 @@ Use these options, along with the options in the first subsection above,
 for NFS version 4 and newer.
 .TP 1.5i
 .BI proto= netid
-The transport protocol name and protocol family the NFS client uses
-to transmit requests to the NFS server for this mount point.
-If an NFS server has both an IPv4 and an IPv6 address, using a specific
-netid will force the use of IPv4 or IPv6 networking to communicate
-with that server.
-.IP
-If support for TI-RPC is built into the
-.B mount.nfs
-command,
+The
 .I netid
-is a valid netid listed in
-.IR /etc/netconfig .
-Otherwise,
-.I netid
-is one of "tcp" or "udp," and only IPv4 may be used.
+determines the transport that is used to communicate with the NFS
+server.  Supported options are
+.BR tcp ", " tcp6 ", and " rdma .
+.B tcp6
+use IPv6 addresses and is only available if support for TI-RPC is
+built in. Both others use IPv4 addresses.
 .IP
 All NFS version 4 servers are required to support TCP,
 so if this mount option is not specified, the NFS version 4 client
@@ -844,6 +835,8 @@ The DATA AND METADATA COHERENCE section discusses
 the behavior of this option in more detail.
 .TP 1.5i
 .BI clientaddr= n.n.n.n
+.TP 1.5i
+.BI clientaddr= n:n: ... :n
 Specifies a single IPv4 address (in dotted-quad form),
 or a non-link-local IPv6 address,
 that the NFS client advertises to allow servers
@@ -1452,19 +1445,19 @@ These auxiliary protocols use no authentication.
 In addition to combining these sideband protocols with the main NFS protocol,
 NFS version 4 introduces more advanced forms of access control,
 authentication, and in-transit data protection.
-The NFS version 4 specification mandates NFSv4 ACLs,
-RPCGSS authentication, and RPCGSS security flavors
+The NFS version 4 specification mandates support for
+strong authentication and security flavors
 that provide per-RPC integrity checking and encryption.
 Because NFS version 4 combines the
 function of the sideband protocols into the main NFS protocol,
 the new security features apply to all NFS version 4 operations
 including mounting, file locking, and so on.
 RPCGSS authentication can also be used with NFS versions 2 and 3,
-but does not protect their sideband protocols.
+but it does not protect their sideband protocols.
 .P
 The
 .B sec
-mount option specifies the RPCGSS security mode
+mount option specifies the security flavor
 that is in effect on a given NFS mount point.
 Specifying
 .B sec=krb5
@@ -1495,13 +1488,14 @@ Similar support for other forms of cryptographic security
 is also available.
 .P
 The NFS version 4 protocol allows
-clients and servers to negotiate among multiple security flavors
-during mount processing.
-However, Linux does not yet implement such negotiation.
-The Linux client specifies a single security flavor at mount time
-which remains in effect for the lifetime of the mount.
-If the server does not support this flavor,
-the initial mount request is rejected by the server.
+a client to renegotiate the security flavor
+when the client crosses into a new filesystem on the server.
+The newly negotiated flavor effects only accesses of the new filesystem.
+.P
+Such negotiation typically occurs when a client crosses
+from a server's pseudo-fs
+into one of the server's exported physical filesystems,
+which often have more restrictive security settings than the pseudo-fs.
 .SS "Using non-privileged source ports"
 NFS clients usually communicate with NFS servers via network sockets.
 Each end of a socket is assigned a port value, which is simply a number

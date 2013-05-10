@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 dnl
-AC_INIT([linux nfs-utils],[1.2.6],[linux-nfs@vger.kernel.org],[nfs-utils])
+AC_INIT([linux nfs-utils],[1.2.8],[linux-nfs@vger.kernel.org],[nfs-utils])
 AC_CANONICAL_BUILD([])
 AC_CANONICAL_HOST([])
 AC_CONFIG_MACRO_DIR(aclocal)
@@ -76,7 +76,8 @@ AC_ARG_ENABLE(nfsv41,
 	enable_nfsv41=yes)
 	if test "$enable_nfsv41" = yes; then
 		if test "$enable_nfsv4" != yes; then
-			AC_MSG_ERROR([NFS v4.1 is enabled but NFS v4 is not. Use --disable-nfsv41])
+			AC_MSG_WARN([NFS v4 is not enabled. Disabling NFS v4.1])
+			enable_nfsv41=no
 		fi
 		BLKMAPD=blkmapd
 	else
@@ -185,11 +186,11 @@ else
 	AM_CONDITIONAL(MOUNT_CONFIG, [test "$enable_mount" = "yes"])
 fi
 
-AC_ARG_ENABLE(nfsdcld,
-	[AC_HELP_STRING([--enable-nfsdcld],
-			[Create nfsdcld NFSv4 clientid tracking daemon. @<:@default=no@:>@])],
-	enable_nfsdcld=$enableval,
-	enable_nfsdcld="no")
+AC_ARG_ENABLE(nfsdcltrack,
+	[AC_HELP_STRING([--enable-nfsdcltrack],
+			[enable NFSv4 clientid tracking programs @<:@default=yes@:>@])],
+	enable_nfsdctrack=$enableval,
+	enable_nfsdcltrack="yes")
 
 dnl Check for TI-RPC library and headers
 AC_LIBTIRPC
@@ -269,30 +270,32 @@ if test "$enable_nfsv4" = yes; then
   dnl Check for sqlite3
   AC_SQLITE3_VERS
 
-  if test "$enable_nfsdcld" = "yes"; then
+  if test "$enable_nfsdcltrack" = "yes"; then
 	AC_CHECK_HEADERS([libgen.h sys/inotify.h], ,
-		AC_MSG_ERROR([Cannot find header needed for nfsdcld]))
+		AC_MSG_ERROR([Cannot find header needed for nfsdcltrack]))
 
-  	if test "$libsqlite3_cv_is_recent" != "yes" ; then
-		AC_MSG_ERROR([nfsdcld requires sqlite3])
-	fi
+    case $libsqlite3_cv_is_recent in
+    yes) ;;
+    unknown)
+      dnl do not fail when cross-compiling
+      AC_MSG_WARN([assuming sqlite is at least v3.3]) ;;
+    *)
+      AC_MSG_ERROR([nfsdcltrack requires sqlite-devel]) ;;
+    esac
   fi
 
-  AM_CONDITIONAL(CONFIG_NFSDCLD, [test "$enable_nfsdcld" = "yes" ])
-
-  dnl librpcsecgss already has a dependency on libgssapi,
-  dnl but we need to make sure we get the right version
-  if test "$enable_gss" = yes; then
-    AC_RPCSEC_VERSION
-  fi
+else
+  enable_nfsdcltrack="no"
 fi
 
 if test "$enable_nfsv41" = yes; then
   AC_CHECK_LIB([devmapper], [dm_task_create], [LIBDEVMAPPER="-ldevmapper"], AC_MSG_ERROR([libdevmapper needed]))
   AC_CHECK_HEADER(libdevmapper.h, , AC_MSG_ERROR([Cannot find devmapper header file libdevmapper.h]))
+  AC_CHECK_HEADER(sys/inotify.h, , AC_MSG_ERROR([Cannot find header file sys/inotify.h]))
 fi
 
 dnl enable nfsidmap when its support by libnfsidmap
+AM_CONDITIONAL(CONFIG_NFSDCLTRACK, [test "$enable_nfsdcltrack" = "yes" ])
 AM_CONDITIONAL(CONFIG_NFSIDMAP, [test "$ac_cv_header_keyutils_h$ac_cv_lib_nfsidmap_nfs4_owner_to_uid" = "yesyes"])
 
 
@@ -342,6 +345,20 @@ if test "$enable_gss" = yes; then
   dnl Invoked after AC_KERBEROS_V5; AC_LIBRPCSECGSS needs to have KRBLIBS set
   AC_LIBRPCSECGSS
 
+  dnl librpcsecgss already has a dependency on libgssapi,
+  dnl but we need to make sure we get the right version
+  if test "$enable_gss" = yes; then
+    AC_RPCSEC_VERSION
+    if test x"$GSSGLUE_LIBS" != x""; then
+      GSSAPI_CFLAGS=$GSSGLUE_CFLAGS
+      GSSAPI_LIBS=$GSSGLUE_LIBS
+    else
+      GSSAPI_CFLAGS=$GSSKRB_CFLAGS
+      GSSAPI_LIBS=$GSSKRB_LIBS
+    fi
+    AC_SUBST([GSSAPI_CFLAGS])
+    AC_SUBST([GSSAPI_LIBS])
+  fi
 fi
 
 dnl Check for IPv6 support
@@ -355,7 +372,7 @@ AC_CHECK_HEADERS([arpa/inet.h fcntl.h libintl.h limits.h \
                  stdlib.h string.h sys/file.h sys/ioctl.h sys/mount.h \
                  sys/param.h sys/socket.h sys/time.h sys/vfs.h \
                  syslog.h unistd.h com_err.h et/com_err.h \
-                 ifaddrs.h nfs-plugin.h])
+                 ifaddrs.h nfs-plugin.h libio.h])
 
 dnl *************************************************************
 dnl Checks for typedefs, structures, and compiler characteristics
@@ -393,7 +410,7 @@ AC_CHECK_FUNCS([alarm atexit dup2 fdatasync ftruncate getcwd \
                gethostbyaddr gethostbyname gethostname getmntent \
                getnameinfo getrpcbyname getifaddrs \
                gettimeofday hasmntopt inet_ntoa innetgr memset mkdir pathconf \
-               realpath rmdir select socket strcasecmp strchr strdup \
+               ppoll realpath rmdir select socket strcasecmp strchr strdup \
                strerror strrchr strtol strtoul sigprocmask])
 
 
@@ -477,7 +494,7 @@ AC_CONFIG_FILES([
 	tools/nfs-iostat/Makefile
 	utils/Makefile
 	utils/blkmapd/Makefile
-	utils/nfsdcld/Makefile
+	utils/nfsdcltrack/Makefile
 	utils/exportfs/Makefile
 	utils/gssd/Makefile
 	utils/idmapd/Makefile

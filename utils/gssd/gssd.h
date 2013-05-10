@@ -45,8 +45,8 @@
 #define DNOTIFY_SIGNAL		(SIGRTMIN + 3)
 
 #define GSSD_DEFAULT_CRED_DIR			"/tmp"
-#define GSSD_USER_CRED_DIR			"/run/user"
-#define GSSD_DEFAULT_CRED_PREFIX		"krb5cc_"
+#define GSSD_USER_CRED_DIR			"/run/user/%U"
+#define GSSD_DEFAULT_CRED_PREFIX		"krb5cc"
 #define GSSD_DEFAULT_MACHINE_CRED_SUFFIX	"machine"
 #define GSSD_DEFAULT_KEYTAB_FILE		"/etc/krb5.keytab"
 #define GSSD_SERVICE_NAME			"nfs"
@@ -81,8 +81,10 @@ struct clnt_info {
 	char			*protocol;
 	int			krb5_fd;
 	int			krb5_poll_index;
+	int			krb5_close_me;
 	int                     gssd_fd;
 	int                     gssd_poll_index;
+	int			gssd_close_me;
 	struct sockaddr_storage addr;
 };
 

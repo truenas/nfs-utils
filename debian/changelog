@@ -1,5 +1,11 @@
-nfs-utils (1:1.2.6-4) UNRELEASED; urgency=low
+nfs-utils (1:1.2.8-1) UNRELEASED; urgency=low
 
+  * New upstream version (Closes: #707258).
+    - Only amend extra-options on a successful vers=4 mount
+      (Closes: #690181).
+    - Use default domain (Closes: #657188).
+    - Fix is-subdirectory to understand '/' (Closes: #685306).
+    - Drop 18-osd_login-sbindir: incorporated upstream.
   * Use rpcbind's rpcinfo everywhere (Closes: #707589).
 
  -- Luk Claes <luk@zomers.be>  Fri, 10 May 2013 09:08:08 +0200

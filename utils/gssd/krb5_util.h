@@ -31,9 +31,12 @@ void gssd_setup_krb5_machine_gss_ccache(char *servername);
 void gssd_destroy_krb5_machine_creds(void);
 int  gssd_refresh_krb5_machine_credential(char *hostname,
 					  struct gssd_k5_kt_princ *ple, 
-					  char *service);
+					  char *service,
+					  char *tgtname);
 char *gssd_k5_err_msg(krb5_context context, krb5_error_code code);
 void gssd_k5_get_default_realm(char **def_realm);
+
+int gssd_acquire_user_cred(uid_t uid, gss_cred_id_t *gss_cred);
 
 #ifdef HAVE_SET_ALLOWABLE_ENCTYPES
 extern int limit_to_legacy_enctypes;

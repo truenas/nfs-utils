@@ -55,16 +55,14 @@
 #include "err_util.h"
 
 extern struct pollfd *pollarray;
-extern int pollsize;
+extern unsigned long pollsize;
 
 #define POLL_MILLISECS	500
 
 static volatile int dir_changed = 1;
 
-static void dir_notify_handler(int sig, siginfo_t *si, void *data)
+static void dir_notify_handler(__attribute__((unused))int sig)
 {
-	printerr(2, "dir_notify_handler: sig %d si %p data %p\n", sig, si, data);
-
 	dir_changed = 1;
 }
 
@@ -78,8 +76,10 @@ scan_poll_results(int ret)
 	{
 		i = clp->gssd_poll_index;
 		if (i >= 0 && pollarray[i].revents) {
-			if (pollarray[i].revents & POLLHUP)
+			if (pollarray[i].revents & POLLHUP) {
+				clp->gssd_close_me = 1;
 				dir_changed = 1;
+			}
 			if (pollarray[i].revents & POLLIN)
 				handle_gssd_upcall(clp);
 			pollarray[clp->gssd_poll_index].revents = 0;
@@ -89,8 +89,10 @@ scan_poll_results(int ret)
 		}
 		i = clp->krb5_poll_index;
 		if (i >= 0 && pollarray[i].revents) {
-			if (pollarray[i].revents & POLLHUP)
+			if (pollarray[i].revents & POLLHUP) {
+				clp->krb5_close_me = 1;
 				dir_changed = 1;
+			}
 			if (pollarray[i].revents & POLLIN)
 				handle_krb5_upcall(clp);
 			pollarray[clp->krb5_poll_index].revents = 0;
@@ -99,7 +101,7 @@ scan_poll_results(int ret)
 				break;
 		}
 	}
-};
+}
 
 static int
 topdirs_add_entry(struct dirent *dent)
@@ -119,11 +121,13 @@ topdirs_add_entry(struct dirent *dent)
 	}
 	snprintf(tdi->dirname, PATH_MAX, "%s/%s", pipefs_dir, dent->d_name);
 	tdi->fd = open(tdi->dirname, O_RDONLY);
-	if (tdi->fd != -1) {
-		fcntl(tdi->fd, F_SETSIG, DNOTIFY_SIGNAL);
-		fcntl(tdi->fd, F_NOTIFY,
-		      DN_CREATE|DN_DELETE|DN_MODIFY|DN_MULTISHOT);
+	if (tdi->fd == -1) {
+		printerr(0, "ERROR: failed to open %s\n", tdi->dirname);
+		free(tdi);
+		return -1;
 	}
+	fcntl(tdi->fd, F_SETSIG, DNOTIFY_SIGNAL);
+	fcntl(tdi->fd, F_NOTIFY, DN_CREATE|DN_DELETE|DN_MODIFY|DN_MULTISHOT);
 
 	TAILQ_INSERT_HEAD(&topdirs_list, tdi, list);
 	return 0;
@@ -175,17 +179,52 @@ out_err:
 	return -1;
 }
 
+#ifdef HAVE_PPOLL
+static void gssd_poll(struct pollfd *fds, unsigned long nfds)
+{
+	sigset_t emptyset;
+	int ret;
+
+	sigemptyset(&emptyset);
+	ret = ppoll(fds, nfds, NULL, &emptyset);
+	if (ret < 0) {
+		if (errno != EINTR)
+			printerr(0, "WARNING: error return from poll\n");
+	} else if (ret == 0) {
+		printerr(0, "WARNING: unexpected timeout\n");
+	} else {
+		scan_poll_results(ret);
+	}
+}
+#else	/* !HAVE_PPOLL */
+static void gssd_poll(struct pollfd *fds, unsigned long nfds)
+{
+	int ret;
+
+	/* race condition here: dir_changed could be set before we
+	 * enter the poll, and we'd never notice if it weren't for the
+	 * timeout. */
+	ret = poll(fds, nfds, POLL_MILLISECS);
+	if (ret < 0) {
+		if (errno != EINTR)
+			printerr(0, "WARNING: error return from poll\n");
+	} else if (ret == 0) {
+		/* timeout */
+	} else { /* ret > 0 */
+		scan_poll_results(ret);
+	}
+}
+#endif	/* !HAVE_PPOLL */
+
 void
 gssd_run()
 {
-	int			ret;
-	struct sigaction	dn_act;
+	struct sigaction	dn_act = {
+		.sa_handler = dir_notify_handler
+	};
 	sigset_t		set;
 
-	/* Taken from linux/Documentation/dnotify.txt: */
-	dn_act.sa_sigaction = dir_notify_handler;
 	sigemptyset(&dn_act.sa_mask);
-	dn_act.sa_flags = SA_SIGINFO;
 	sigaction(DNOTIFY_SIGNAL, &dn_act, NULL);
 
 	/* just in case the signal is blocked... */
@@ -207,19 +246,7 @@ gssd_run()
 				exit(1);
 			}
 		}
-		/* race condition here: dir_changed could be set before we
-		 * enter the poll, and we'd never notice if it weren't for the
-		 * timeout. */
-		ret = poll(pollarray, pollsize, POLL_MILLISECS);
-		if (ret < 0) {
-			if (errno != EINTR)
-				printerr(0,
-					 "WARNING: error return from poll\n");
-		} else if (ret == 0) {
-			/* timeout */
-		} else { /* ret > 0 */
-			scan_poll_results(ret);
-		}
+		gssd_poll(pollarray, pollsize);
 	}
 	topdirs_free_list();
 

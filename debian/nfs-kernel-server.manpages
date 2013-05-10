@@ -3,4 +3,4 @@ debian/tmp/usr/share/man/man7/nfsd.7
 debian/tmp/usr/share/man/man8/mountd.8
 debian/tmp/usr/share/man/man8/exportfs.8
 debian/tmp/usr/share/man/man8/nfsd.8
-debian/tmp/usr/share/man/man8/svcgssd.8
+debian/tmp/usr/share/man/man8/nfsdcltrack.8

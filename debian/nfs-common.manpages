@@ -15,3 +15,4 @@ debian/tmp/usr/share/man/man8/mount.nfs.8
 debian/tmp/usr/share/man/man8/umount.nfs.8
 debian/tmp/usr/share/man/man8/mountstats.8
 debian/tmp/usr/share/man/man8/nfsiostat.8
+debian/tmp/usr/share/man/man8/svcgssd.8

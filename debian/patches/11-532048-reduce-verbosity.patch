@@ -13,9 +13,11 @@ seem to be any evidence that it's been included yet in 1.2.0.
 
 Steve Langasek <steve.langasek@canonical.com>
 
---- a/utils/gssd/gssd_proc.c	2010-02-18 23:35:00.000000000 +1100
-+++ b/utils/gssd/gssd_proc.c	2010-04-06 16:43:55.000000000 +1000
-@@ -638,7 +638,7 @@ do_error_downcall(int k5_fd, uid_t uid, 
+Index: nfs-utils/utils/gssd/gssd_proc.c
+===================================================================
+--- nfs-utils.orig/utils/gssd/gssd_proc.c	2013-05-10 08:50:57.000000000 +0000
++++ nfs-utils/utils/gssd/gssd_proc.c	2013-05-10 08:50:57.000000000 +0000
+@@ -714,7 +714,7 @@
  	unsigned int timeout = 0;
  	int	zero = 0;
  
@@ -24,16 +26,16 @@ Steve Langasek <steve.langasek@canonical.com>
  
  	if (WRITE_BYTES(&p, end, uid)) goto out_err;
  	if (WRITE_BYTES(&p, end, timeout)) goto out_err;
-@@ -906,7 +906,7 @@ process_krb5_upcall(struct clnt_info *cl
- 	int			create_resp = -1;
- 	int			err, downcall_err = -EACCES;
+@@ -978,7 +978,7 @@
+ 	gss_cred_id_t		gss_cred;
+ 	OM_uint32		maj_stat, min_stat, lifetime_rec;
  
 -	printerr(1, "handling krb5 upcall (%s)\n", clp->dirname);
 +	printerr(2, "handling krb5 upcall (%s)\n", clp->dirname);
  
- 	if (tgtname) {
- 		if (clp->servicename) {
-@@ -1066,7 +1066,7 @@ process_spkm3_upcall(struct clnt_info *c
+ 	token.length = 0;
+ 	token.value = NULL;
+@@ -1082,7 +1082,7 @@
  	}
  
  	if (!authgss_get_private_data(auth, &pd)) {
@@ -42,9 +44,11 @@ Steve Langasek <steve.langasek@canonical.com>
  			    "data for user with uid %d for server %s\n",
  			 uid, clp->servername);
  		goto out_return_error;
---- a/utils/gssd/gss_util.c	2010-02-18 23:35:00.000000000 +1100
-+++ b/utils/gssd/gss_util.c	2010-04-06 16:43:55.000000000 +1000
-@@ -126,7 +126,7 @@ display_status_1(char *m, u_int32_t code
+Index: nfs-utils/utils/gssd/gss_util.c
+===================================================================
+--- nfs-utils.orig/utils/gssd/gss_util.c	2013-05-10 08:50:57.000000000 +0000
++++ nfs-utils/utils/gssd/gss_util.c	2013-05-10 08:50:57.000000000 +0000
+@@ -126,7 +126,7 @@
  				"gss_display_status called from %s\n", m);
  			break;
  		} else {

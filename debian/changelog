@@ -8,6 +8,7 @@ nfs-utils (1:1.2.8-1) UNRELEASED; urgency=low
     - Drop 18-osd_login-sbindir: incorporated upstream.
     - Avoid DNS reverse lookups on server names (Closes: #707401).
     - auth_unix_ip should downcall on error (Closes: #682709).
+    - Refresh 11-532048-reduce-verbosity.
   * Use rpcbind's rpcinfo everywhere (Closes: #707589).
 
  -- Luk Claes <luk@zomers.be>  Fri, 10 May 2013 09:08:08 +0200

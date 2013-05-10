@@ -6,6 +6,7 @@ nfs-utils (1:1.2.8-1) UNRELEASED; urgency=low
     - Use default domain (Closes: #657188).
     - Fix is-subdirectory to understand '/' (Closes: #685306).
     - Drop 18-osd_login-sbindir: incorporated upstream.
+    - Avoid DNS reverse lookups on server names (Closes: #707401).
   * Use rpcbind's rpcinfo everywhere (Closes: #707589).
 
  -- Luk Claes <luk@zomers.be>  Fri, 10 May 2013 09:08:08 +0200

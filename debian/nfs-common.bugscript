@@ -2,7 +2,7 @@
 set -e
 
 echo '-- rpcinfo --' >&3
-rpcinfo -p >&3
+/usr/sbin/rpcinfo -p >&3
 
 echo '-- /etc/default/nfs-common --' >&3
 cat /etc/default/nfs-common|grep -v -e '^\#' -e '^$' >&3

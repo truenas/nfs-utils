@@ -1,6 +1,8 @@
 nfs-utils (1:1.2.8-2) UNRELEASED; urgency=low
 
   * Fix reportbug scripts to use rpcinfo in /usr/sbin.
+  * Add id_resolver.conf to fix nfsidmap invocation
+    (Closes: #708156, #638157, #707960).
 
  -- Luk Claes <luk@zomers.be>  Sun, 12 May 2013 15:38:54 +0200
 

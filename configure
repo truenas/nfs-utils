@@ -763,10 +763,6 @@ RELEASE
 MAINT
 MAINTAINER_MODE_FALSE
 MAINTAINER_MODE_TRUE
-AM_BACKSLASH
-AM_DEFAULT_VERBOSITY
-AM_DEFAULT_V
-AM_V
 am__untar
 am__tar
 AMTAR
@@ -839,7 +835,6 @@ SHELL'
 ac_subst_files=''
 ac_user_opts='
 enable_option_checking
-enable_silent_rules
 enable_maintainer_mode
 with_release
 with_statedir
@@ -1512,8 +1507,6 @@ Optional Features:
   --disable-option-checking  ignore unrecognized --enable/--with options
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
-  --enable-silent-rules   less verbose build output (undo: "make V=1")
-  --disable-silent-rules  verbose build output (undo: "make V=0")
   --enable-maintainer-mode
                           enable make rules and dependencies not useful (and
                           sometimes confusing) to the casual installer
@@ -2837,7 +2830,7 @@ case $host_os in *\ *) host_os=`echo "$host_os" | sed 's/ /-/g'`;; esac
 
 
 
-am__api_version='1.13'
+am__api_version='1.12'
 
 # Find a good install program.  We prefer a C program (faster),
 # so one script is as good as another.  But avoid the broken or
@@ -3021,8 +3014,8 @@ if test x"${MISSING+set}" != xset; then
   esac
 fi
 # Use eval to expand $SHELL
-if eval "$MISSING --is-lightweight"; then
-  am_missing_run="$MISSING "
+if eval "$MISSING --run true"; then
+  am_missing_run="$MISSING --run "
 else
   am_missing_run=
   { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: 'missing' script is too old or missing" >&5
@@ -3262,45 +3255,6 @@ else
 fi
 rmdir .tst 2>/dev/null
 
-# Check whether --enable-silent-rules was given.
-if test "${enable_silent_rules+set}" = set; then :
-  enableval=$enable_silent_rules;
-fi
-
-case $enable_silent_rules in # (((
-  yes) AM_DEFAULT_VERBOSITY=0;;
-   no) AM_DEFAULT_VERBOSITY=1;;
-    *) AM_DEFAULT_VERBOSITY=1;;
-esac
-am_make=${MAKE-make}
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether $am_make supports nested variables" >&5
-$as_echo_n "checking whether $am_make supports nested variables... " >&6; }
-if ${am_cv_make_support_nested_variables+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  if $as_echo 'TRUE=$(BAR$(V))
-BAR0=false
-BAR1=true
-V=1
-am__doit:
-	@$(TRUE)
-.PHONY: am__doit' | $am_make -f - >/dev/null 2>&1; then
-  am_cv_make_support_nested_variables=yes
-else
-  am_cv_make_support_nested_variables=no
-fi
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $am_cv_make_support_nested_variables" >&5
-$as_echo "$am_cv_make_support_nested_variables" >&6; }
-if test $am_cv_make_support_nested_variables = yes; then
-    AM_V='$(V)'
-  AM_DEFAULT_V='$(AM_DEFAULT_VERBOSITY)'
-else
-  AM_V=$AM_DEFAULT_VERBOSITY
-  AM_DEFAULT_V=$AM_DEFAULT_VERBOSITY
-fi
-AM_BACKSLASH='\'
-
 if test "`cd $srcdir && pwd`" != "`pwd`"; then
   # Use -I$(srcdir) only when $(srcdir) != ., so that make's output
   # is not polluted with repeated "-I."
@@ -3363,12 +3317,7 @@ mkdir_p='$(MKDIR_P)'
 # in the wild :-(  We should find a proper way to deprecate it ...
 AMTAR='$${TAR-tar}'
 
-
-# We'll loop over all known methods to create a tar archive until one works.
-_am_tools='gnutar  pax cpio none'
-
 am__tar='$${TAR-tar} chof - "$$tardir"' am__untar='$${TAR-tar} xf -'
-
 
 
 
@@ -7499,8 +7448,7 @@ else
     ;;
   *)
     lt_cv_sys_max_cmd_len=`(getconf ARG_MAX) 2> /dev/null`
-    if test -n "$lt_cv_sys_max_cmd_len" && \
-	test undefined != "$lt_cv_sys_max_cmd_len"; then
+    if test -n "$lt_cv_sys_max_cmd_len"; then
       lt_cv_sys_max_cmd_len=`expr $lt_cv_sys_max_cmd_len \/ 4`
       lt_cv_sys_max_cmd_len=`expr $lt_cv_sys_max_cmd_len \* 3`
     else
@@ -7901,6 +7849,10 @@ freebsd* | dragonfly*)
   fi
   ;;
 
+gnu*)
+  lt_cv_deplibs_check_method=pass_all
+  ;;
+
 haiku*)
   lt_cv_deplibs_check_method=pass_all
   ;;
@@ -7939,11 +7891,11 @@ irix5* | irix6* | nonstopux*)
   ;;
 
 # This must be glibc/ELF.
-linux* | k*bsd*-gnu | kopensolaris*-gnu | gnu*)
+linux* | k*bsd*-gnu | kopensolaris*-gnu)
   lt_cv_deplibs_check_method=pass_all
   ;;
 
-netbsd* | netbsdelf*-gnu)
+netbsd*)
   if echo __ELF__ | $CC -E - | $GREP __ELF__ > /dev/null; then
     lt_cv_deplibs_check_method='match_pattern /lib[^/]+(\.so\.[0-9]+\.[0-9]+|_pic\.a)$'
   else
@@ -8098,6 +8050,8 @@ $as_echo "no" >&6; }
 fi
 
 
+    test -n "$AR" && break
+  done
 fi
 if test -z "$ac_cv_prog_DLLTOOL"; then
   ac_ct_DLLTOOL=$DLLTOOL
@@ -8160,8 +8114,38 @@ test -z "$DLLTOOL" && DLLTOOL=dlltool
 
 
 
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  echo conftest.$ac_objext > conftest.lst
+      lt_ar_try='$AR $AR_FLAGS libconftest.a @conftest.lst >&5'
+      { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$lt_ar_try\""; } >&5
+  (eval $lt_ar_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }
+      if test "$ac_status" -eq 0; then
+	# Ensure the archiver fails upon bogus file names.
+	rm -f conftest.$ac_objext libconftest.a
+	{ { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$lt_ar_try\""; } >&5
+  (eval $lt_ar_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }
+	if test "$ac_status" -ne 0; then
+          lt_cv_ar_at_file=@
+        fi
+      fi
+      rm -f conftest.* libconftest.a
 
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
 
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $lt_cv_ar_at_file" >&5
+$as_echo "$lt_cv_ar_at_file" >&6; }
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking how to associate runtime and link libraries" >&5
 $as_echo_n "checking how to associate runtime and link libraries... " >&6; }
@@ -8914,6 +8898,40 @@ fi
 
 
 
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for sysroot" >&5
+$as_echo_n "checking for sysroot... " >&6; }
+
+# Check whether --with-sysroot was given.
+if test "${with_sysroot+set}" = set; then :
+  withval=$with_sysroot;
+else
+  with_sysroot=no
+fi
+
+
+lt_sysroot=
+case ${with_sysroot} in #(
+ yes)
+   if test "$GCC" = yes; then
+     lt_sysroot=`$CC --print-sysroot 2>/dev/null`
+   fi
+   ;; #(
+ /*)
+   lt_sysroot=`echo "$with_sysroot" | sed -e "$sed_quote_subst"`
+   ;; #(
+ no|'')
+   ;; #(
+ *)
+   { $as_echo "$as_me:${as_lineno-$LINENO}: result: ${with_sysroot}" >&5
+$as_echo "${with_sysroot}" >&6; }
+   as_fn_error $? "The sysroot must be an absolute path." "$LINENO" 5
+   ;;
+esac
+
+ { $as_echo "$as_me:${as_lineno-$LINENO}: result: ${lt_sysroot:-no}" >&5
+$as_echo "${lt_sysroot:-no}" >&6; }
+
+
 
 
 
@@ -9036,14 +9054,7 @@ s390*-*linux*|s390*-*tpf*|sparc*-*linux*)
 	    LD="${LD-ld} -m elf_i386_fbsd"
 	    ;;
 	  x86_64-*linux*)
-	    case `/usr/bin/file conftest.o` in
-	      *x86-64*)
-		LD="${LD-ld} -m elf32_x86_64"
-		;;
-	      *)
-		LD="${LD-ld} -m elf_i386"
-		;;
-	    esac
+	    LD="${LD-ld} -m elf_i386"
 	    ;;
 	  ppc64-*linux*|powerpc64-*linux*)
 	    LD="${LD-ld} -m elf32ppclinux"
@@ -9295,6 +9306,126 @@ $as_echo_n "checking for $ac_word... " >&6; }
 if ${ac_cv_prog_DSYMUTIL+:} false; then :
   $as_echo_n "(cached) " >&6
 else
+  if test -n "$MANIFEST_TOOL"; then
+  ac_cv_prog_MANIFEST_TOOL="$MANIFEST_TOOL" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_prog_DSYMUTIL="${ac_tool_prefix}dsymutil"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+fi
+fi
+MANIFEST_TOOL=$ac_cv_prog_MANIFEST_TOOL
+if test -n "$MANIFEST_TOOL"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $MANIFEST_TOOL" >&5
+$as_echo "$MANIFEST_TOOL" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+fi
+if test -z "$ac_cv_prog_MANIFEST_TOOL"; then
+  ac_ct_MANIFEST_TOOL=$MANIFEST_TOOL
+  # Extract the first word of "mt", so it can be a program name with args.
+set dummy mt; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_prog_ac_ct_DSYMUTIL+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  if test -n "$ac_ct_MANIFEST_TOOL"; then
+  ac_cv_prog_ac_ct_MANIFEST_TOOL="$ac_ct_MANIFEST_TOOL" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_prog_ac_ct_DSYMUTIL="dsymutil"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+fi
+fi
+ac_ct_MANIFEST_TOOL=$ac_cv_prog_ac_ct_MANIFEST_TOOL
+if test -n "$ac_ct_MANIFEST_TOOL"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_ct_MANIFEST_TOOL" >&5
+$as_echo "$ac_ct_MANIFEST_TOOL" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+  if test "x$ac_ct_MANIFEST_TOOL" = x; then
+    MANIFEST_TOOL=":"
+  else
+    case $cross_compiling:$ac_tool_warned in
+yes:)
+{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: using cross tools not prefixed with host triplet" >&5
+$as_echo "$as_me: WARNING: using cross tools not prefixed with host triplet" >&2;}
+ac_tool_warned=yes ;;
+esac
+    MANIFEST_TOOL=$ac_ct_MANIFEST_TOOL
+  fi
+else
+  MANIFEST_TOOL="$ac_cv_prog_MANIFEST_TOOL"
+fi
+
+test -z "$MANIFEST_TOOL" && MANIFEST_TOOL=mt
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking if $MANIFEST_TOOL is a manifest tool" >&5
+$as_echo_n "checking if $MANIFEST_TOOL is a manifest tool... " >&6; }
+if ${lt_cv_path_mainfest_tool+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  lt_cv_path_mainfest_tool=no
+  echo "$as_me:$LINENO: $MANIFEST_TOOL '-?'" >&5
+  $MANIFEST_TOOL '-?' 2>conftest.err > conftest.out
+  cat conftest.err >&5
+  if $GREP 'Manifest Tool' conftest.out > /dev/null; then
+    lt_cv_path_mainfest_tool=yes
+  fi
+  rm -f conftest*
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $lt_cv_path_mainfest_tool" >&5
+$as_echo "$lt_cv_path_mainfest_tool" >&6; }
+if test "x$lt_cv_path_mainfest_tool" != xyes; then
+  MANIFEST_TOOL=:
+fi
+
+
+
+
+
+
+  case $host_os in
+    rhapsody* | darwin*)
+    if test -n "$ac_tool_prefix"; then
+  # Extract the first word of "${ac_tool_prefix}dsymutil", so it can be a program name with args.
+set dummy ${ac_tool_prefix}dsymutil; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_prog_NMEDIT+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
   if test -n "$DSYMUTIL"; then
   ac_cv_prog_DSYMUTIL="$DSYMUTIL" # Let the user override the test.
 else
@@ -9305,7 +9436,7 @@ do
   test -z "$as_dir" && as_dir=.
     for ac_exec_ext in '' $ac_executable_extensions; do
   if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
-    ac_cv_prog_DSYMUTIL="${ac_tool_prefix}dsymutil"
+    ac_cv_prog_NMEDIT="${ac_tool_prefix}nmedit"
     $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
     break 2
   fi
@@ -9330,98 +9461,6 @@ if test -z "$ac_cv_prog_DSYMUTIL"; then
   ac_ct_DSYMUTIL=$DSYMUTIL
   # Extract the first word of "dsymutil", so it can be a program name with args.
 set dummy dsymutil; ac_word=$2
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
-$as_echo_n "checking for $ac_word... " >&6; }
-if ${ac_cv_prog_ac_ct_DSYMUTIL+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  if test -n "$ac_ct_DSYMUTIL"; then
-  ac_cv_prog_ac_ct_DSYMUTIL="$ac_ct_DSYMUTIL" # Let the user override the test.
-else
-as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-for as_dir in $PATH
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-    for ac_exec_ext in '' $ac_executable_extensions; do
-  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
-    ac_cv_prog_ac_ct_DSYMUTIL="dsymutil"
-    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-  done
-IFS=$as_save_IFS
-
-fi
-fi
-ac_ct_DSYMUTIL=$ac_cv_prog_ac_ct_DSYMUTIL
-if test -n "$ac_ct_DSYMUTIL"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_ct_DSYMUTIL" >&5
-$as_echo "$ac_ct_DSYMUTIL" >&6; }
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-fi
-
-  if test "x$ac_ct_DSYMUTIL" = x; then
-    DSYMUTIL=":"
-  else
-    case $cross_compiling:$ac_tool_warned in
-yes:)
-{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: using cross tools not prefixed with host triplet" >&5
-$as_echo "$as_me: WARNING: using cross tools not prefixed with host triplet" >&2;}
-ac_tool_warned=yes ;;
-esac
-    DSYMUTIL=$ac_ct_DSYMUTIL
-  fi
-else
-  DSYMUTIL="$ac_cv_prog_DSYMUTIL"
-fi
-
-    if test -n "$ac_tool_prefix"; then
-  # Extract the first word of "${ac_tool_prefix}nmedit", so it can be a program name with args.
-set dummy ${ac_tool_prefix}nmedit; ac_word=$2
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
-$as_echo_n "checking for $ac_word... " >&6; }
-if ${ac_cv_prog_NMEDIT+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  if test -n "$NMEDIT"; then
-  ac_cv_prog_NMEDIT="$NMEDIT" # Let the user override the test.
-else
-as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-for as_dir in $PATH
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-    for ac_exec_ext in '' $ac_executable_extensions; do
-  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
-    ac_cv_prog_NMEDIT="${ac_tool_prefix}nmedit"
-    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-  done
-IFS=$as_save_IFS
-
-fi
-fi
-NMEDIT=$ac_cv_prog_NMEDIT
-if test -n "$NMEDIT"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $NMEDIT" >&5
-$as_echo "$NMEDIT" >&6; }
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-fi
-
-
-fi
-if test -z "$ac_cv_prog_NMEDIT"; then
-  ac_ct_NMEDIT=$NMEDIT
-  # Extract the first word of "nmedit", so it can be a program name with args.
-set dummy nmedit; ac_word=$2
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
 $as_echo_n "checking for $ac_word... " >&6; }
 if ${ac_cv_prog_ac_ct_NMEDIT+:} false; then :
@@ -10400,10 +10439,6 @@ _lt_linker_boilerplate=`cat conftest.err`
 $RM -r conftest*
 
 
-## CAVEAT EMPTOR:
-## There is no encapsulation within the following macros, do not change
-## the running order or otherwise move them around unless you know exactly
-## what you are doing...
 if test -n "$compiler"; then
 
 lt_prog_compiler_no_builtin_flag=
@@ -10616,7 +10651,7 @@ lt_prog_compiler_static=
       lt_prog_compiler_static='-non_shared'
       ;;
 
-    linux* | k*bsd*-gnu | kopensolaris*-gnu | gnu*)
+    linux* | k*bsd*-gnu | kopensolaris*-gnu)
       case $cc_basename in
       # old Intel for x86_64 which still supported -KPIC.
       ecc*)
@@ -10678,7 +10713,7 @@ lt_prog_compiler_static=
 	  # Sun C 5.9
 	  lt_prog_compiler_pic='-KPIC'
 	  lt_prog_compiler_static='-Bstatic'
-	  lt_prog_compiler_wl='-Wl,'
+	  lt_prog_compiler_wl=''
 	  ;;
         *Intel*\ [CF]*Compiler*)
 	  lt_prog_compiler_wl='-Wl,'
@@ -11094,9 +11129,6 @@ $as_echo_n "checking whether the $compiler linker ($LD) supports shared librarie
   openbsd*)
     with_gnu_ld=no
     ;;
-  linux* | k*bsd*-gnu | gnu*)
-    link_all_deplibs=no
-    ;;
   esac
 
   ld_shlibs=yes
@@ -11318,7 +11350,7 @@ _LT_EOF
       fi
       ;;
 
-    netbsd* | netbsdelf*-gnu)
+    netbsd*)
       if echo __ELF__ | $CC -E - | $GREP __ELF__ >/dev/null; then
 	archive_cmds='$LD -Bshareable $libobjs $deplibs $linker_flags -o $lib'
 	wlarc=
@@ -11495,7 +11527,6 @@ _LT_EOF
 	if test "$aix_use_runtimelinking" = yes; then
 	  shared_flag="$shared_flag "'${wl}-G'
 	fi
-	link_all_deplibs=no
       else
 	# not using gcc
 	if test "$host_cpu" = ia64; then
@@ -11949,7 +11980,7 @@ $as_echo "$lt_cv_irix_exported_symbol" >&6; }
       link_all_deplibs=yes
       ;;
 
-    netbsd* | netbsdelf*-gnu)
+    netbsd*)
       if echo __ELF__ | $CC -E - | $GREP __ELF__ >/dev/null; then
 	archive_cmds='$LD -Bshareable -o $lib $libobjs $deplibs $linker_flags'  # a.out
       else
@@ -12786,8 +12817,32 @@ freebsd* | dragonfly*)
   esac
   ;;
 
+gnu*)
+  version_type=linux # correct to gnu/linux during the next big refactor
+  need_lib_prefix=no
+  need_version=no
+  library_names_spec='${libname}${release}${shared_ext}$versuffix ${libname}${release}${shared_ext}${major} ${libname}${shared_ext}'
+  soname_spec='${libname}${release}${shared_ext}$major'
+  shlibpath_var=LD_LIBRARY_PATH
+  shlibpath_overrides_runpath=no
+  hardcode_into_libs=yes
+  ;;
+
 haiku*)
   version_type=linux # correct to gnu/linux during the next big refactor
+  need_lib_prefix=no
+  need_version=no
+  dynamic_linker="$host_os runtime_loader"
+  library_names_spec='${libname}${release}${shared_ext}$versuffix ${libname}${release}${shared_ext}${major} ${libname}${shared_ext}'
+  soname_spec='${libname}${release}${shared_ext}$major'
+  shlibpath_var=LIBRARY_PATH
+  shlibpath_overrides_runpath=yes
+  sys_lib_dlsearch_path_spec='/boot/home/config/lib /boot/common/lib /boot/system/lib'
+  hardcode_into_libs=yes
+  ;;
+
+haiku*)
+  version_type=linux
   need_lib_prefix=no
   need_version=no
   dynamic_linker="$host_os runtime_loader"
@@ -12902,7 +12957,7 @@ linux*oldld* | linux*aout* | linux*coff*)
   ;;
 
 # This must be glibc/ELF.
-linux* | k*bsd*-gnu | kopensolaris*-gnu | gnu*)
+linux* | k*bsd*-gnu | kopensolaris*-gnu)
   version_type=linux # correct to gnu/linux during the next big refactor
   need_lib_prefix=no
   need_version=no
@@ -12951,10 +13006,14 @@ fi
   # before this can be enabled.
   hardcode_into_libs=yes
 
+  # Add ABI-specific directories to the system library path.
+  sys_lib_dlsearch_path_spec="/lib64 /usr/lib64 /lib /usr/lib"
+
   # Append ld.so.conf contents to the search path
   if test -f /etc/ld.so.conf; then
     lt_ld_extra=`awk '/^include / { system(sprintf("cd /etc; cat %s 2>/dev/null", \$2)); skip = 1; } { if (!skip) print \$0; skip = 0; }' < /etc/ld.so.conf | $SED -e 's/#.*//;/^[	 ]*hwcap[	 ]/d;s/[:,	]/ /g;s/=[^=]*$//;s/=[^= ]* / /g;s/"//g;/^$/d' | tr '\n' ' '`
-    sys_lib_dlsearch_path_spec="/lib /usr/lib $lt_ld_extra"
+    sys_lib_dlsearch_path_spec="$sys_lib_dlsearch_path_spec $lt_ld_extra"
+
   fi
 
   # We used to test for /lib/ld.so.1 and disable shared libraries on
@@ -12964,18 +13023,6 @@ fi
   # people can always --disable-shared, the test was removed, and we
   # assume the GNU/Linux dynamic linker is in use.
   dynamic_linker='GNU/Linux ld.so'
-  ;;
-
-netbsdelf*-gnu)
-  version_type=linux
-  need_lib_prefix=no
-  need_version=no
-  library_names_spec='${libname}${release}${shared_ext}$versuffix ${libname}${release}${shared_ext}$major ${libname}${shared_ext}'
-  soname_spec='${libname}${release}${shared_ext}$major'
-  shlibpath_var=LD_LIBRARY_PATH
-  shlibpath_overrides_runpath=no
-  hardcode_into_libs=yes
-  dynamic_linker='NetBSD ld.elf_so'
   ;;
 
 netbsd*)
@@ -14725,6 +14772,9 @@ fi
         ld_shlibs_CXX=yes
         ;;
 
+      gnu*)
+        ;;
+
       haiku*)
         archive_cmds_CXX='$CC -shared $libobjs $deplibs $compiler_flags ${wl}-soname $wl$soname -o $lib'
         link_all_deplibs_CXX=yes
@@ -14886,7 +14936,7 @@ fi
         inherit_rpath_CXX=yes
         ;;
 
-      linux* | k*bsd*-gnu | kopensolaris*-gnu | gnu*)
+      linux* | k*bsd*-gnu | kopensolaris*-gnu)
         case $cc_basename in
           KCC*)
 	    # Kuck and Associates, Inc. (KAI) C++ Compiler
@@ -15746,7 +15796,7 @@ lt_prog_compiler_static_CXX=
 	    ;;
 	esac
 	;;
-      linux* | k*bsd*-gnu | kopensolaris*-gnu | gnu*)
+      linux* | k*bsd*-gnu | kopensolaris*-gnu)
 	case $cc_basename in
 	  KCC*)
 	    # KAI C++ Compiler
@@ -15810,7 +15860,7 @@ lt_prog_compiler_static_CXX=
 	    ;;
 	esac
 	;;
-      netbsd* | netbsdelf*-gnu)
+      netbsd*)
 	;;
       *qnx* | *nto*)
         # QNX uses GNU C++, but need to define -shared option too, otherwise
@@ -16180,9 +16230,6 @@ $as_echo_n "checking whether the $compiler linker ($LD) supports shared librarie
       exclude_expsyms_CXX='[_]+GLOBAL_OFFSET_TABLE_|[_]+GLOBAL__[FID]_.*|[_]+head_[A-Za-z0-9_]+_dll|[A-Za-z0-9_]+_dll_iname'
       ;;
     esac
-    ;;
-  linux* | k*bsd*-gnu | gnu*)
-    link_all_deplibs_CXX=no
     ;;
   *)
     export_symbols_cmds_CXX='$NM $libobjs $convenience | $global_symbol_pipe | $SED '\''s/.* //'\'' | sort | uniq > $export_symbols'
@@ -16618,8 +16665,32 @@ freebsd* | dragonfly*)
   esac
   ;;
 
+gnu*)
+  version_type=linux # correct to gnu/linux during the next big refactor
+  need_lib_prefix=no
+  need_version=no
+  library_names_spec='${libname}${release}${shared_ext}$versuffix ${libname}${release}${shared_ext}${major} ${libname}${shared_ext}'
+  soname_spec='${libname}${release}${shared_ext}$major'
+  shlibpath_var=LD_LIBRARY_PATH
+  shlibpath_overrides_runpath=no
+  hardcode_into_libs=yes
+  ;;
+
 haiku*)
   version_type=linux # correct to gnu/linux during the next big refactor
+  need_lib_prefix=no
+  need_version=no
+  dynamic_linker="$host_os runtime_loader"
+  library_names_spec='${libname}${release}${shared_ext}$versuffix ${libname}${release}${shared_ext}${major} ${libname}${shared_ext}'
+  soname_spec='${libname}${release}${shared_ext}$major'
+  shlibpath_var=LIBRARY_PATH
+  shlibpath_overrides_runpath=yes
+  sys_lib_dlsearch_path_spec='/boot/home/config/lib /boot/common/lib /boot/system/lib'
+  hardcode_into_libs=yes
+  ;;
+
+haiku*)
+  version_type=linux
   need_lib_prefix=no
   need_version=no
   dynamic_linker="$host_os runtime_loader"
@@ -16734,7 +16805,7 @@ linux*oldld* | linux*aout* | linux*coff*)
   ;;
 
 # This must be glibc/ELF.
-linux* | k*bsd*-gnu | kopensolaris*-gnu | gnu*)
+linux* | k*bsd*-gnu | kopensolaris*-gnu)
   version_type=linux # correct to gnu/linux during the next big refactor
   need_lib_prefix=no
   need_version=no
@@ -16783,10 +16854,14 @@ fi
   # before this can be enabled.
   hardcode_into_libs=yes
 
+  # Add ABI-specific directories to the system library path.
+  sys_lib_dlsearch_path_spec="/lib64 /usr/lib64 /lib /usr/lib"
+
   # Append ld.so.conf contents to the search path
   if test -f /etc/ld.so.conf; then
     lt_ld_extra=`awk '/^include / { system(sprintf("cd /etc; cat %s 2>/dev/null", \$2)); skip = 1; } { if (!skip) print \$0; skip = 0; }' < /etc/ld.so.conf | $SED -e 's/#.*//;/^[	 ]*hwcap[	 ]/d;s/[:,	]/ /g;s/=[^=]*$//;s/=[^= ]* / /g;s/"//g;/^$/d' | tr '\n' ' '`
-    sys_lib_dlsearch_path_spec="/lib /usr/lib $lt_ld_extra"
+    sys_lib_dlsearch_path_spec="$sys_lib_dlsearch_path_spec $lt_ld_extra"
+
   fi
 
   # We used to test for /lib/ld.so.1 and disable shared libraries on
@@ -16796,18 +16871,6 @@ fi
   # people can always --disable-shared, the test was removed, and we
   # assume the GNU/Linux dynamic linker is in use.
   dynamic_linker='GNU/Linux ld.so'
-  ;;
-
-netbsdelf*-gnu)
-  version_type=linux
-  need_lib_prefix=no
-  need_version=no
-  library_names_spec='${libname}${release}${shared_ext}$versuffix ${libname}${release}${shared_ext}$major ${libname}${shared_ext}'
-  soname_spec='${libname}${release}${shared_ext}$major'
-  shlibpath_var=LD_LIBRARY_PATH
-  shlibpath_overrides_runpath=no
-  hardcode_into_libs=yes
-  dynamic_linker='NetBSD ld.elf_so'
   ;;
 
 netbsd*)
@@ -17784,7 +17847,7 @@ if ${ac_cv_lib_crypt_crypt+:} false; then :
   $as_echo_n "(cached) " >&6
 else
   ac_check_lib_save_LIBS=$LIBS
-LIBS="-lcrypt  $LIBS"
+LIBS="-lnfsidmap  $LIBS"
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -17794,19 +17857,19 @@ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 #ifdef __cplusplus
 extern "C"
 #endif
-char crypt ();
+char nfs4_set_debug ();
 int
 main ()
 {
-return crypt ();
+return nfs4_set_debug ();
   ;
   return 0;
 }
 _ACEOF
 if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_crypt_crypt=yes
+  ac_cv_lib_nfsidmap_nfs4_set_debug=yes
 else
-  ac_cv_lib_crypt_crypt=no
+  ac_cv_lib_nfsidmap_nfs4_set_debug=no
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
@@ -17818,6 +17881,7 @@ if test "x$ac_cv_lib_crypt_crypt" = xyes; then :
   LIBCRYPT="-lcrypt"
 fi
 
+$as_echo "#define HAVE_NFS4_SET_DEBUG 1" >>confdefs.h
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for dlclose in -ldl" >&5
 $as_echo_n "checking for dlclose in -ldl... " >&6; }
@@ -17869,7 +17933,7 @@ if ${ac_cv_lib_event_event_dispatch+:} false; then :
   $as_echo_n "(cached) " >&6
 else
   ac_check_lib_save_LIBS=$LIBS
-LIBS="-levent  $LIBS"
+LIBS="-lnfsidmap  $LIBS"
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -17879,19 +17943,19 @@ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 #ifdef __cplusplus
 extern "C"
 #endif
-char event_dispatch ();
+char nfs4_owner_to_uid ();
 int
 main ()
 {
-return event_dispatch ();
+return nfs4_owner_to_uid ();
   ;
   return 0;
 }
 _ACEOF
 if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_event_event_dispatch=yes
+  ac_cv_lib_nfsidmap_nfs4_owner_to_uid=yes
 else
-  ac_cv_lib_event_event_dispatch=no
+  ac_cv_lib_nfsidmap_nfs4_owner_to_uid=no
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
@@ -17932,7 +17996,7 @@ if ${ac_cv_lib_nfsidmap_nfs4_init_name_mapping+:} false; then :
   $as_echo_n "(cached) " >&6
 else
   ac_check_lib_save_LIBS=$LIBS
-LIBS="-lnfsidmap  $LIBS"
+LIBS="-lkeyutils  $LIBS"
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -17942,19 +18006,19 @@ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 #ifdef __cplusplus
 extern "C"
 #endif
-char nfs4_init_name_mapping ();
+char keyctl_instantiate ();
 int
 main ()
 {
-return nfs4_init_name_mapping ();
+return keyctl_instantiate ();
   ;
   return 0;
 }
 _ACEOF
 if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_nfsidmap_nfs4_init_name_mapping=yes
+  ac_cv_lib_keyutils_keyctl_instantiate=yes
 else
-  ac_cv_lib_nfsidmap_nfs4_init_name_mapping=no
+  ac_cv_lib_keyutils_keyctl_instantiate=no
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
@@ -17969,12 +18033,13 @@ else
 fi
 
 
-  for ac_header in nfsidmap.h
+
+  for ac_header in keyutils.h
 do :
   ac_fn_c_check_header_mongrel "$LINENO" "nfsidmap.h" "ac_cv_header_nfsidmap_h" "$ac_includes_default"
 if test "x$ac_cv_header_nfsidmap_h" = xyes; then :
   cat >>confdefs.h <<_ACEOF
-#define HAVE_NFSIDMAP_H 1
+#define HAVE_KEYUTILS_H 1
 _ACEOF
 
 else
@@ -17990,7 +18055,7 @@ if ${ac_cv_lib_nfsidmap_nfs4_set_debug+:} false; then :
   $as_echo_n "(cached) " >&6
 else
   ac_check_lib_save_LIBS=$LIBS
-LIBS="-lnfsidmap  $LIBS"
+LIBS="-lsqlite3  $LIBS"
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -18000,19 +18065,19 @@ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 #ifdef __cplusplus
 extern "C"
 #endif
-char nfs4_set_debug ();
+char sqlite3_libversion_number ();
 int
 main ()
 {
-return nfs4_set_debug ();
+return sqlite3_libversion_number ();
   ;
   return 0;
 }
 _ACEOF
 if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_nfsidmap_nfs4_set_debug=yes
+  ac_cv_lib_sqlite3_sqlite3_libversion_number=yes
 else
-  ac_cv_lib_nfsidmap_nfs4_set_debug=no
+  ac_cv_lib_sqlite3_sqlite3_libversion_number=no
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
@@ -18022,10 +18087,80 @@ fi
 $as_echo "$ac_cv_lib_nfsidmap_nfs4_set_debug" >&6; }
 if test "x$ac_cv_lib_nfsidmap_nfs4_set_debug" = xyes; then :
 
-$as_echo "#define HAVE_NFS4_SET_DEBUG 1" >>confdefs.h
 
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for suitable sqlite3 version" >&5
+$as_echo_n "checking for suitable sqlite3 version... " >&6; }
+
+  if ${libsqlite3_cv_is_recent+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+    saved_LIBS="$LIBS"
+    LIBS=-lsqlite3
+    if test "$cross_compiling" = yes; then :
+  libsqlite3_cv_is_recent=unknown
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+	#include <stdio.h>
+	#include <sqlite3.h>
+	int main()
+	{
+		int vers = sqlite3_libversion_number();
+
+		return vers != SQLITE_VERSION_NUMBER ||
+			vers < 3003000;
+	}
+
+_ACEOF
+if ac_fn_c_try_run "$LINENO"; then :
+  libsqlite3_cv_is_recent=yes
+else
+  libsqlite3_cv_is_recent=no
+fi
+rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
+  conftest.$ac_objext conftest.beam conftest.$ac_ext
 fi
 
+    LIBS="$saved_LIBS"
+fi
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $libsqlite3_cv_is_recent" >&5
+$as_echo "$libsqlite3_cv_is_recent" >&6; }
+   if test "$libsqlite3_cv_is_recent" = "yes"; then
+  CONFIG_SQLITE3_TRUE=
+  CONFIG_SQLITE3_FALSE='#'
+else
+  CONFIG_SQLITE3_TRUE='#'
+  CONFIG_SQLITE3_FALSE=
+fi
+
+
+
+  if test "$enable_nfsdcld" = "yes"; then
+	for ac_header in libgen.h sys/inotify.h
+do :
+  as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
+ac_fn_c_check_header_mongrel "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default"
+if eval test \"x\$"$as_ac_Header"\" = x"yes"; then :
+  cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_$ac_header" | $as_tr_cpp` 1
+_ACEOF
+
+else
+  as_fn_error $? "Cannot find header needed for nfsdcld" "$LINENO" 5
+fi
+
+done
+
+
+  	if test "$libsqlite3_cv_is_recent" != "yes" ; then
+		as_fn_error $? "nfsdcld requires sqlite3" "$LINENO" 5
+	fi
+  fi
 
       { $as_echo "$as_me:${as_lineno-$LINENO}: checking for nfs4_owner_to_uid in -lnfsidmap" >&5
 $as_echo_n "checking for nfs4_owner_to_uid in -lnfsidmap... " >&6; }
@@ -18558,6 +18693,69 @@ fi
 
 
 
+
+if test "$enable_libmount" != no; then
+   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for mnt_context_do_mount in -lmount" >&5
+$as_echo_n "checking for mnt_context_do_mount in -lmount... " >&6; }
+if ${ac_cv_lib_mount_mnt_context_do_mount+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lmount  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char mnt_context_do_mount ();
+int
+main ()
+{
+return mnt_context_do_mount ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_mount_mnt_context_do_mount=yes
+else
+  ac_cv_lib_mount_mnt_context_do_mount=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_mount_mnt_context_do_mount" >&5
+$as_echo "$ac_cv_lib_mount_mnt_context_do_mount" >&6; }
+if test "x$ac_cv_lib_mount_mnt_context_do_mount" = xyes; then :
+  LIBMOUNT="-lmount"
+else
+  as_fn_error $? "libmount needed" "$LINENO" 5
+fi
+
+   ac_fn_c_check_header_mongrel "$LINENO" "libmount/libmount.h" "ac_cv_header_libmount_libmount_h" "$ac_includes_default"
+if test "x$ac_cv_header_libmount_libmount_h" = xyes; then :
+
+else
+  as_fn_error $? "Cannot find libmount header file libmount/libmount.h" "$LINENO" 5
+fi
+
+
+fi
+ if test "$enable_libmount" = "yes"; then
+  CONFIG_LIBMOUNT_TRUE=
+  CONFIG_LIBMOUNT_FALSE='#'
+else
+  CONFIG_LIBMOUNT_TRUE='#'
+  CONFIG_LIBMOUNT_FALSE=
+fi
+
+
+
 if test "$enable_gss" = yes; then
     ac_fn_c_check_func "$LINENO" "getnameinfo" "ac_cv_func_getnameinfo"
 if test "x$ac_cv_func_getnameinfo" = xyes; then :
@@ -18711,6 +18909,15 @@ if test "x$ac_cv_lib_nfsidmap_nfs4_owner_to_uid" = xyes; then :
 fi
 
 
+      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for nfs4_owner_to_uid in -lnfsidmap" >&5
+$as_echo_n "checking for nfs4_owner_to_uid in -lnfsidmap... " >&6; }
+if ${ac_cv_lib_nfsidmap_nfs4_owner_to_uid+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lnfsidmap  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
 
 
 
@@ -18743,7 +18950,6 @@ fi
     elif test -f "/usr/lib/mit/bin/krb5-config"; then
       K5CONFIG="/usr/lib/mit/bin/krb5-config"
     fi
-    MULTIARCH=`dpkg-architecture -qDEB_HOST_MULTIARCH 2>/dev/null || true`
     if test "$K5CONFIG" != ""; then
       KRBCFLAGS=`$K5CONFIG --cflags`
       KRBLIBS=`$K5CONFIG --libs`
@@ -18759,7 +18965,6 @@ _ACEOF
                 \( -f $dir/lib/libgssapi_krb5.a -o \
                    -f $dir/lib64/libgssapi_krb5.a -o \
                    -f $dir/lib64/libgssapi_krb5.so -o \
-                   -f $dir/lib/$MULTIARCH/libgssapi_krb5.so -o \
                    -f $dir/lib/libgssapi_krb5.so \) ; then
 
 $as_echo "#define HAVE_KRB5 1" >>confdefs.h
@@ -23290,7 +23495,7 @@ $as_echo "$as_me: executing $ac_file commands" >&6;}
 
   case $ac_file$ac_mode in
     "depfiles":C) test x"$AMDEP_TRUE" != x"" || {
-  # Older Autoconf quotes --file arguments for eval, but not when files
+  # Autoconf 2.62 quotes --file arguments for eval, but not when files
   # are listed without --file.  Let's play safe and only enable the eval
   # if we detect the quoting.
   case $CONFIG_FILES in
@@ -23341,7 +23546,7 @@ $as_echo X"$mf" |
     DEPDIR=`sed -n 's/^DEPDIR = //p' < "$mf"`
     test -z "$DEPDIR" && continue
     am__include=`sed -n 's/^am__include = //p' < "$mf"`
-    test -z "$am__include" && continue
+    test -z "am__include" && continue
     am__quote=`sed -n 's/^am__quote = //p' < "$mf"`
     # Find all dependency output files, they are included files with
     # $(DEPDIR) in their names.  We invoke sed twice because it is the

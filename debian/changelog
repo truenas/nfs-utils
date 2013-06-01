@@ -1,3 +1,9 @@
+nfs-utils (1:1.2.8-3) UNRELEASED; urgency=low
+
+  * Add myself as comaintainer, per <518FCECE.7050106@debian.org>.
+
+ -- Steve Langasek <vorlon@debian.org>  Sat, 01 Jun 2013 00:40:52 +0000
+
 nfs-utils (1:1.2.8-2) unstable; urgency=medium
 
   * Fix reportbug scripts to use rpcinfo in /usr/sbin.

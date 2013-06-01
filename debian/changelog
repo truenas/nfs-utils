@@ -1,4 +1,4 @@
-nfs-utils (1:1.2.8-3) UNRELEASED; urgency=low
+nfs-utils (1:1.2.8-3) unstable; urgency=low
 
   * Add myself as comaintainer, per <518FCECE.7050106@debian.org>.
   * Build --with-libgssglue, which was the default prior to 1.2.8; this
@@ -7,7 +7,7 @@ nfs-utils (1:1.2.8-3) UNRELEASED; urgency=low
     being incorrectly passed between multiple gss implementations (by way of
     libtirpc).  Closes: #707960.
 
- -- Steve Langasek <vorlon@debian.org>  Sat, 01 Jun 2013 00:40:52 +0000
+ -- Steve Langasek <vorlon@debian.org>  Fri, 31 May 2013 17:59:53 -0700
 
 nfs-utils (1:1.2.8-2) unstable; urgency=medium
 

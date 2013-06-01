@@ -1,6 +1,11 @@
 nfs-utils (1:1.2.8-3) UNRELEASED; urgency=low
 
   * Add myself as comaintainer, per <518FCECE.7050106@debian.org>.
+  * Build --with-libgssglue, which was the default prior to 1.2.8; this
+    fixes a regression that makes rpc.gssd (and hence, all
+    Kerberos-authenticated mounts) completely useless, because objects are
+    being incorrectly passed between multiple gss implementations (by way of
+    libtirpc).  Closes: #707960.
 
  -- Steve Langasek <vorlon@debian.org>  Sat, 01 Jun 2013 00:40:52 +0000
 

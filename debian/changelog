@@ -1,9 +1,9 @@
-nfs-utils (1:1.2.8-4) UNRELEASED; urgency=low
+nfs-utils (1:1.2.8-4) unstable; urgency=low
 
   * The configure option name is --with-gssglue, not --with-libgssglue.
     Fix this, so that rpc.gssd really works.  Really closes: #707960.
 
- -- Steve Langasek <vorlon@debian.org>  Sat, 01 Jun 2013 10:28:45 -0700
+ -- Steve Langasek <vorlon@debian.org>  Sat, 01 Jun 2013 10:29:32 -0700
 
 nfs-utils (1:1.2.8-3) unstable; urgency=low
 

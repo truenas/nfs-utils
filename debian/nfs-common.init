@@ -18,7 +18,6 @@ DESC="NFS common utilities"
 # Read config
 DEFAULTFILE=/etc/default/nfs-common
 NEED_STATD=
-NEED_IDMAPD=
 NEED_GSSD=
 PIPEFS_MOUNTPOINT=/run/rpc_pipefs
 RPCGSSDOPTS=
@@ -32,11 +31,10 @@ fi
 [ -x /sbin/rpc.statd ] || exit 0
 
 #
-# Parse the fstab file, and determine whether we need idmapd and gssd. (The
+# Parse the fstab file, and determine whether we need gssd. (The
 # /etc/defaults settings, if any, will override our autodetection.) This code
 # is partially adapted from the mountnfs.sh script in the sysvinit package.
 #
-AUTO_NEED_IDMAPD=no
 AUTO_NEED_GSSD=no
 
 if [ -f /etc/fstab ]; then
@@ -49,10 +47,6 @@ if [ -f /etc/fstab ]; then
 		continue
 		;;
 	esac
-	# FSTYPE "nfs" can be NFSv4 now
-        #if [ "$FSTYPE" = "nfs4" ]; then
-            AUTO_NEED_IDMAPD=yes
-        #fi
         case "$OPTS" in
 
             sec=krb5|*,sec=krb5|sec=krb5,*|*,sec=krb5i,*|sec=krb5i|*,sec=krb5i|sec=krb5i,*|*,sec=krb5i,*|sec=krb5p|*,sec=krb5p|sec=krb5p,*|*,sec=krb5p,*)
@@ -62,19 +56,6 @@ if [ -f /etc/fstab ]; then
     done
 
     exec 0<&9 9<&-
-fi
-
-#
-# We also need idmapd if we run an NFSv4 server. It's fairly difficult
-# to autodetect whether there are NFSv4 exports or not, and idmapd is not a
-# particularily heavy daemon, so we auto-enable it if we find an /etc/exports
-# file. This does not mean that there are NFSv4 or other mounts active (or
-# even that nfs-kernel-server is installed), but it matches what the "start"
-# condition in nfs-kernel-server's init script does, which has a value in
-# itself.
-#
-if [ -f /etc/exports ] && grep -q '^[[:space:]]*[^#]*/' /etc/exports; then
-    AUTO_NEED_IDMAPD=yes
 fi
 
 case "$NEED_STATD" in
@@ -89,7 +70,7 @@ case "$NEED_IDMAPD" in
     yes|no)	
         ;;
     *)
-        NEED_IDMAPD=$AUTO_NEED_IDMAPD
+        NEED_IDMAPD=yes
 	;;
 esac
 

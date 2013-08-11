@@ -20,7 +20,7 @@ DEFAULTFILE=/etc/default/nfs-common
 NEED_STATD=
 NEED_IDMAPD=
 NEED_GSSD=
-PIPEFS_MOUNTPOINT=/var/lib/nfs/rpc_pipefs
+PIPEFS_MOUNTPOINT=/run/rpc_pipefs
 RPCGSSDOPTS=
 if [ -f $DEFAULTFILE ]; then
     . $DEFAULTFILE
@@ -172,6 +172,7 @@ case "$1" in
 	    do_modprobe sunrpc
 	    do_modprobe nfs
 	    do_modprobe nfsd
+	    mkdir -p "$PIPEFS_MOUNTPOINT"
 	    if do_mount rpc_pipefs $PIPEFS_MOUNTPOINT
 	    then
 	    	if [ "$NEED_IDMAPD" = yes ]

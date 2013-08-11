@@ -21,5 +21,4 @@ esac
 
 act="restart"
 [ "$1:$2" = "configure:" ] && act="start"
-[ "$1:$2" = "configure:" ] && invoke-rc.d nfs-common start
 invoke-rc.d nfs-kernel-server $act

@@ -26,7 +26,6 @@ case "$1" in
 
         chown statd: /var/lib/nfs/sm \
             /var/lib/nfs/sm.bak \
-            /var/lib/nfs/rpc_pipefs \
             /var/lib/nfs
         if [ -f /var/lib/nfs/state ]; then
             chown statd /var/lib/nfs/state

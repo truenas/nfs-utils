@@ -2,7 +2,9 @@
 
 # Parsing of DEB_BUILD_OPTIONS flags.
 # Note that nostrip is handled automatically by debhelper.
-CFLAGS := -g -Wall
+CFLAGS := -g -Wall -DPIPEFS_DIR=\\\"/run/rpc_pipefs\\\" \
+		-DGSSD_PIPEFS_DIR=\\\"/run/rpc_pipefs\\\"
+
 ifneq (,$(filter noopt,$(DEB_BUILD_OPTIONS)))
     CFLAGS += -O0
 else

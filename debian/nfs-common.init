@@ -129,7 +129,7 @@ case "$1" in
 		fi
 	    fi
 	    start-stop-daemon --start --oknodo --quiet \
-		--pidfile /var/run/rpc.statd.pid \
+		--pidfile /run/rpc.statd.pid \
 	        --exec /sbin/rpc.statd -- $STATDOPTS
 	    RET=$?
 	    if [ $RET != 0 ]; then
@@ -138,7 +138,7 @@ case "$1" in
 	    else
 		if [ -d /run/sendsigs.omit.d ]; then
 		    rm -f /run/sendsigs.omit.d/statd
-		    ln -s /var/run/rpc.statd.pid /run/sendsigs.omit.d/statd
+		    ln -s /run/rpc.statd.pid /run/sendsigs.omit.d/statd
 		fi
 	    fi
 	fi

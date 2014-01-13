@@ -4,7 +4,7 @@
 # Provides:          nfs-common
 # Required-Start:    $portmap $time
 # Required-Stop:     $time
-# Default-Start:     2 3 4 5 S
+# Default-Start:     S
 # Default-Stop:      0 1 6
 # Short-Description: NFS support files common to client and server
 # Description:       NFS is a popular protocol for file sharing across

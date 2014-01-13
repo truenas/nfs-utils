@@ -47,12 +47,16 @@ if [ -f /etc/fstab ]; then
 		continue
 		;;
 	esac
-        case "$OPTS" in
-
-            sec=krb5|*,sec=krb5|sec=krb5,*|*,sec=krb5i,*|sec=krb5i|*,sec=krb5i|sec=krb5i,*|*,sec=krb5i,*|sec=krb5p|*,sec=krb5p|sec=krb5p,*|*,sec=krb5p,*)
-    	    AUTO_NEED_GSSD=yes
-            ;;
-        esac
+	OLDIFS="$IFS"
+	IFS=","
+	for OPT in $OPTS; do
+	    case "$OPT" in
+		sec=krb5|sec=krb5i|sec=krb5p)
+		    AUTO_NEED_GSSD=yes
+		;;
+	    esac
+	done
+	IFS="$OLDIFS"
     done
 
     exec 0<&9 9<&-

@@ -8,6 +8,8 @@ nfs-utils (1:1.2.8-6) UNRELEASED; urgency=medium
   * Only start nfs-common in runlevel S; it doesn't need to be started
     more than once (and startpar won't actually run it more than once,
     anyway).  Closes: #510528.
+  * Fix obsolete invocations of update-rc.d by switching nfs-common to use
+    dh_installinit.  Closes: #736059.
 
  -- Steve Langasek <vorlon@debian.org>  Mon, 13 Jan 2014 22:19:43 +0000
 

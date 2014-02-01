@@ -2,8 +2,6 @@
 
 set -e
 
-#DEBHELPER#
-
 case "$1" in
     configure)
         ucf --three-way /usr/share/nfs-common/conffiles/idmapd.conf /etc/idmapd.conf
@@ -12,7 +10,6 @@ case "$1" in
         if [ "$2" != "" ] && dpkg --compare-versions "$2" lt 1:1.1.0-10; then
             update-rc.d -f nfs-common remove >/dev/null
         fi
-        update-rc.d nfs-common start 20 2 3 4 5 . stop 20 0 1 6 . start 44 S . >/dev/null
 
         if ! getent passwd statd >/dev/null; then
             adduser --system --home /var/lib/nfs --no-create-home statd
@@ -44,6 +41,4 @@ case "$1" in
     ;;
 esac
 
-act="restart"
-[ "$1:$2" = "configure:" ] && act="start"
-invoke-rc.d nfs-common $act
+#DEBHELPER#

@@ -55,7 +55,7 @@ binary-arch: build
 	dh_install -Xman --fail-missing
 	dh_installdocs -A
 	dh_installdocs -pnfs-common debian/README.Debian.nfsv4
-	install -m 0755 debian/nfs-common.init debian/nfs-common/etc/init.d/nfs-common
+	dh_installinit -pnfs-common -R
 	install -m 0755 debian/nfs-kernel-server.init debian/nfs-kernel-server/etc/init.d/nfs-kernel-server
 	install -m 0644 debian/nfs-common.bugcontrol debian/nfs-common/usr/share/bug/nfs-common/control
 	install -m 0755 debian/nfs-common.bugscript debian/nfs-common/usr/share/bug/nfs-common/script

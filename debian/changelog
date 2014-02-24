@@ -1,4 +1,4 @@
-nfs-utils (1:1.2.8-6) UNRELEASED; urgency=medium
+nfs-utils (1:1.2.8-6) unstable; urgency=medium
 
   * Fix the sec=krb5* handling in debian/nfs-common.init to properly match
     all cases.  Closes: #715478.
@@ -22,7 +22,7 @@ nfs-utils (1:1.2.8-6) UNRELEASED; urgency=medium
     consistent with other default files, so that users who edit the file to
     add multiple options don't accidentally cause shell syntax bugs.
 
- -- Steve Langasek <vorlon@debian.org>  Mon, 13 Jan 2014 22:19:43 +0000
+ -- Steve Langasek <vorlon@debian.org>  Mon, 24 Feb 2014 18:11:17 +0000
 
 nfs-utils (1:1.2.8-5) unstable; urgency=medium
 

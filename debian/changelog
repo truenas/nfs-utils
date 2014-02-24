@@ -13,6 +13,11 @@ nfs-utils (1:1.2.8-6) UNRELEASED; urgency=medium
   * Tweak nfs-common preinst to not remove nfs state files except on package
     removal (i.e., these should not be removed when the package is
     deconfigured temporarily).
+  * debian/nfs-kernel-server.init: don't try to check for nfsv3 configuration
+    in nfsd and pass --no-nfs-version 3 to mountd if absent; the check is
+    buggy and impossible to make reliable, and there's no reason to single
+    out NFSv3 here (and the original rationale for this behavior is lost).
+    Closes LP: #897644, LP: #1284210.
 
  -- Steve Langasek <vorlon@debian.org>  Mon, 13 Jan 2014 22:19:43 +0000
 

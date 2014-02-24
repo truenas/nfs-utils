@@ -18,6 +18,9 @@ nfs-utils (1:1.2.8-6) UNRELEASED; urgency=medium
     buggy and impossible to make reliable, and there's no reason to single
     out NFSv3 here (and the original rationale for this behavior is lost).
     Closes LP: #897644, LP: #1284210.
+  * Provide quoted entries by default in debian/nfs-kernel-server.default,
+    consistent with other default files, so that users who edit the file to
+    add multiple options don't accidentally cause shell syntax bugs.
 
  -- Steve Langasek <vorlon@debian.org>  Mon, 13 Jan 2014 22:19:43 +0000
 

@@ -1,3 +1,9 @@
+nfs-utils (1:1.2.8-7) UNRELEASED; urgency=medium
+
+  * Update debian/watch
+
+ -- Ben Hutchings <ben@decadent.org.uk>  Mon, 23 Mar 2015 16:33:59 +0000
+
 nfs-utils (1:1.2.8-6) unstable; urgency=medium
 
   * Fix the sec=krb5* handling in debian/nfs-common.init to properly match

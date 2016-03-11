@@ -1,3 +1,14 @@
+nfs-utils (1:1.2.8-7) experimental; urgency=medium
+
+  * Get rid of libgssglue1.
+    Don't pass "--with-gssglue" to ./configure.
+    Build-depend on libtirpc-dev (>= 0.2.4-2~).
+    Depend on libtirpc1 (>= 0.2.4-2~).
+    Depend on rpcbind (>= 0.2.1-5~).
+  * Remove debian/source/options.
+
+ -- Anibal Monsalve Salazar <anibal@debian.org>  Sat, 02 Aug 2014 12:25:47 +0100
+
 nfs-utils (1:1.2.8-6) unstable; urgency=medium
 
   * Fix the sec=krb5* handling in debian/nfs-common.init to properly match

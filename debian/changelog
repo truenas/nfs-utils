@@ -1,8 +1,36 @@
-nfs-utils (1:1.2.8-7) UNRELEASED; urgency=medium
+nfs-utils (1:1.2.8-10) UNRELEASED; urgency=medium
 
   * Update debian/watch
 
  -- Ben Hutchings <ben@decadent.org.uk>  Mon, 23 Mar 2015 16:33:59 +0000
+
+nfs-utils (1:1.2.8-9) unstable; urgency=medium
+
+  * debian/patches/22-mountd-fix-segfault-in-add_name-with-newer-gcc-
+    compi.patch: cherry-pick fix from upstream for a segfault in 
+    add_name with newer gcc compilers.  Closes: #757835, LP: #1355829.
+
+ -- Steve Langasek <vorlon@debian.org>  Tue, 12 Aug 2014 17:12:38 -0700
+
+nfs-utils (1:1.2.8-8) unstable; urgency=medium
+
+  * Upload to unstable where this belongs.
+  * libtirpc versioning against 0.2.4, not 0.2.4-2.
+  * Drop versioned dependency on rpcbind; nothing in the rpcbind relationship
+    requires this.
+
+ -- Steve Langasek <vorlon@debian.org>  Mon, 11 Aug 2014 00:20:32 -0700
+
+nfs-utils (1:1.2.8-7) experimental; urgency=medium
+
+  * Get rid of libgssglue1.
+    Don't pass "--with-gssglue" to ./configure.
+    Build-depend on libtirpc-dev (>= 0.2.4-2~).
+    Depend on libtirpc1 (>= 0.2.4-2~).
+    Depend on rpcbind (>= 0.2.1-5~).
+  * Remove debian/source/options.
+
+ -- Anibal Monsalve Salazar <anibal@debian.org>  Sat, 02 Aug 2014 12:25:47 +0100
 
 nfs-utils (1:1.2.8-6) unstable; urgency=medium
 

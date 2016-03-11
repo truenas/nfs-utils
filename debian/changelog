@@ -1,3 +1,11 @@
+nfs-utils (1:1.2.8-9) unstable; urgency=medium
+
+  * debian/patches/22-mountd-fix-segfault-in-add_name-with-newer-gcc-
+    compi.patch: cherry-pick fix from upstream for a segfault in 
+    add_name with newer gcc compilers.  Closes: #757835, LP: #1355829.
+
+ -- Steve Langasek <vorlon@debian.org>  Tue, 12 Aug 2014 17:12:38 -0700
+
 nfs-utils (1:1.2.8-8) unstable; urgency=medium
 
   * Upload to unstable where this belongs.

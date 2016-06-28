@@ -1,0 +1,66 @@
+Description: Let sysadmins enable/disable statd services
+ As the admin was able to control under upstart the statd services with
+ NEED_STATD in default conffiles, mirror this funcationality under systemd
+ by letting the user systemctl enable/disable statd services.
+Author: Didier Roche <didrocks@ubuntu.com>
+Bug-Ubuntu: https://launchpad.net/bugs/1428486
+Index: nfs-utils-1.2.8/systemd/nfs-server.service
+===================================================================
+--- nfs-utils-1.2.8.orig/systemd/nfs-server.service
++++ nfs-utils-1.2.8/systemd/nfs-server.service
+@@ -3,8 +3,7 @@ Description=NFS server and services
+ DefaultDependencies=no
+ Requires= network.target proc-fs-nfsd.mount rpcbind.target
+ Requires= nfs-mountd.service
+-Wants=rpc-statd.service nfs-idmapd.service
+-Wants=rpc-statd-notify.service
++Wants=nfs-idmapd.service
+ 
+ After= local-fs.target
+ After= network.target proc-fs-nfsd.mount rpcbind.target nfs-mountd.service
+Index: nfs-utils-1.2.8/systemd/rpc-statd-notify.service
+===================================================================
+--- nfs-utils-1.2.8.orig/systemd/rpc-statd-notify.service
++++ nfs-utils-1.2.8/systemd/rpc-statd-notify.service
+@@ -17,3 +17,6 @@ After=nfs-config.service
+ EnvironmentFile=-/run/sysconfig/nfs-utils
+ Type=forking
+ ExecStart=-/sbin/sm-notify $SMNOTIFYARGS
++
++[Install]
++WantedBy=nfs-client.target
+Index: nfs-utils-1.2.8/systemd/rpc-statd.service
+===================================================================
+--- nfs-utils-1.2.8.orig/systemd/rpc-statd.service
++++ nfs-utils-1.2.8/systemd/rpc-statd.service
+@@ -7,7 +7,7 @@ After=network.target nss-lookup.target r
+ 
+ PartOf=nfs-utils.service
+ 
+-Wants=nfs-config.service
++Wants=nfs-config.service rpc-statd-notify.service
+ After=nfs-config.service
+ 
+ [Service]
+@@ -15,3 +15,6 @@ EnvironmentFile=-/run/sysconfig/nfs-util
+ Type=forking
+ PIDFile=/var/run/rpc.statd.pid
+ ExecStart=/sbin/rpc.statd --no-notify $STATDARGS
++
++[Install]
++WantedBy=nfs-server.service
+Index: nfs-utils-1.2.8/systemd/nfs-client.target
+===================================================================
+--- nfs-utils-1.2.8.orig/systemd/nfs-client.target
++++ nfs-utils-1.2.8/systemd/nfs-client.target
+@@ -3,9 +3,7 @@ Description=NFS client services
+ Before=remote-fs-pre.target
+ Wants=remote-fs-pre.target
+ 
+-# Note: we don't "Wants=rpc-statd.service" as "mount.nfs" will arrange to
+-# start that on demand if needed.
+-Wants=nfs-blkmap.service rpc-statd-notify.service
++Wants=nfs-blkmap.service
+ After=nfs-blkmap.service
+ 
+ # GSS services dependencies and ordering

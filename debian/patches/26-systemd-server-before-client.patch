@@ -1,0 +1,28 @@
+From d8c1fcce6d06aa062315a47134e8e3b364cb0700 Mon Sep 17 00:00:00 2001
+From: Martin Pitt <martin.pitt@ubuntu.com>
+Date: Tue, 3 Mar 2015 10:45:38 +0100
+Subject: [PATCH] systemd: Order NFS server before client
+
+This makes mounting NFS shares from localhost work reliably, as you need to
+start the server before attempting (client) mounts, and conversely on shutdown
+need to unmount all shares before stopping the server to avoid hangs.
+---
+ systemd/nfs-server.service | 3 +++
+ 1 file changed, 3 insertions(+)
+
+Forwarded: http://www.spinics.net/lists/linux-nfs/msg49934.html
+
+Index: nfs-utils-1.2.8/systemd/nfs-server.service
+===================================================================
+--- nfs-utils-1.2.8.orig/systemd/nfs-server.service
++++ nfs-utils-1.2.8/systemd/nfs-server.service
+@@ -15,6 +15,9 @@ Before= rpc-statd-notify.service
+ Wants=auth-rpcgss-module.service
+ After=rpc-gssd.service gssproxy.service rpc-svcgssd.service
+ 
++# start/stop server before/after client
++Before=remote-fs-pre.target
++
+ Wants=nfs-config.service
+ After=nfs-config.service
+ 

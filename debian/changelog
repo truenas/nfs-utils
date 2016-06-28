@@ -1,3 +1,67 @@
+nfs-utils (1:1.2.8-9.1) unstable; urgency=medium
+
+  Partial sync from ubuntu, included changes:
+
+  [ Martin Pitt ]
+  * Add 00git-start-statd-systemd.patch: Latest start-statd script from
+    1.3.2 to start rpc-statd.service under systemd.
+  * Add 23-systemd-pipefs_in_run.patch: systemd: Mount rpc_pipefs in /run instead of
+    /var/lib/nfs/, like in the upstart units.
+  * Add 24-systemd-daemon-paths.patch: Adjust program paths in systemd units.
+  * debian/nfs-kernel-server.links: Add nfs-kernel-server.service alias
+    symlink, to match SysV init script.
+  * Add 25-systemd-server-before-client.patch: Order NFS server before client,
+    to make mounting NFS shares from localhost work reliably.
+  * Add debian/nfs-utils_env.sh: Translate our /etc/default files into runtime
+    configuration for nfs-config.service.
+  * debian/nfs-{common,kernel-server}.install: Install systemd units.
+  * debian/rules: Enable/start systemd units. (LP: #1312976)
+
+  * Add autopkgtest for installing server and client on localhost, setting up
+    two exports, rebooting, and ensuring that the NFS mounts work.
+  * Add 23-systemd-relax-dependencies.patch: Stop depending on basic.target in
+    the daemons which still do; i. e. add DefaultDependencies=no. This makes
+    it possible to run NFS during early boot, helps if you e. g. have /var
+    on NFS, and avoids dependency cycles with rcS init.d scripts which depend
+    on $remote_fs. (LP: #1428487)
+  * Shift number prefixes of other systemd patches accordingly, and adjust
+    them to the above patch.
+
+  * 27-systemd-enable-with-systemctl-statd.patch: let the admin
+    enable/disable statd via systemd tools. (LP: #1428486)
+  * debian/rules: don't start statd by default (or it will trigger upstart
+    and systemd statd unit startup).
+  * debian/control, debian/*install: move nfs-utils.service to nfs-common
+    package. (LP: #1436304)
+
+  [ Steve Langasek ]
+  * Add a dependency on keyutils to nfs-common, so that idmapping will work
+    under systemd.  LP: #1449074.
+
+  Followup changes to complement merge from ubuntu:
+
+  [ Andreas Henriksson ]
+  * Restore anything related to nfs-common.init and nfs-common.default
+  * debian/nfs-common.links: Mask nfs-common init script with a symlink
+    to /dev/null to avoid using it under systemd.
+  * Explicitly set executable permissions on nfs-utils_env.sh helper
+    instead of relying on debian/nfs-utils_env.sh having correct
+    permissions in source directory.
+
+  All of the above Closes: #796637
+
+  Additional changes while at it:
+
+  [ Andreas Henriksson ]
+  * Make nfs-kernel-server depend on netbase since it needs /etc/services
+    for nfs-server to start (which is required for successful pkg install).
+    - Avoids "...unable to resolve ANYADDR:nfs to inet address: ..."
+
+  [ Martin Pitt ]
+  * Drop obsolete versioned initscripts dependency. (Closes: #804990)
+
+ -- Andreas Henriksson <andreas@fatal.se>  Tue, 28 Jun 2016 02:05:16 +0200
+
 nfs-utils (1:1.2.8-9) unstable; urgency=medium
 
   * debian/patches/22-mountd-fix-segfault-in-add_name-with-newer-gcc-

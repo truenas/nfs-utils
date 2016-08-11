@@ -1,3 +1,18 @@
+nfs-utils (1:1.2.8-9.2) unstable; urgency=medium
+
+  * Non-maintainer upload.
+  * Really add keyutils as a dependency of nfs-common. (Closes: #830777)
+    - changelog entry included but actual change missed when partially
+      merging the ubuntu delta in previous NMU.
+  * Add debian/patches/unbreak-blkmapd-rpc_pipefs-run.patch (Closes: #828826)
+    - patch from Christoph Hellwig to unbreak blkmapd after move of
+      rpc_pipefs to /run.
+  * Add debian/patches/unbreak-gssd-rpc_pipefs-run.patch (Closes: #632141)
+    - similarly to blkmapd also unbreak gssd. Thanks to Christoph Hellwig
+      for pointing this out.
+
+ -- Andreas Henriksson <andreas@fatal.se>  Thu, 11 Aug 2016 18:50:24 +0200
+
 nfs-utils (1:1.2.8-9.1) unstable; urgency=medium
 
   Partial sync from ubuntu, included changes:

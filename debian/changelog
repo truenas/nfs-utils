@@ -1,3 +1,14 @@
+nfs-utils (1:1.2.8-10) UNRELEASED; urgency=medium
+
+  [ Ben Hutchings ]
+  * Update debian/watch
+
+  [ Salvatore Bonaccorso ]
+  * Fix typo in comment for installed idmapd.conf.
+    Thanks to Ferenc Wágner (Closes: #841387)
+
+ -- Ben Hutchings <ben@decadent.org.uk>  Mon, 23 Mar 2015 16:33:59 +0000
+
 nfs-utils (1:1.2.8-9.2) unstable; urgency=medium
 
   * Non-maintainer upload.

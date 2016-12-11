@@ -1,0 +1,385 @@
+Description: systemd units from upstream
+Origin: upstream, 1.3.2
+
+Index: nfs-utils-1.2.8/systemd/README
+===================================================================
+--- /dev/null
++++ nfs-utils-1.2.8/systemd/README
+@@ -0,0 +1,71 @@
++
++Notes about systemd unit files for nfs-utils.
++
++The unit files provided here should be sufficient for systemd
++to manage all daemons and related services provides by nfs-utils.
++
++They do *not* include any unit files for separate services such as
++rpc.rquotad (in the 'quota' package) or rpcbind.
++
++There are 4 units that can be 'enabled' or 'disabled' by systemctl, or
++by a suitable 'preset' setting:
++
++ nfs-server.service
++    If enabled, nfs service is started together with dependencies
++    such as mountd, statd, rpc.idmapd
++    This is a "service" file rather than a "target" (which is the
++    normal grouping construct) so that
++        systemctl start nfs-server
++    can work (if no type is given, ".service" is assumed).
++
++ nfs-client.target
++    If enabled, daemons needs for an nfs client are enabled.
++    This does *not* include rpc.statd.  the rpc-statd.service unit
++    is started by /usr/sbin/start-statd which mount.nfs will run
++    if statd is needed.
++
++ nfs-blkmap.target
++    If enabled, then blkmapd will be run when nfs-client.target is
++    started.
++
++Another special unit is "nfs-utils.service".  This doesn't really do
++anything, but exists so that other units may declare themselves as
++"PartOf" nfs-utils.service.
++The effect of this is that
++     systemctl restart nfs-utils
++will restart all nfs-utils daemons as maybe be required during
++software update.  It isn't possible to make
++     systemctl try-restart nfs-server nfs-client.target
++do this as some daemon are included in both, and rpc.statd would
++not be restarted if nfs-server were not active (as nfs-client doesn't
++Want it - it is started by mount.nfs running start-statd).
++
++It is possible that we should have an nfs-statd.target which can
++selectively enable statd being stared by -server and sm-notify
++being started by -server or -client.  That way it could be disabled
++completely on V4-only configurations.  Currently statd is always
++started on the server and sm-notify is always run if server or
++client is enabled.
++
++Stopping nfs-server will also stop rpc.mountd, and rpc.svcgssd.
++It cannot stop rpc.statd or rpc.gssd as they may be in use by the
++client and systemd cannot specify is two-pronged reverse dependency.
++(i.e. stop this unit if none of these units are running)
++
++Distro specific commandline configuration can be provided by
++installing a script /usr/lib/systemd/scripts/nfs-utils_env.sh
++This should write /run/sysconfig/nfs-utils based on configuration
++information such as in /etc/sysconfig/nfs or /etc/defaults/nfs.
++It is run once by nfs-config.service.
++
++rpc.gssd and rpc.svcgssd are assumed to be needed if /etc/krb5.keytab
++is present.
++If a site needs this file present but does not want the gss daemons
++running, it should create
++   /etc/systemd/system/rpc-gssd.service.d/01-disable.conf
++and
++   /etc/systemd/system/rpc-svcgssd.service.d/01-disable.conf
++
++containing
++   [Unit]
++   ConditionNull=false
+Index: nfs-utils-1.2.8/systemd/auth-rpcgss-module.service
+===================================================================
+--- /dev/null
++++ nfs-utils-1.2.8/systemd/auth-rpcgss-module.service
+@@ -0,0 +1,15 @@
++# We want to start gss-proxy on kernels that support it and rpc.svcgssd
++# on those that don't.  Those services check for support by checking
++# for existence of the path /proc/net/rpc/use-gss-proxy.  Before they
++# can perform that check, they need this module loaded.  (Unless
++# rpcsec_gss support is built directly into the kernel, in which case this
++# unit will fail.  But that's OK.)
++[Unit]
++Description=Kernel Module supporting RPCSEC_GSS
++Before=gssproxy.service rpc-svcgssd.service rpc-gssd.service
++Wants=gssproxy.service rpc-svcgssd.service rpc-gssd.service
++ConditionPathExists=/etc/krb5.keytab
++
++[Service]
++Type=oneshot
++ExecStart=/sbin/modprobe -q auth_rpcgss
+Index: nfs-utils-1.2.8/systemd/nfs-blkmap.service
+===================================================================
+--- /dev/null
++++ nfs-utils-1.2.8/systemd/nfs-blkmap.service
+@@ -0,0 +1,16 @@
++[Unit]
++Description=pNFS block layout mapping daemon
++DefaultDependencies=no
++Conflicts=umount.target
++After=var-lib-nfs-rpc_pipefs.mount
++Requires=var-lib-nfs-rpc_pipefs.mount
++
++Requisite=nfs-blkmap.target
++After=nfs-blkmap.target
++
++PartOf=nfs-utils.service
++
++[Service]
++Type=forking
++PIDFile=/var/run/blkmapd.pid
++ExecStart=/usr/sbin/blkmapd $BLKMAPDARGS
+Index: nfs-utils-1.2.8/systemd/nfs-blkmap.target
+===================================================================
+--- /dev/null
++++ nfs-utils-1.2.8/systemd/nfs-blkmap.target
+@@ -0,0 +1,8 @@
++[Unit]
++Description= PNFS blkmaping enablement.
++# If this target is enabled, then blkmapd will be started
++# as required.  If it is not enabled it won't.
++
++[Install]
++WantedBy=remote-fs.target
++WantedBy=multi-user.target
+\ No newline at end of file
+Index: nfs-utils-1.2.8/systemd/nfs-client.target
+===================================================================
+--- /dev/null
++++ nfs-utils-1.2.8/systemd/nfs-client.target
+@@ -0,0 +1,17 @@
++[Unit]
++Description=NFS client services
++Before=remote-fs-pre.target
++Wants=remote-fs-pre.target
++
++# Note: we don't "Wants=rpc-statd.service" as "mount.nfs" will arrange to
++# start that on demand if needed.
++Wants=nfs-blkmap.service rpc-statd-notify.service
++After=nfs-blkmap.service
++
++# GSS services dependencies and ordering
++Wants=auth-rpcgss-module.service
++After=rpc-gssd.service rpc-svcgssd.service gssproxy.service
++
++[Install]
++WantedBy=multi-user.target
++WantedBy=remote-fs.target
+Index: nfs-utils-1.2.8/systemd/nfs-config.service
+===================================================================
+--- /dev/null
++++ nfs-utils-1.2.8/systemd/nfs-config.service
+@@ -0,0 +1,7 @@
++[Unit]
++Description=Preprocess NFS configuration
++
++[Service]
++Type=oneshot
++RemainAfterExit=yes
++ExecStart=/usr/lib/systemd/scripts/nfs-utils_env.sh
+Index: nfs-utils-1.2.8/systemd/nfs-idmapd.service
+===================================================================
+--- /dev/null
++++ nfs-utils-1.2.8/systemd/nfs-idmapd.service
+@@ -0,0 +1,14 @@
++[Unit]
++Description=NFSv4 ID-name mapping service
++Requires=var-lib-nfs-rpc_pipefs.mount
++After=var-lib-nfs-rpc_pipefs.mount
++
++BindsTo=nfs-server.service
++
++Wants=nfs-config.service
++After=nfs-config.service
++
++[Service]
++EnvironmentFile=-/run/sysconfig/nfs-utils
++Type=forking
++ExecStart=/usr/sbin/rpc.idmapd $RPCIDMAPDARGS
+Index: nfs-utils-1.2.8/systemd/nfs-mountd.service
+===================================================================
+--- /dev/null
++++ nfs-utils-1.2.8/systemd/nfs-mountd.service
+@@ -0,0 +1,14 @@
++[Unit]
++Description=NFS Mount Daemon
++Requires=proc-fs-nfsd.mount
++After=proc-fs-nfsd.mount
++After=network.target
++BindsTo=nfs-server.service
++
++Wants=nfs-config.service
++After=nfs-config.service
++
++[Service]
++EnvironmentFile=-/run/sysconfig/nfs-utils
++Type=forking
++ExecStart=/usr/sbin/rpc.mountd $RPCMOUNTDARGS
+Index: nfs-utils-1.2.8/systemd/nfs-server.service
+===================================================================
+--- /dev/null
++++ nfs-utils-1.2.8/systemd/nfs-server.service
+@@ -0,0 +1,33 @@
++[Unit]
++Description=NFS server and services
++Requires= network.target proc-fs-nfsd.mount rpcbind.target
++Requires= nfs-mountd.service
++Wants=rpc-statd.service nfs-idmapd.service
++Wants=rpc-statd-notify.service
++
++After= network.target proc-fs-nfsd.mount rpcbind.target nfs-mountd.service
++After= nfs-idmapd.service rpc-statd.service
++Before= rpc-statd-notify.service
++
++# GSS services dependencies and ordering
++Wants=auth-rpcgss-module.service
++After=rpc-gssd.service gssproxy.service rpc-svcgssd.service
++
++Wants=nfs-config.service
++After=nfs-config.service
++
++[Service]
++EnvironmentFile=-/run/sysconfig/nfs-utils
++
++Type=oneshot
++RemainAfterExit=yes
++ExecStartPre=/usr/sbin/exportfs -r
++ExecStart=/usr/sbin/rpc.nfsd $RPCNFSDARGS
++ExecStop=/usr/sbin/rpc.nfsd 0
++ExecStopPost=/usr/sbin/exportfs -au
++ExecStopPost=/usr/sbin/exportfs -f
++
++ExecReload=/usr/sbin/exportfs -r
++
++[Install]
++WantedBy=multi-user.target
+Index: nfs-utils-1.2.8/systemd/nfs-utils.service
+===================================================================
+--- /dev/null
++++ nfs-utils-1.2.8/systemd/nfs-utils.service
+@@ -0,0 +1,17 @@
++[Unit]
++Description=NFS server and client services
++# This service should never be stopped, only restarted.
++# When it is re-started, all other services which declare
++# themselves to be "PartOf" this service will also be
++# restarted. Thus
++#   systemctl restart nfs-utils
++# will restart all daemons which are part of nfs-utils
++# and which are running.  This is useful after a software
++# update.
++
++# This is a "service" rather than "target" so that we
++# don't need to say "systemctl restart nfs-utils.target".
++[Service]
++Type=oneshot
++RemainAfterExit=yes
++ExecStart=/bin/true
+Index: nfs-utils-1.2.8/systemd/proc-fs-nfsd.mount
+===================================================================
+--- /dev/null
++++ nfs-utils-1.2.8/systemd/proc-fs-nfsd.mount
+@@ -0,0 +1,7 @@
++[Unit]
++Description=NFSD configuration filesystem
++
++[Mount]
++What=nfsd
++Where=/proc/fs/nfsd
++Type=nfsd
+Index: nfs-utils-1.2.8/systemd/rpc-gssd.service
+===================================================================
+--- /dev/null
++++ nfs-utils-1.2.8/systemd/rpc-gssd.service
+@@ -0,0 +1,19 @@
++[Unit]
++Description=RPC security service for NFS client and server
++DefaultDependencies=no
++Conflicts=umount.target
++Requires=var-lib-nfs-rpc_pipefs.mount
++After=var-lib-nfs-rpc_pipefs.mount
++
++ConditionPathExists=/etc/krb5.keytab
++
++PartOf=nfs-utils.service
++
++Wants=nfs-config.service
++After=nfs-config.service
++
++[Service]
++EnvironmentFile=-/run/sysconfig/nfs-utils
++
++Type=forking
++ExecStart=/usr/sbin/rpc.gssd $GSSDARGS
+Index: nfs-utils-1.2.8/systemd/rpc-statd-notify.service
+===================================================================
+--- /dev/null
++++ nfs-utils-1.2.8/systemd/rpc-statd-notify.service
+@@ -0,0 +1,18 @@
++[Unit]
++Description=Notify NFS peers of a restart
++Requires=network-online.target
++After=network.target nss-lookup.target
++
++# if we run an nfs server, it needs to be running before we
++# tell clients that it has restarted.
++After=nfs-server.service
++
++PartOf=nfs-utils.service
++
++Wants=nfs-config.service
++After=nfs-config.service
++
++[Service]
++EnvironmentFile=-/run/sysconfig/nfs-utils
++Type=forking
++ExecStart=-/usr/sbin/sm-notify $SMNOTIFYARGS
+Index: nfs-utils-1.2.8/systemd/rpc-statd.service
+===================================================================
+--- /dev/null
++++ nfs-utils-1.2.8/systemd/rpc-statd.service
+@@ -0,0 +1,17 @@
++[Unit]
++Description=NFS status monitor for NFSv2/3 locking.
++DefaultDependencies=no
++Conflicts=umount.target
++Requires=nss-lookup.target rpcbind.target
++After=network.target nss-lookup.target rpcbind.target
++
++PartOf=nfs-utils.service
++
++Wants=nfs-config.service
++After=nfs-config.service
++
++[Service]
++EnvironmentFile=-/run/sysconfig/nfs-utils
++Type=forking
++PIDFile=/var/run/rpc.statd.pid
++ExecStart=/usr/sbin/rpc.statd --no-notify $STATDARGS
+Index: nfs-utils-1.2.8/systemd/rpc-svcgssd.service
+===================================================================
+--- /dev/null
++++ nfs-utils-1.2.8/systemd/rpc-svcgssd.service
+@@ -0,0 +1,19 @@
++[Unit]
++Description=RPC security service for NFS server
++Requires=var-lib-nfs-rpc_pipefs.mount
++After=var-lib-nfs-rpc_pipefs.mount
++PartOf=nfs-server.service
++PartOf=nfs-utils.service
++
++After=gssproxy.service
++ConditionPathExists=|!/run/gssproxy.pid
++ConditionPathExists=|!/proc/net/rpc/use-gss-proxy
++ConditionPathExists=/etc/krb5.keytab
++
++Wants=nfs-config.service
++After=nfs-config.service
++
++[Service]
++EnvironmentFile=-/run/sysconfig/nfs-utils
++Type=forking
++ExecStart=/usr/sbin/rpc.svcgssd $SVCGSSDARGS
+Index: nfs-utils-1.2.8/systemd/var-lib-nfs-rpc_pipefs.mount
+===================================================================
+--- /dev/null
++++ nfs-utils-1.2.8/systemd/var-lib-nfs-rpc_pipefs.mount
+@@ -0,0 +1,9 @@
++[Unit]
++Description=RPC Pipe File System
++DefaultDependencies=no
++Conflicts=umount.target
++
++[Mount]
++What=sunrpc
++Where=/var/lib/nfs/rpc_pipefs
++Type=rpc_pipefs

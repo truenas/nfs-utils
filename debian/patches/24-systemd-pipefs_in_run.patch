@@ -1,0 +1,92 @@
+Description: systemd: Mount rpc_pipefs in /run instead of /var/lib/nfs/
+Author: Martin Pitt <martin.pitt@ubuntu.com>
+Forwarded: No
+
+Index: nfs-utils-1.2.8/systemd/var-lib-nfs-rpc_pipefs.mount
+===================================================================
+--- nfs-utils-1.2.8.orig/systemd/var-lib-nfs-rpc_pipefs.mount
++++ /dev/null
+@@ -1,9 +0,0 @@
+-[Unit]
+-Description=RPC Pipe File System
+-DefaultDependencies=no
+-Conflicts=umount.target
+-
+-[Mount]
+-What=sunrpc
+-Where=/var/lib/nfs/rpc_pipefs
+-Type=rpc_pipefs
+Index: nfs-utils-1.2.8/systemd/nfs-blkmap.service
+===================================================================
+--- nfs-utils-1.2.8.orig/systemd/nfs-blkmap.service
++++ nfs-utils-1.2.8/systemd/nfs-blkmap.service
+@@ -2,8 +2,8 @@
+ Description=pNFS block layout mapping daemon
+ DefaultDependencies=no
+ Conflicts=umount.target
+-After=var-lib-nfs-rpc_pipefs.mount
+-Requires=var-lib-nfs-rpc_pipefs.mount
++After=run-rpc_pipefs.mount
++Requires=run-rpc_pipefs.mount
+ 
+ Requisite=nfs-blkmap.target
+ After=nfs-blkmap.target
+Index: nfs-utils-1.2.8/systemd/nfs-idmapd.service
+===================================================================
+--- nfs-utils-1.2.8.orig/systemd/nfs-idmapd.service
++++ nfs-utils-1.2.8/systemd/nfs-idmapd.service
+@@ -1,8 +1,8 @@
+ [Unit]
+ Description=NFSv4 ID-name mapping service
+ DefaultDependencies=no
+-Requires=var-lib-nfs-rpc_pipefs.mount
+-After=var-lib-nfs-rpc_pipefs.mount local-fs.target
++Requires=run-rpc_pipefs.mount
++After=run-rpc_pipefs.mount local-fs.target
+ 
+ BindsTo=nfs-server.service
+ 
+Index: nfs-utils-1.2.8/systemd/rpc-gssd.service
+===================================================================
+--- nfs-utils-1.2.8.orig/systemd/rpc-gssd.service
++++ nfs-utils-1.2.8/systemd/rpc-gssd.service
+@@ -2,8 +2,8 @@
+ Description=RPC security service for NFS client and server
+ DefaultDependencies=no
+ Conflicts=umount.target
+-Requires=var-lib-nfs-rpc_pipefs.mount
+-After=var-lib-nfs-rpc_pipefs.mount
++Requires=run-rpc_pipefs.mount
++After=run-rpc_pipefs.mount
+ 
+ ConditionPathExists=/etc/krb5.keytab
+ 
+Index: nfs-utils-1.2.8/systemd/rpc-svcgssd.service
+===================================================================
+--- nfs-utils-1.2.8.orig/systemd/rpc-svcgssd.service
++++ nfs-utils-1.2.8/systemd/rpc-svcgssd.service
+@@ -1,8 +1,8 @@
+ [Unit]
+ Description=RPC security service for NFS server
+ DefaultDependencies=no
+-Requires=var-lib-nfs-rpc_pipefs.mount
+-After=var-lib-nfs-rpc_pipefs.mount local-fs.target
++Requires=run-rpc_pipefs.mount
++After=run-rpc_pipefs.mount local-fs.target
+ PartOf=nfs-server.service
+ PartOf=nfs-utils.service
+ 
+Index: nfs-utils-1.2.8/systemd/run-rpc_pipefs.mount
+===================================================================
+--- /dev/null
++++ nfs-utils-1.2.8/systemd/run-rpc_pipefs.mount
+@@ -0,0 +1,9 @@
++[Unit]
++Description=RPC Pipe File System
++DefaultDependencies=no
++Conflicts=umount.target
++
++[Mount]
++What=sunrpc
++Where=/run/rpc_pipefs
++Type=rpc_pipefs

@@ -1,0 +1,19 @@
+From: Andreas Henriksson <andreas@fatal.se>
+Subject: move of rpc_pipefs mountpoint to /run breaks gssd
+
+This is a followup patch for gssd also needing to know about the new
+rpc_pipefs location, as mentioned in https://bugs.debian.org/828826
+
+Bug-Debian: https://bugs.debian.org/632141
+
+--- a/utils/gssd/gssd.h
++++ b/utils/gssd/gssd.h
+@@ -38,7 +38,7 @@
+ #define MAX_FILE_NAMELEN	32
+ #define FD_ALLOC_BLOCK		256
+ #ifndef GSSD_PIPEFS_DIR
+-#define GSSD_PIPEFS_DIR		"/var/lib/nfs/rpc_pipefs"
++#define GSSD_PIPEFS_DIR		"/run/rpc_pipefs"
+ #endif
+ #define INFO			"info"
+ #define KRB5			"krb5"

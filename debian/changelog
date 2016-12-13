@@ -1,4 +1,7 @@
-nfs-utils (1:1.2.8-10) UNRELEASED; urgency=medium
+nfs-utils (1:1.3.4-1) unstable; urgency=medium
+
+  [ Daniel Pocock ]
+  * New upstream release.
 
   [ Ben Hutchings ]
   * Update debian/watch
@@ -7,7 +10,7 @@ nfs-utils (1:1.2.8-10) UNRELEASED; urgency=medium
   * Fix typo in comment for installed idmapd.conf.
     Thanks to Ferenc Wágner (Closes: #841387)
 
- -- Ben Hutchings <ben@decadent.org.uk>  Mon, 23 Mar 2015 16:33:59 +0000
+ -- Daniel Pocock <daniel@pocock.pro>  Tue, 13 Dec 2016 19:37:42 +0100
 
 nfs-utils (1:1.2.8-9.2) unstable; urgency=medium
 

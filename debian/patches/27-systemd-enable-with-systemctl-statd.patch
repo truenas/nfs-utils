@@ -35,18 +35,18 @@ index 2ccdc63..fe88b15 100644
  After= local-fs.target
  After= network.target proc-fs-nfsd.mount rpcbind.socket nfs-mountd.service
 diff --git a/systemd/rpc-statd-notify.service b/systemd/rpc-statd-notify.service
-index 89ba36c..4484bf8 100644
+index 91cf370..05c54ef 100644
 --- a/systemd/rpc-statd-notify.service
 +++ b/systemd/rpc-statd-notify.service
 @@ -17,3 +17,6 @@ After=nfs-config.service
  EnvironmentFile=-/run/sysconfig/nfs-utils
  Type=forking
- ExecStart=-/usr/sbin/sm-notify $SMNOTIFYARGS
+ ExecStart=-/sbin/sm-notify $SMNOTIFYARGS
 +
 +[Install]
 +WantedBy=nfs-client.target
 diff --git a/systemd/rpc-statd.service b/systemd/rpc-statd.service
-index a02f5c4..2a3015c 100644
+index 6ba0aa1..2138f74 100644
 --- a/systemd/rpc-statd.service
 +++ b/systemd/rpc-statd.service
 @@ -7,7 +7,7 @@ After=network.target nss-lookup.target rpcbind.socket
@@ -61,7 +61,7 @@ index a02f5c4..2a3015c 100644
 @@ -15,3 +15,6 @@ EnvironmentFile=-/run/sysconfig/nfs-utils
  Type=forking
  PIDFile=/var/run/rpc.statd.pid
- ExecStart=/usr/sbin/rpc.statd --no-notify $STATDARGS
+ ExecStart=/sbin/rpc.statd --no-notify $STATDARGS
 +
 +[Install]
 +WantedBy=nfs-server.service

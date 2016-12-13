@@ -69,22 +69,30 @@ static void warn_duplicated_exports(nfs_export *exp, struct exportent *eep)
  * export_read - read entries from /etc/exports
  * @fname: name of file to read from
  *
+ * Returns number of read entries.
  */
-void
+int
 export_read(char *fname)
 {
 	struct exportent	*eep;
 	nfs_export		*exp;
 
+	int volumes = 0;
+
 	setexportent(fname, "r");
 	while ((eep = getexportent(0,1)) != NULL) {
 		exp = export_lookup(eep->e_hostname, eep->e_path, 0);
-		if (!exp)
-			export_create(eep, 0);
+		if (!exp) {
+			if (export_create(eep, 0))
+				/* possible complaints already logged */
+				volumes++;
+		}
 		else
 			warn_duplicated_exports(exp, eep);
 	}
 	endexportent();
+
+	return volumes;
 }
 
 /**

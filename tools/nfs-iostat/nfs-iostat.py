@@ -95,7 +95,7 @@ class DeviceData:
             if words[6] == 'nfs':
                 self.__nfs_data['statvers'] = words[7]
         elif words[0] == 'age:':
-            self.__nfs_data['age'] = long(words[1])
+            self.__nfs_data['age'] = int(words[1])
         elif words[0] == 'opts:':
             self.__nfs_data['mountoptions'] = ''.join(words[1:]).split(',')
         elif words[0] == 'caps:':
@@ -116,7 +116,7 @@ class DeviceData:
         elif words[0] == 'bytes:':
             i = 1
             for key in NfsByteCounters:
-                self.__nfs_data[key] = long(words[i])
+                self.__nfs_data[key] = int(words[i])
                 i += 1
 
     def __parse_rpc_line(self, words):
@@ -131,8 +131,8 @@ class DeviceData:
                 self.__rpc_data['rpcsends'] = int(words[4])
                 self.__rpc_data['rpcreceives'] = int(words[5])
                 self.__rpc_data['badxids'] = int(words[6])
-                self.__rpc_data['inflightsends'] = long(words[7])
-                self.__rpc_data['backlogutil'] = long(words[8])
+                self.__rpc_data['inflightsends'] = int(words[7])
+                self.__rpc_data['backlogutil'] = int(words[8])
             elif words[1] == 'tcp':
                 self.__rpc_data['port'] = words[2]
                 self.__rpc_data['bind_count'] = int(words[3])
@@ -142,8 +142,8 @@ class DeviceData:
                 self.__rpc_data['rpcsends'] = int(words[7])
                 self.__rpc_data['rpcreceives'] = int(words[8])
                 self.__rpc_data['badxids'] = int(words[9])
-                self.__rpc_data['inflightsends'] = long(words[10])
-                self.__rpc_data['backlogutil'] = long(words[11])
+                self.__rpc_data['inflightsends'] = int(words[10])
+                self.__rpc_data['backlogutil'] = int(words[11])
             elif words[1] == 'rdma':
                 self.__rpc_data['port'] = words[2]
                 self.__rpc_data['bind_count'] = int(words[3])
@@ -169,7 +169,7 @@ class DeviceData:
         else:
             op = words[0][:-1]
             self.__rpc_data['ops'] += [op]
-            self.__rpc_data[op] = [long(word) for word in words[1:]]
+            self.__rpc_data[op] = [int(word) for word in words[1:]]
 
     def parse_stats(self, lines):
         """Turn a list of lines from a mount stat file into a 
@@ -213,7 +213,8 @@ class DeviceData:
         # the reference to them.  so we build new lists here
         # for the result object.
         for op in result.__rpc_data['ops']:
-            result.__rpc_data[op] = map(difference, self.__rpc_data[op], old_stats.__rpc_data[op])
+            result.__rpc_data[op] = list(map(
+                difference, self.__rpc_data[op], old_stats.__rpc_data[op]))
 
         # update the remaining keys we care about
         result.__rpc_data['rpcsends'] -= old_stats.__rpc_data['rpcsends']
@@ -243,27 +244,15 @@ class DeviceData:
         """Print attribute cache efficiency stats
         """
         nfs_stats = self.__nfs_data
-        getattr_stats = self.__rpc_data['GETATTR']
 
-        if nfs_stats['inoderevalidates'] != 0:
-            getattr_ops = float(getattr_stats[1])
-            opens = float(nfs_stats['vfsopen'])
-            revalidates = float(nfs_stats['inoderevalidates']) - opens
-            if revalidates != 0:
-                ratio = ((revalidates - getattr_ops) * 100) / revalidates
-            else:
-                ratio = 0.0
-
-            data_invalidates = float(nfs_stats['datainvalidates'])
-            attr_invalidates = float(nfs_stats['attrinvalidates'])
-
-            print()
-            print('%d inode revalidations, hitting in cache %4.2f%% of the time' % \
-                (revalidates, ratio))
-            print('%d open operations (mandatory GETATTR requests)' % opens)
-            if getattr_ops != 0:
-                print('%4.2f%% of GETATTRs resulted in data cache invalidations' % \
-                   ((data_invalidates * 100) / getattr_ops))
+        print()
+        print('%d VFS opens' % (nfs_stats['vfsopen']))
+        print('%d inoderevalidates (forced GETATTRs)' % \
+            (nfs_stats['inoderevalidates']))
+        print('%d page cache invalidations' % \
+            (nfs_stats['datainvalidates']))
+        print('%d attribute cache invalidations' % \
+            (nfs_stats['attrinvalidates']))
 
     def __print_dir_cache_stats(self, sample_time):
         """Print directory stats
@@ -271,7 +260,7 @@ class DeviceData:
         nfs_stats = self.__nfs_data
         lookup_ops = self.__rpc_data['LOOKUP'][0]
         readdir_ops = self.__rpc_data['READDIR'][0]
-        if self.__rpc_data.has_key('READDIRPLUS'):
+        if 'READDIRPLUS' in self.__rpc_data:
             readdir_ops += self.__rpc_data['READDIRPLUS'][0]
 
         dentry_revals = nfs_stats['dentryrevalidates']
@@ -330,7 +319,7 @@ class DeviceData:
     def __print_rpc_op_stats(self, op, sample_time):
         """Print generic stats for one RPC op
         """
-        if not self.__rpc_data.has_key(op):
+        if op not in self.__rpc_data:
             return
 
         rpc_stats = self.__rpc_data[op]
@@ -353,15 +342,21 @@ class DeviceData:
             exe_per_op = 0.0
 
         op += ':'
-        print('%s' % op.lower().ljust(15))
-        print('  ops/s\t\t   kB/s\t\t  kB/op\t\tretrans\t\tavg RTT (ms)\tavg exe (ms)')
+        print(format(op.lower(), '<16s'), end='')
+        print(format('ops/s', '>8s'), end='')
+        print(format('kB/s', '>16s'), end='')
+        print(format('kB/op', '>16s'), end='')
+        print(format('retrans', '>16s'), end='')
+        print(format('avg RTT (ms)', '>16s'), end='')
+        print(format('avg exe (ms)', '>16s'))
 
-        print('\t\t%7.3f' % (ops / sample_time))
-        print('\t%7.3f' % (kilobytes / sample_time))
-        print('\t%7.3f' % kb_per_op)
-        print(' %7d (%3.1f%%)' % (retrans, retrans_percent))
-        print('\t%7.3f' % rtt_per_op)
-        print('\t%7.3f' % exe_per_op)
+        print(format((ops / sample_time), '>24.3f'), end='')
+        print(format((kilobytes / sample_time), '>16.3f'), end='')
+        print(format(kb_per_op, '>16.3f'), end='')
+        retransmits = '{0:>10.0f} ({1:>3.1f}%)'.format(retrans, retrans_percent).strip()
+        print(format(retransmits, '>16'), end='')
+        print(format(rtt_per_op, '>16.3f'), end='')
+        print(format(exe_per_op, '>16.3f'))
 
     def ops(self, sample_time):
         sends = float(self.__rpc_data['rpcsends'])
@@ -391,9 +386,10 @@ class DeviceData:
             (self.__nfs_data['export'], self.__nfs_data['mountpoint']))
         print()
 
-        print('   op/s\t\trpc bklog')
-        print('%7.2f' % (sends / sample_time))
-        print('\t%7.2f' % backlog)
+        print(format('ops/s', '>16') + format('rpc bklog', '>16'))
+        print(format((sends / sample_time), '>16.3f'), end='')
+        print(format(backlog, '>16.3f'))
+        print()
 
         if which == 0:
             self.__print_rpc_op_stats('READ', sample_time)
@@ -405,13 +401,15 @@ class DeviceData:
         elif which == 2:
             self.__print_rpc_op_stats('LOOKUP', sample_time)
             self.__print_rpc_op_stats('READDIR', sample_time)
-            if self.__rpc_data.has_key('READDIRPLUS'):
+            if 'READDIRPLUS' in self.__rpc_data:
                 self.__print_rpc_op_stats('READDIRPLUS', sample_time)
             self.__print_dir_cache_stats(sample_time)
         elif which == 3:
             self.__print_rpc_op_stats('READ', sample_time)
             self.__print_rpc_op_stats('WRITE', sample_time)
             self.__print_page_stats(sample_time)
+
+        sys.stdout.flush()
 
 #
 # Functions
@@ -450,7 +448,7 @@ def print_iostat_summary(old, new, devices, time, options):
     if old:
         # Trim device list to only include intersection of old and new data,
         # this addresses umounts due to autofs mountpoints
-        devicelist = filter(lambda x:x in devices,old)
+        devicelist = [x for x in old if x in devices]
     else:
         devicelist = devices
 

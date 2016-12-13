@@ -3,7 +3,7 @@
 .\" Copyright (C) 1995 Olaf Kirch <okir@monad.swb.de>
 .\" Modifications 1999-2003 Neil Brown <neilb@cse.unsw.edu.au>
 .\"
-.TH exportfs 8 "31 December 2009"
+.TH exportfs 8 "30 September 2013"
 .SH NAME
 exportfs \- maintain table of exported NFS file systems
 .SH SYNOPSIS
@@ -16,6 +16,8 @@ exportfs \- maintain table of exported NFS file systems
 .BI "/usr/sbin/exportfs [-v]
 .br
 .BI "/usr/sbin/exportfs -f"
+.br
+.BI "/usr/sbin/exportfs -s"
 .br
 .SH DESCRIPTION
 An NFS server maintains a table of local physical file systems
@@ -86,6 +88,9 @@ appropriate export entry for the host given in
 to be added to the kernel's export table.
 .SH OPTIONS
 .TP
+.B \-d kind " or " \-\-debug kind
+Turn on debugging. Valid kinds are: all, auth, call, general and parse.
+.TP
 .B -a
 Export or unexport all directories.
 .TP
@@ -133,6 +138,9 @@ when they make their next NFS mount request.
 Be verbose. When exporting or unexporting, show what's going on. When
 displaying the current export list, also display the list of export
 options.
+.TP
+.B -s
+Display the current export list suitable for /etc/exports.
 .SH DISCUSSION
 .SS Exporting Directories
 The first synopsis shows how to invoke
@@ -154,6 +162,14 @@ along with the client or clients who are permitted to access it.
 See
 .B exports(5)
 for a description of supported options and access list formats.
+.PP
+IPv6 presentation addresses contain colons, which are already used
+to separate the "host" and "path" command line arguments.
+When specifying a client using a raw IPv6 address,
+enclose the address in square brackets.
+For IPv6 network addresses, place the prefix just after the closing
+bracket.
+.PP
 To export a directory to the world, simply specify
 .IR :/path .
 .PP
@@ -238,6 +254,14 @@ and files under
 .PP
 .nf
 .B "# exportfs -au
+.fi
+.PP
+To export the
+.I /usr/tmp
+directory to IPv6 link-local clients:
+.PP
+.nf
+.B "# exportfs [fe80::]/64:/usr/tmp
 .fi
 .SH USAGE NOTES
 Exporting to IP networks or DNS and NIS domains does not enable clients

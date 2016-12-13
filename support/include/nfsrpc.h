@@ -23,6 +23,7 @@
 #ifndef __NFS_UTILS_NFSRPC_H
 #define __NFS_UTILS_NFSRPC_H
 
+#include <string.h>
 #include <rpc/types.h>
 #include <rpc/clnt.h>
 
@@ -154,6 +155,11 @@ extern unsigned long	nfs_pmap_getport(const struct sockaddr_in *,
 				const unsigned long,
 				const unsigned long,
 				const struct timeval *);
+
+/*
+ * Use nfs_pmap_getport to see if statd is running locally
+ */
+extern int nfs_probe_statd(void);
 
 /*
  * Contact a remote RPC service to discover whether it is responding

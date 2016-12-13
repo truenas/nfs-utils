@@ -37,6 +37,7 @@
 #include <libgen.h>
 #include <sys/inotify.h>
 #include <dirent.h>
+#include <limits.h>
 #ifdef HAVE_SYS_CAPABILITY_H
 #include <sys/prctl.h>
 #include <sys/capability.h>
@@ -48,6 +49,8 @@
 #ifndef CLD_DEFAULT_STORAGEDIR
 #define CLD_DEFAULT_STORAGEDIR NFS_STATEDIR "/nfsdcltrack"
 #endif
+
+#define NFSD_END_GRACE_FILE "/proc/fs/nfsd/v4_end_grace"
 
 /* defined by RFC 3530 */
 #define NFS4_OPAQUE_LIMIT	1024
@@ -210,6 +213,64 @@ cltrack_set_caps(void)
 	return ret;
 }
 
+/* Inform the kernel that it's OK to lift nfsd's grace period */
+static void
+cltrack_lift_grace_period(void)
+{
+	int fd;
+
+	fd = open(NFSD_END_GRACE_FILE, O_WRONLY);
+	if (fd < 0) {
+		/* Don't warn if file isn't present */
+		if (errno != ENOENT)
+			xlog(L_WARNING, "Unable to open %s: %m",
+				NFSD_END_GRACE_FILE);
+		return;
+	}
+
+	if (write(fd, "Y", 1) < 0)
+		xlog(L_WARNING, "Unable to write to %s: %m",
+				NFSD_END_GRACE_FILE);
+
+	close(fd);
+	return;
+}
+
+/*
+ * Fetch the contents of the NFSDCLTRACK_GRACE_START env var. If it's not set
+ * or there's an error converting it to time_t, then return LONG_MAX.
+ */
+static time_t
+cltrack_get_grace_start(void)
+{
+	time_t grace_start;
+	char *end;
+	char *grace_start_str = getenv("NFSDCLTRACK_GRACE_START");
+
+	if (!grace_start_str)
+		return LONG_MAX;
+
+	errno = 0;
+	grace_start = strtol(grace_start_str, &end, 0);
+	/* Problem converting or value is too large? */
+	if (errno)
+		return LONG_MAX;
+
+	return grace_start;
+}
+
+static bool
+cltrack_reclaims_complete(void)
+{
+	time_t grace_start = cltrack_get_grace_start();
+
+	/* Don't query DB if we didn't get a valid boot time */
+	if (grace_start == LONG_MAX)
+		return false;
+
+	return !sqlite_query_reclaiming(grace_start);
+}
+
 static int
 cltrack_init(const char __attribute__((unused)) *unused)
 {
@@ -241,7 +302,7 @@ cltrack_init(const char __attribute__((unused)) *unused)
 	}
 
 	/* set up storage db */
-	ret = sqlite_maindb_init(storagedir);
+	ret = sqlite_prepare_dbh(storagedir);
 	if (ret) {
 		xlog(L_ERROR, "Failed to init database: %d", ret);
 		/*
@@ -250,8 +311,28 @@ cltrack_init(const char __attribute__((unused)) *unused)
 		 * stop upcalling until the problem is resolved.
 		 */
 		ret = -EACCES;
+	} else {
+		if (cltrack_reclaims_complete())
+			cltrack_lift_grace_period();
 	}
+
 	return ret;
+}
+
+/*
+ * Fetch the contents of the NFSDCLTRACK_CLIENT_HAS_SESSION env var. If
+ * it's set and the first character is 'Y' then return true. Otherwise
+ * return false.
+ */
+static bool
+cltrack_client_has_session(void)
+{
+	char *has_session = getenv("NFSDCLTRACK_CLIENT_HAS_SESSION");
+
+	if (has_session && *has_session == 'Y')
+		return true;
+
+	return false;
 }
 
 static int
@@ -259,6 +340,7 @@ cltrack_create(const char *id)
 {
 	int ret;
 	ssize_t len;
+	bool has_session;
 
 	xlog(D_GENERAL, "%s: create client record.", __func__);
 
@@ -270,7 +352,12 @@ cltrack_create(const char *id)
 	if (len < 0)
 		return (int)len;
 
-	ret = sqlite_insert_client(blob, len);
+	has_session = cltrack_client_has_session();
+
+	ret = sqlite_insert_client(blob, len, has_session, false);
+
+	if (!ret && has_session && cltrack_reclaims_complete())
+		cltrack_lift_grace_period();
 
 	return ret ? -EREMOTEIO : ret;
 }
@@ -297,7 +384,8 @@ cltrack_remove(const char *id)
 }
 
 static int
-cltrack_check_legacy(const unsigned char *blob, const ssize_t len)
+cltrack_check_legacy(const unsigned char *blob, const ssize_t len,
+			bool has_session)
 {
 	int ret;
 	struct stat st;
@@ -323,7 +411,7 @@ cltrack_check_legacy(const unsigned char *blob, const ssize_t len)
 	}
 
 	/* Dir exists, try to insert record into db */
-	ret = sqlite_insert_client(blob, len);
+	ret = sqlite_insert_client(blob, len, has_session, has_session);
 	if (ret) {
 		xlog(D_GENERAL, "Failed to insert client: %d", ret);
 		return -EREMOTEIO;
@@ -343,6 +431,7 @@ cltrack_check(const char *id)
 {
 	int ret;
 	ssize_t len;
+	bool has_session;
 
 	xlog(D_GENERAL, "%s: check client record", __func__);
 
@@ -354,9 +443,11 @@ cltrack_check(const char *id)
 	if (len < 0)
 		return (int)len;
 
-	ret = sqlite_check_client(blob, len);
+	has_session = cltrack_client_has_session();
+
+	ret = sqlite_check_client(blob, len, has_session);
 	if (ret)
-		ret = cltrack_check_legacy(blob, len);
+		ret = cltrack_check_legacy(blob, len, has_session);
 
 	return ret ? -EPERM : ret;
 }

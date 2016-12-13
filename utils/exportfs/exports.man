@@ -39,7 +39,7 @@ the export name using a backslash followed by the character code as three
 octal digits.
 .PP
 To apply changes to this file, run
-.BR exportfs \-ra
+.BR "exportfs \-ra"
 or restart the NFS server.
 .PP
 .SS Machine Name Formats
@@ -218,16 +218,46 @@ This option can be very useful in some situations, but it should be
 used with due care, and only after confirming that the client system
 copes with the situation effectively.
 
-The option can be explicitly disabled with
+The option can be explicitly disabled for NFSv2 and NFSv3 with
 .IR hide .
+
+This option is not relevant when NFSv4 is use.  NFSv4 never hides
+subordinate filesystems.  Any filesystem that is exported will be
+visible where expected when using NFSv4.
 .TP
-.IR crossmnt
+.I crossmnt
 This option is similar to
 .I nohide
-but it makes it possible for clients to move from the filesystem marked
-with crossmnt to exported filesystems mounted on it.  Thus when a child
-filesystem "B" is mounted on a parent "A", setting crossmnt on "A" has
-the same effect as setting "nohide" on B.
+but it makes it possible for clients to access all filesystems mounted
+on a filesystem marked with
+.IR crossmnt .
+Thus when a child filesystem "B" is mounted on a parent "A", setting
+crossmnt on "A" has a similar effect to setting "nohide" on B.
+
+With
+.I nohide
+the child filesystem needs to be explicitly exported.  With
+.I crossmnt
+it need not.  If a child of a
+.I crossmnt
+file is not explicitly exported, then it will be implicitly exported
+with the same export options as the parent, except for
+.IR fsid= .
+This makes it impossible to
+.B not
+export a child of a
+.I crossmnt
+filesystem.  If some but not all subordinate filesystems of a parent
+are to be exported, then they must be explicitly exported and the
+parent should not have
+.I crossmnt
+set.
+
+The
+.I nocrossmnt
+option can explictly disable
+.I crossmnt
+if it was previously set.  This is rarely useful.
 .TP
 .IR no_subtree_check
 This option disables subtree checking, which has mild security
@@ -360,6 +390,11 @@ supported so the same configuration can be made to work on old and new
 kernels alike.
 
 .TP
+.IR nordirplus
+This option will disable READDIRPLUS request handling.  When set,
+READDIRPLUS requests from NFS clients return NFS3ERR_NOTSUPP, and
+clients fall back on READDIR.  This option affects only NFSv3 clients.
+.TP
 .IR refer= path@host[+host][:path@host[+host]]
 A client referencing the export point will be directed to choose from
 the given list an alternative location for the filesystem.
@@ -372,6 +407,15 @@ is sufficient.)
 If the client asks for alternative locations for the export point, it
 will be given this list of alternatives. (Note that actual replication
 of the filesystem must be handled elsewhere.)
+
+.TP
+.IR pnfs
+This option allows enables the use of pNFS extension if protocol level
+is NFSv4.1 or higher, and the filesystem supports pNFS exports.  With
+pNFS clients can bypass the server and perform I/O directly to storage
+devices. The default can be explicitly requested with the
+.I no_pnfs
+option.
 
 .SS User ID Mapping
 .PP
@@ -444,17 +488,11 @@ is supposedly that of user joe).
 After reading 
 .I /etc/exports 
 .B exportfs
-reads files under 
-.I /etc/exports.d. 
-directory as extra export tables.
-.B exportfs
-regards only a file which name is ended with 
+reads files in the
+.I /etc/exports.d
+directory as extra export tables.  Only files ending in
 .I .exports
-and
-not started with 
-.I . 
-as an extra export file. A file which name
-is not met this condition is just ignored.
+are considered.  Files beginning with a dot are ignored.
 The format for extra export tables is the same as 
 .I /etc/exports
 .

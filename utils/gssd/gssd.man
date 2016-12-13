@@ -195,11 +195,28 @@ option when starting
 .BR rpc.gssd .
 .SH OPTIONS
 .TP
-.B -D
-DNS Reverse lookups are not used for determining the
-server names pass to GSSAPI. This option will reverses that and forces 
-the use of DNS Reverse resolution of the server's IP address to 
-retrieve the server name to use in GSAPI authentication.
+.B \-D
+The server name passed to GSSAPI for authentication is normally the
+name exactly as requested.  e.g. for NFS
+it is the server name in the "servername:/path" mount request.  Only if this
+servername appears to be an IP address (IPv4 or IPv6) or an
+unqualified name (no dots) will a reverse DNS lookup
+will be performed to get the canoncial server name.
+
+If
+.B \-D
+is present, a reverse DNS lookup will
+.I always
+be used, even if the server name looks like a canonical name.  So it
+is needed if partially qualified, or non canonical names are regularly
+used.
+
+Using
+.B \-D
+can introduce a security vulnerability, so it is recommended that
+.B \-D
+not be used, and that canonical names always be used when requesting
+services.
 .TP
 .B -f
 Runs
@@ -272,6 +289,14 @@ new kernel contexts to be negotiated after
 seconds, which allows changing Kerberos tickets and identities frequently.
 The default is no explicit timeout, which means the kernel context will live
 the lifetime of the Kerberos service ticket used in its creation.
+.TP
+.B -T timeout
+Timeout, in seconds, to create an RPC connection with a server while
+establishing an authenticated gss context for a user.
+The default timeout is set to 5 seconds.
+If you get messages like "WARNING: can't create tcp rpc_clnt to server
+%servername% for user with uid %uid%: RPC: Remote system error -
+Connection timed out", you should consider an increase of this timeout.
 .SH SEE ALSO
 .BR rpc.svcgssd (8),
 .BR kerberos (1),

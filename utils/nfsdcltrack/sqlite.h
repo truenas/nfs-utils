@@ -21,10 +21,12 @@
 #define _SQLITE_H_
 
 int sqlite_prepare_dbh(const char *topdir);
-int sqlite_maindb_init(const char *topdir);
-int sqlite_insert_client(const unsigned char *clname, const size_t namelen);
+int sqlite_insert_client(const unsigned char *clname, const size_t namelen,
+				const bool has_session, const bool zerotime);
 int sqlite_remove_client(const unsigned char *clname, const size_t namelen);
-int sqlite_check_client(const unsigned char *clname, const size_t namelen);
+int sqlite_check_client(const unsigned char *clname, const size_t namelen,
+				const bool has_session);
 int sqlite_remove_unreclaimed(const time_t grace_start);
+int sqlite_query_reclaiming(const time_t grace_start);
 
 #endif /* _SQLITE_H */

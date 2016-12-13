@@ -277,7 +277,7 @@ client_lookup(char *hname, int canonical)
 	if (htype == MCL_FQDN && !canonical) {
 		ai = host_addrinfo(hname);
 		if (!ai) {
-			xlog(L_ERROR, "Failed to resolve %s", hname);
+			xlog(L_WARNING, "Failed to resolve %s", hname);
 			goto out;
 		}
 		hname = ai->ai_canonname;
@@ -482,8 +482,12 @@ add_name(char *old, const char *add)
 		else
 			cp = cp + strlen(cp);
 	}
-	strncpy(new, old, cp-old);
-	new[cp-old] = 0;
+	if (old) {
+		strncpy(new, old, cp-old);
+		new[cp-old] = 0;
+	} else {
+		new[0] = 0;
+	}
 	if (cp != old && !*cp)
 		strcat(new, ",");
 	strcat(new, add);
@@ -635,7 +639,7 @@ check_netgroup(const nfs_client *clp, const struct addrinfo *ai)
 	const char *netgroup = clp->m_hostname + 1;
 	struct addrinfo *tmp = NULL;
 	struct hostent *hp;
-	char *dot, *hname;
+	char *dot, *hname, *ip;
 	int i, match;
 
 	match = 0;
@@ -681,6 +685,18 @@ check_netgroup(const nfs_client *clp, const struct addrinfo *ai)
 			}
 		}
 	}
+
+	/* check whether the IP itself is in the netgroup */
+	ip = calloc(INET6_ADDRSTRLEN, 1);
+	if (inet_ntop(ai->ai_family, &(((struct sockaddr_in *)ai->ai_addr)->sin_addr), ip, INET6_ADDRSTRLEN) == ip) {
+		if (innetgr(netgroup, ip, NULL, NULL)) {
+			free(hname);
+			hname = ip;
+			match = 1;
+			goto out;
+		}
+	}
+	free(ip);
 
 	/* Okay, strip off the domain (if we have one) */
 	dot = strchr(hname, '.');
@@ -745,7 +761,6 @@ client_check(const nfs_client *clp, const struct addrinfo *ai)
 int
 client_gettype(char *ident)
 {
-	struct addrinfo *ai;
 	char *sp;
 
 	if (ident[0] == '\0' || strcmp(ident, "*")==0)
@@ -765,16 +780,6 @@ client_gettype(char *ident)
 			return MCL_SUBNETWORK;
 		if (*sp == '\\' && sp[1])
 			sp++;
-	}
-
-	/*
-	 * Treat unadorned IP addresses as MCL_SUBNETWORK.
-	 * Everything else is MCL_FQDN.
-	 */
-	ai = host_pton(ident);
-	if (ai != NULL) {
-		freeaddrinfo(ai);
-		return MCL_SUBNETWORK;
 	}
 
 	return MCL_FQDN;

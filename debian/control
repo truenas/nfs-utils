@@ -4,7 +4,7 @@ Section: net
 Maintainer: Debian kernel team <debian-kernel@lists.debian.org>
 Uploaders: Anibal Monsalve Salazar <anibal@debian.org>, Ben Hutchings <ben@decadent.org.uk>, Steve Langasek <vorlon@debian.org>
 Build-Depends: debhelper (>= 7), libwrap0-dev, libevent-dev, libnfsidmap-dev (>= 0.24), libkrb5-dev, libblkid-dev, libkeyutils-dev, pkg-config, libldap2-dev, libcap-dev, libtirpc-dev (>= 0.2.4-2~), libdevmapper-dev, dh-autoreconf, libmount-dev, libsqlite3-dev, dh-systemd
-Standards-Version: 3.9.0
+Standards-Version: 3.9.8
 Homepage: http://nfs.sourceforge.net/
 Vcs-Git: git://git.debian.org/kernel/nfs-utils.git
 Vcs-Browser: http://git.debian.org/?p=kernel/nfs-utils.git

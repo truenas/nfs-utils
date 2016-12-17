@@ -1,9 +1,14 @@
-nfs-utils (1:1.3.4-1.1) unstable; urgency=medium
+nfs-utils (1:1.3.4-2) unstable; urgency=medium
 
-  * Non-maintainer upload.
+  [ Daniel Pocock ]
+  * Ignore failure to (re)start service during postinst. (Closes: #848115)
+  * Correct location of nfs-utils_env.sh in service file. (Closes: #848145)
+  * Use FD 9 in start-statd. (Closes: #848277)
+
+  [ Helmut Grohne ]
   * Fix FTCBFS: Let dh_auto_configure provide cross flags (Closes: #836542)
 
- -- Helmut Grohne <helmut@subdivi.de>  Thu, 15 Dec 2016 16:35:14 +0100
+ -- Daniel Pocock <daniel@pocock.pro>  Sat, 17 Dec 2016 11:49:21 +0100
 
 nfs-utils (1:1.3.4-1) unstable; urgency=medium
 

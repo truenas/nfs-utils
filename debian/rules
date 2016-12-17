@@ -24,8 +24,7 @@ build-arch: build-stamp
 build-stamp:
 	dh_testdir
 	dh_autoreconf
-	CFLAGS="$(CFLAGS)" ./configure \
-		--mandir='$${prefix}/share/man' \
+	CFLAGS="$(CFLAGS)" dh_auto_configure -- \
 		--enable-nfsv41 \
 		--enable-ipv6 \
 		--enable-libmount-mount \

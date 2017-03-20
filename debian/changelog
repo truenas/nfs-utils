@@ -1,3 +1,10 @@
+nfs-utils (1:1.3.4-2.1) unstable; urgency=medium
+
+  * Non-maintainer upload.
+  * Fix patch to also change pidfile path in service file (Closes: #850464)
+
+ -- Andreas Henriksson <andreas@fatal.se>  Mon, 20 Mar 2017 16:07:55 +0100
+
 nfs-utils (1:1.3.4-2) unstable; urgency=medium
 
   [ Daniel Pocock ]

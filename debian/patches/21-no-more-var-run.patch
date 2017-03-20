@@ -6,11 +6,9 @@ Description: PID files should be in /run, not /var/run
  NFS mount itself).
 Bug-Ubuntu: https://bugs.launchpad.net/bugs/1157171
 
-Index: nfs-utils/utils/statd/statd.c
-===================================================================
---- nfs-utils.orig/utils/statd/statd.c
-+++ nfs-utils/utils/statd/statd.c
-@@ -156,7 +156,7 @@
+--- a/utils/statd/statd.c
++++ b/utils/statd/statd.c
+@@ -159,7 +159,7 @@
  	fprintf(stderr,"      -H                   Specify a high-availability callout program.\n");
  }
  
@@ -19,11 +17,9 @@ Index: nfs-utils/utils/statd/statd.c
  
  int pidfd = -1;
  static void create_pidfile(void)
-Index: nfs-utils/utils/statd/statd.man
-===================================================================
---- nfs-utils.orig/utils/statd/statd.man
-+++ nfs-utils/utils/statd/statd.man
-@@ -366,7 +366,7 @@
+--- a/utils/statd/statd.man
++++ b/utils/statd/statd.man
+@@ -398,7 +398,7 @@
  .I /var/lib/nfs/state
  NSM state number for this host
  .TP 2.5i
@@ -32,11 +28,9 @@ Index: nfs-utils/utils/statd/statd.man
  pid file
  .TP 2.5i
  .I /etc/netconfig
-Index: nfs-utils/utils/statd/sm-notify.c
-===================================================================
---- nfs-utils.orig/utils/statd/sm-notify.c
-+++ nfs-utils/utils/statd/sm-notify.c
-@@ -846,7 +846,7 @@
+--- a/utils/statd/sm-notify.c
++++ b/utils/statd/sm-notify.c
+@@ -871,7 +871,7 @@
  }
  
  /*
@@ -45,7 +39,7 @@ Index: nfs-utils/utils/statd/sm-notify.c
   * This file should remain until a reboot, even if the
   * program exits.
   * If file already exists, fail.
-@@ -858,7 +858,7 @@
+@@ -883,7 +883,7 @@
  	int fd;
  
  	(void)snprintf(pid, sizeof(pid), "%d\n", (int)getpid());
@@ -54,11 +48,9 @@ Index: nfs-utils/utils/statd/sm-notify.c
  	if (fd < 0)
  		return 0;
  
-Index: nfs-utils/utils/blkmapd/device-discovery.c
-===================================================================
---- nfs-utils.orig/utils/blkmapd/device-discovery.c
-+++ nfs-utils/utils/blkmapd/device-discovery.c
-@@ -58,7 +58,7 @@
+--- a/utils/blkmapd/device-discovery.c
++++ b/utils/blkmapd/device-discovery.c
+@@ -59,7 +59,7 @@
  #define BL_PIPE_FILE	"/var/lib/nfs/rpc_pipefs/nfs/blocklayout"
  #define NFSPIPE_DIR	"/var/lib/nfs/rpc_pipefs/nfs"
  #define RPCPIPE_DIR	"/var/lib/nfs/rpc_pipefs"
@@ -67,3 +59,14 @@ Index: nfs-utils/utils/blkmapd/device-discovery.c
  
  struct bl_disk *visible_disk_list;
  int    bl_watch_fd, bl_pipe_fd, nfs_pipedir_wfd, rpc_pipedir_wfd;
+--- a/systemd/nfs-blkmap.service
++++ b/systemd/nfs-blkmap.service
+@@ -9,7 +9,7 @@
+ 
+ [Service]
+ Type=forking
+-PIDFile=/var/run/blkmapd.pid
++PIDFile=/run/blkmapd.pid
+ EnvironmentFile=-/run/sysconfig/nfs-utils
+ ExecStart=/usr/sbin/blkmapd $BLKMAPDARGS
+ 

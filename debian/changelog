@@ -1,3 +1,11 @@
+nfs-utils (1:1.3.4-3) UNRELEASED; urgency=medium
+
+  * Fix flaky autopkgtest: a 'sync' after an update on the server does not
+    guarantee that the change is visible on the client.  For that, we need
+    to flush the inode/dentry cache instead.
+
+ -- Steve Langasek <vorlon@debian.org>  Thu, 31 Aug 2017 23:19:41 -0700
+
 nfs-utils (1:1.3.4-2.1) unstable; urgency=medium
 
   * Non-maintainer upload.

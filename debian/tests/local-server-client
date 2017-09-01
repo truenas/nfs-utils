@@ -41,7 +41,7 @@ post_boot_tests() {
 
     # test that we can write to /home and get it in NFS
     rm /home/hello.txt
-    sync
+    echo 2 > /proc/sys/vm/drop_caches
     [ ! -e /mnt/nfs_home/hello.txt ] || fail "/mnt/nfs_home/hello.txt exists after removal"
 
     # read-only, should fail

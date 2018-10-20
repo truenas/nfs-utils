@@ -1,3 +1,22 @@
+nfs-utils (1:1.3.4-2.3) unstable; urgency=medium
+
+  * Non-maintainer upload.
+  [ Steve Langasek ]
+  * Fix flaky autopkgtest: a 'sync' after an update on the server does not
+    guarantee that the change is visible on the client.  For that, we need
+    to flush the inode/dentry cache instead.
+
+  [ Laurent Bigonville ]
+  * debian/control: Drop explicit dependency against libtirpc1 and bump
+    libtirpc-dev build-dependency to >= 1.0.2
+  * debian/watch: Update the URL and check the gpg signature
+  * debian/control: Update Vcs-* fields to point to salsa
+  * debian/control: Bump Standards-Version to 4.2.1 (no further changes)
+  * d/p/30-remove-whitespace-service.patch: Remove extra whitespaces to fix
+    service-key-has-whitespace lintian error
+
+ -- Laurent Bigonville <bigon@debian.org>  Sat, 20 Oct 2018 15:04:07 +0200
+
 nfs-utils (1:1.3.4-2.2) unstable; urgency=medium
 
   * Non-maintainer upload.

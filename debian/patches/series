@@ -11,3 +11,4 @@ unbreak-gssd-rpc_pipefs-run.patch
 28-nfs-utils_env-location.patch
 29-start-statd-fd-9.patch
 0001-rpc.c-added-include-file-so-UINT16_MAX-is-defined.patch
+30-remove-whitespace-service.patch

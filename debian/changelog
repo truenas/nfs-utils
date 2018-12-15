@@ -16,7 +16,7 @@ nfs-utils (1:1.3.4-2.3) unstable; urgency=medium
   [ Laurent Bigonville ]
   * debian/control: Drop explicit dependency against libtirpc1 and bump
     libtirpc-dev build-dependency to >= 1.0.2
-  * debian/watch: Update the URL and check the gpg signature
+  * debian/watch: Update the URL and check the gpg signature (Closes: #895384)
   * debian/control: Update Vcs-* fields to point to salsa
   * debian/control: Bump Standards-Version to 4.2.1 (no further changes)
   * d/p/30-remove-whitespace-service.patch: Remove extra whitespaces to fix

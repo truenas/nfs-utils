@@ -1,3 +1,17 @@
+nfs-utils (1:1.3.4-2.5) unstable; urgency=medium
+
+  * Non-maintainer upload.
+
+  [ Micha Lenk ]
+  * [abaa2ab] handle_gssd_upcall: Fix failure to find uid in upcall string 'mech=krb5'
+    by adding the suggested upstream commits as
+    debian/patches/0010-gssd-replace-non-thread-safe-strtok-with-strsep.patch and
+    debian/patches/0011-gssd-Duplicate-the-upcall-string-for-error-messages.patch.
+    rpc.gssd: WARNING: handle_gssd_upcall: failed to find uid in upcall string 'mech=krb5'
+    (Closes: #895381)
+
+ -- Bernd Zeimetz <bzed@debian.org>  Sat, 06 Apr 2019 18:30:39 +0200
+
 nfs-utils (1:1.3.4-2.4) unstable; urgency=medium
 
   [ Laurent Bigonville ]

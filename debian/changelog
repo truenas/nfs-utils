@@ -4,6 +4,9 @@ nfs-utils (1:1.3.4-2.6) UNRELEASED; urgency=medium
   * nfsiostat: replace 'list' reserved word.
     Thanks to Matthew Ruffell <matthew.ruffell@canonical.com>
     (Closes: #925943, LP: #1821261)
+  * Remove Anibal Monsalve Salazar from Uploaders on request of MIA team.
+    Thanks to Anibal Monsalve Salazar for all previous work done on nfs-utils.
+    (Closes: #925089)
 
   [ Andreas Hasenack ]
   * debian/nfs-utils_env.sh: Fix mismatching [RPC]SVCGSSDOPTS defaults

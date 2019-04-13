@@ -15,3 +15,4 @@ unbreak-gssd-rpc_pipefs-run.patch
 fix-glibc2.28-ftbfs.patch
 0010-gssd-replace-non-thread-safe-strtok-with-strsep.patch
 0011-gssd-Duplicate-the-upcall-string-for-error-messages.patch
+nfsiostat-replace-list-reserved-word.patch

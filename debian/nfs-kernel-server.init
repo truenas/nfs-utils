@@ -72,19 +72,19 @@ case "$1" in
 
 		# See if our running kernel supports the NFS kernel server
 		if ! grep -E -qs "[[:space:]]nfsd\$" /proc/filesystems; then
-			log_warning_msg "Not starting $DESC: no support in current kernel."
+			log_warning_msg "Not starting $DESC: no support in current kernel"
 			exit 0
 		fi
 		
 		do_mount nfsd $PROCNFSD_MOUNTPOINT || NEED_SVCGSSD=no
-		log_begin_msg "Exporting directories for $DESC..."
+		log_action_begin_msg "Exporting directories for $DESC"
 		$PREFIX/sbin/exportfs -r
 		RET=$?
 		if [ $RET != 0 ]; then
-			log_end_msg $RET
+			log_action_end_msg $RET
 			exit $RET
 		fi
-		log_end_msg 0
+		log_action_end_msg 0
 
 		log_daemon_msg "Starting $DESC"
 		log_progress_msg "nfsd"
@@ -142,7 +142,7 @@ case "$1" in
 
 		log_end_msg 0
 	else
-		log_warning_msg "Not starting $DESC: no exports."
+		log_warning_msg "Not starting $DESC: no exports"
 	fi
 	;;
 
@@ -180,14 +180,14 @@ case "$1" in
 
 	log_end_msg 0
 
-	log_begin_msg "Unexporting directories for $DESC..."
+	log_action_begin_msg "Unexporting directories for $DESC"
 	$PREFIX/sbin/exportfs -au
 	RET=$?
 	if [ $RET != 0 ]; then
-		log_end_msg $RET
+		log_action_end_msg $RET
 		exit $RET
 	fi
-	log_end_msg 0
+	log_action_end_msg 0
 
 	if mountpoint -q $PROCNFSD_MOUNTPOINT
 	then
@@ -196,14 +196,8 @@ case "$1" in
 	;;
 
   status)
-	if pidof nfsd >/dev/null
-	then
-	    echo "nfsd running"
-	    exit 0
-	else
-	    echo "nfsd not running"
-	    exit 3
-	fi
+	status_of_proc nfsd nfsd
+	exit $?
 	;;
 
   reload | force-reload)

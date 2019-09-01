@@ -16,6 +16,9 @@ nfs-utils (1:1.3.4-2.6) UNRELEASED; urgency=medium
     have overridden the systemd service to work around the bug.
     (Closes: #892654)
 
+  [ Ben Hutchings ]
+  * debian/control: Remove Daniel Pocock from Uploaders
+
  -- Salvatore Bonaccorso <carnil@debian.org>  Sat, 13 Apr 2019 10:37:07 +0200
 
 nfs-utils (1:1.3.4-2.5) unstable; urgency=medium

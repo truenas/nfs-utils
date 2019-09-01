@@ -4,9 +4,7 @@ OPTDIRS =
 
 if CONFIG_NFSV4
 OPTDIRS += idmapd
-if CONFIG_NFSIDMAP
 OPTDIRS += nfsidmap
-endif
 endif
 
 if CONFIG_NFSV41
@@ -21,8 +19,16 @@ if CONFIG_MOUNT
 OPTDIRS += mount
 endif
 
+if CONFIG_NFSDCLD
+OPTDIRS += nfsdcld
+endif
+
 if CONFIG_NFSDCLTRACK
 OPTDIRS += nfsdcltrack
+endif
+
+if CONFIG_JUNCTION
+OPTDIRS += nfsref
 endif
 
 SUBDIRS = \
@@ -32,7 +38,6 @@ SUBDIRS = \
 	nfsstat \
 	showmount \
 	statd \
-	osd_login \
 	$(OPTDIRS)
 
 MAINTAINERCLEANFILES = Makefile.in

@@ -4,8 +4,8 @@ MAINTAINERCLEANFILES = Makefile.in
 
 unit_files =  \
     nfs-client.target \
+    rpc_pipefs.target \
     \
-    nfs-config.service \
     nfs-mountd.service \
     nfs-server.service \
     nfs-utils.service \
@@ -36,11 +36,31 @@ unit_files += \
 endif
 endif
 
-EXTRA_DIST = $(unit_files)
+man5_MANS	= nfs.conf.man
+man7_MANS	= nfs.systemd.man
+EXTRA_DIST = $(unit_files) $(man5_MANS) $(man7_MANS)
 
 unit_dir = /usr/lib/systemd/system
+generator_dir = /usr/lib/systemd/system-generators
+
+EXTRA_PROGRAMS	= nfs-server-generator rpc-pipefs-generator
+genexecdir = $(generator_dir)
+
+COMMON_SRCS = systemd.c systemd.h
+
+nfs_server_generator_SOURCES = $(COMMON_SRCS) nfs-server-generator.c
+
+rpc_pipefs_generator_SOURCES = $(COMMON_SRCS) rpc-pipefs-generator.c
+
+nfs_server_generator_LDADD = ../support/export/libexport.a \
+			     ../support/nfs/libnfs.la \
+			     ../support/misc/libmisc.a \
+			     $(LIBPTHREAD)
+
+rpc_pipefs_generator_LDADD = ../support/nfs/libnfs.la
 
 if INSTALL_SYSTEMD
+genexec_PROGRAMS = nfs-server-generator rpc-pipefs-generator
 install-data-hook: $(unit_files)
 	mkdir -p $(DESTDIR)/$(unitdir)
 	cp $(unit_files) $(DESTDIR)/$(unitdir)

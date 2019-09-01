@@ -71,6 +71,7 @@
 #include "gss_util.h"
 #include "krb5_util.h"
 #include "nfslib.h"
+#include "conffile.h"
 
 static char *pipefs_path = GSSD_PIPEFS_DIR;
 static DIR *pipefs_dir;
@@ -85,8 +86,10 @@ int  root_uses_machine_creds = 1;
 unsigned int  context_timeout = 0;
 unsigned int  rpc_timeout = 5;
 char *preferred_realm = NULL;
+char *ccachedir = NULL;
 /* Avoid DNS reverse lookups on server names */
 static bool avoid_dns = true;
+static bool use_gssproxy = false;
 int thread_started = false;
 pthread_mutex_t pmutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t pcond = PTHREAD_COND_INITIALIZER;
@@ -169,14 +172,14 @@ gssd_addrstr_to_sockaddr(struct sockaddr *sa, const char *node, const char *port
 		if (sin6->sin6_scope_id) {
 			printerr(0, "ERROR: address %s has non-zero "
 				    "sin6_scope_id!\n", node);
-			freeaddrinfo(res);
+			nfs_freeaddrinfo(res);
 			return false;
 		}
 	}
 #endif /* IPV6_SUPPORTED */
 
 	memcpy(sa, res->ai_addr, res->ai_addrlen);
-	freeaddrinfo(res);
+	nfs_freeaddrinfo(res);
 	return true;
 }
 
@@ -835,6 +838,44 @@ usage(char *progname)
 	exit(1);
 }
 
+inline static void 
+read_gss_conf(void)
+{
+	char *s;
+
+	conf_init_file(NFS_CONFFILE);
+	use_memcache = conf_get_bool("gssd", "use-memcache", use_memcache);
+	root_uses_machine_creds = conf_get_bool("gssd", "use-machine-creds",
+						root_uses_machine_creds);
+	avoid_dns = conf_get_bool("gssd", "avoid-dns", avoid_dns);
+#ifdef HAVE_SET_ALLOWABLE_ENCTYPES
+	limit_to_legacy_enctypes = conf_get_bool("gssd", "limit-to-legacy-enctypes",
+						 limit_to_legacy_enctypes);
+#endif
+	context_timeout = conf_get_num("gssd", "context-timeout", context_timeout);
+	rpc_timeout = conf_get_num("gssd", "rpc-timeout", rpc_timeout);
+	s = conf_get_str("gssd", "pipefs-directory");
+	if (!s)
+		s = conf_get_str("general", "pipefs-directory");
+	else
+		printerr(0, "WARNING: Specifying pipefs-directory in the [gssd] "
+			 "section of %s is deprecated.  Use the [general] "
+			 "section instead.", NFS_CONFFILE);
+	if (s)
+		pipefs_path = s;
+	s = conf_get_str("gssd", "keytab-file");
+	if (s)
+		keytabfile = s;
+	s = conf_get_str("gssd", "cred-cache-directory");
+	if (s)
+		ccachedir = s;
+	s = conf_get_str("gssd", "preferred-realm");
+	if (s)
+		preferred_realm = s;
+
+	use_gssproxy = conf_get_bool("gssd", "use-gss-proxy", use_gssproxy);
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -845,8 +886,12 @@ main(int argc, char *argv[])
 	int i;
 	extern char *optarg;
 	char *progname;
-	char *ccachedir = NULL;
 	struct event sighup_ev;
+
+	read_gss_conf();
+
+	verbosity = conf_get_num("gssd", "verbosity", verbosity);
+	rpc_verbosity = conf_get_num("gssd", "rpc-verbosity", rpc_verbosity);
 
 	while ((opt = getopt(argc, argv, "DfvrlmnMp:k:d:t:T:R:")) != -1) {
 		switch (opt) {
@@ -912,6 +957,14 @@ main(int argc, char *argv[])
 	if (setenv("HOME", "/", 1)) {
 		printerr(0, "gssd: Unable to set $HOME: %s\n", strerror(errno));
 		exit(1);
+	}
+
+	if (use_gssproxy) {
+		if (setenv("GSS_USE_PROXY", "yes", 1) < 0) {
+			printerr(0, "gssd: Unable to set $GSS_USE_PROXY: %s\n", 
+				strerror(errno));
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	if (ccachedir) {

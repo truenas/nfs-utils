@@ -54,6 +54,8 @@ int nfs_callback_address(const struct sockaddr *, const socklen_t,
 int clnt_ping(struct sockaddr_in *, const unsigned long,
 		const unsigned long, const unsigned int,
 		struct sockaddr_in *);
+int nfs_is_inaddr_any(struct sockaddr *);
+int nfs_addr_matches_localips(struct sockaddr *);
 
 struct mount_options;
 
@@ -72,7 +74,7 @@ struct nfs_version {
 
 int nfs_nfs_proto_family(struct mount_options *options, sa_family_t *family);
 int nfs_mount_proto_family(struct mount_options *options, sa_family_t *family);
-int nfs_nfs_version(struct mount_options *options, struct nfs_version *version);
+int nfs_nfs_version(char *type, struct mount_options *options, struct nfs_version *version);
 int  nfs_nfs_protocol(struct mount_options *options, unsigned long *protocol);
 
 int nfs_options2pmap(struct mount_options *,

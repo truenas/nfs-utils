@@ -131,10 +131,12 @@ this way are ro, rw, no_root_squash, root_squash, and all_squash.
 understands the following export options:
 .TP
 .IR secure
-This option requires that requests originate on an Internet port less
-than IPPORT_RESERVED (1024). This option is on by default. To turn it
-off, specify
+This option requires that requests not using gss originate on an
+Internet port less than IPPORT_RESERVED (1024). This option is on by default.
+To turn it off, specify
 .IR insecure .
+(NOTE: older kernels (before upstream kernel version 4.17) enforced this
+requirement on gss requests as well.)
 .TP
 .IR rw
 Allow both read and write requests on this NFS volume. The
@@ -410,12 +412,20 @@ of the filesystem must be handled elsewhere.)
 
 .TP
 .IR pnfs
-This option allows enables the use of pNFS extension if protocol level
+This option enables the use of the pNFS extension if the protocol level
 is NFSv4.1 or higher, and the filesystem supports pNFS exports.  With
 pNFS clients can bypass the server and perform I/O directly to storage
 devices. The default can be explicitly requested with the
 .I no_pnfs
 option.
+
+.TP
+.IR security_label
+With this option set, clients using NFSv4.2 or higher will be able to
+set and retrieve security labels (such as those used by SELinux).  This
+will only work if all clients use a consistent security policy.  Note
+that early kernels did not support this export option, and instead
+enabled security labels by default.
 
 .SS User ID Mapping
 .PP

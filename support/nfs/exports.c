@@ -155,6 +155,7 @@ getexportent(int fromkernel, int fromexports)
 	}
 
 	xfree(ee.e_hostname);
+	xfree(ee.e_realpath);
 	ee = def_ee;
 
 	/* Check for default client */
@@ -179,9 +180,20 @@ getexportent(int fromkernel, int fromexports)
 	}
 	ee.e_hostname = xstrdup(hostname);
 
-	if (parseopts(opt, &ee, fromexports && !has_default_subtree_opts, NULL) < 0)
-		return NULL;
+	if (parseopts(opt, &ee, fromexports && !has_default_subtree_opts, NULL) < 0) {
+                if(ee.e_hostname)
+                {
+                    xfree(ee.e_hostname);
+                    ee.e_hostname=NULL;
+                }
+                if(ee.e_uuid)
+                {
+                    xfree(ee.e_uuid);
+                    ee.e_uuid=NULL;
+                }
 
+		return NULL;
+        }
 	/* resolve symlinks */
 	if (realpath(ee.e_path, rpath) != NULL) {
 		rpath[sizeof (rpath) - 1] = '\0';
@@ -275,6 +287,8 @@ putexportent(struct exportent *ep)
 		"no_" : "");
 	if (ep->e_flags & NFSEXP_NOREADDIRPLUS)
 		fprintf(fp, "nordirplus,");
+	if (ep->e_flags & NFSEXP_SECURITY_LABEL)
+		fprintf(fp, "security_label,");
 	fprintf(fp, "%spnfs,", (ep->e_flags & NFSEXP_PNFS)? "" : "no_");
 	if (ep->e_flags & NFSEXP_FSID) {
 		fprintf(fp, "fsid=%d,", ep->e_fsid);
@@ -356,6 +370,7 @@ dupexportent(struct exportent *dst, struct exportent *src)
 	if (src->e_uuid)
 		dst->e_uuid = strdup(src->e_uuid);
 	dst->e_hostname = NULL;
+	dst->e_realpath = NULL;
 }
 
 struct exportent *
@@ -367,6 +382,8 @@ mkexportent(char *hname, char *path, char *options)
 
 	xfree(ee.e_hostname);
 	ee.e_hostname = xstrdup(hname);
+	xfree(ee.e_realpath);
+	ee.e_realpath = NULL;
 
 	if (strlen(path) >= sizeof(ee.e_path)) {
 		xlog(L_ERROR, "path name %s too long", path);
@@ -544,6 +561,8 @@ parseopts(char *cp, struct exportent *ep, int warn, int *had_subtree_opt_ptr)
 			setflags(NFSEXP_ASYNC, active, ep);
 		else if (!strcmp(opt, "nordirplus"))
 			setflags(NFSEXP_NOREADDIRPLUS, active, ep);
+		else if (!strcmp(opt, "security_label"))
+			setflags(NFSEXP_SECURITY_LABEL, active, ep);
 		else if (!strcmp(opt, "nohide"))
 			setflags(NFSEXP_NOHIDE, active, ep);
 		else if (!strcmp(opt, "hide"))
@@ -710,6 +729,7 @@ parsesquash(char *list, int **idp, int *lenp, char **ep)
 		}
 		if (id0 == -1 || id1 == -1) {
 			syntaxerr("uid/gid -1 not permitted");
+			xfree(id);
 			return -1;
 		}
 		if ((len % 8) == 0)
@@ -720,6 +740,7 @@ parsesquash(char *list, int **idp, int *lenp, char **ep)
 			break;
 		if (*cp != ',') {
 			syntaxerr("bad uid/gid list");
+			xfree(id);
 			return -1;
 		}
 		cp++;

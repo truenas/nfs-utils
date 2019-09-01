@@ -39,14 +39,14 @@ static void		auth_fixpath(char *path);
 static nfs_export my_exp;
 static nfs_client my_client;
 
-extern int new_cache;
 extern int use_ipaddr;
+
+extern struct state_paths etab;
 
 void
 auth_init(void)
 {
 	auth_reload();
-	xtab_mount_write();
 }
 
 /*
@@ -86,10 +86,10 @@ auth_reload()
 	static unsigned int	counter;
 	int			fd;
 
-	if ((fd = open(_PATH_ETAB, O_RDONLY)) < 0) {
-		xlog(L_FATAL, "couldn't open %s", _PATH_ETAB);
+	if ((fd = open(etab.statefn, O_RDONLY)) < 0) {
+		xlog(L_FATAL, "couldn't open %s", etab.statefn);
 	} else if (fstat(fd, &stb) < 0) {
-		xlog(L_FATAL, "couldn't stat %s", _PATH_ETAB);
+		xlog(L_FATAL, "couldn't stat %s", etab.statefn);
 		close(fd);
 	} else if (last_fd != -1 && stb.st_ino == last_inode) {
 		/* We opened the etab file before, and its inode
@@ -211,17 +211,9 @@ auth_authenticate_internal(const struct sockaddr *caller, const char *path,
 {
 	nfs_export *exp;
 
-	if (new_cache) {
-		exp = auth_authenticate_newcache(caller, path, ai, error);
-		if (!exp)
-			return NULL;
-	} else {
-		exp = export_find(ai, path);
-		if (exp == NULL) {
-			*error = no_entry;
-			return NULL;
-		}
-	}
+	exp = auth_authenticate_newcache(caller, path, ai, error);
+	if (!exp)
+		return NULL;
 	if (!(exp->m_export.e_flags & NFSEXP_INSECURE_PORT) &&
 		     nfs_get_port(caller) >= IPPORT_RESERVED) {
 		*error = illegal_port;
@@ -269,43 +261,43 @@ auth_authenticate(const char *what, const struct sockaddr *caller,
 		*p = '\0';
 	}
 
+	host_ntop(caller, buf, sizeof(buf));
 	switch (error) {
 	case bad_path:
 		xlog(L_WARNING, "bad path in %s request from %s: \"%s\"",
-		     what, host_ntop(caller, buf, sizeof(buf)), path);
+		     what, buf, path);
 		break;
 
 	case unknown_host:
 		xlog(L_WARNING, "refused %s request from %s for %s (%s): unmatched host",
-		     what, host_ntop(caller, buf, sizeof(buf)), path, epath);
+		     what, buf, path, epath);
 		break;
 
 	case no_entry:
 		xlog(L_WARNING, "refused %s request from %s for %s (%s): no export entry",
-		     what, ai->ai_canonname, path, epath);
+		     what, buf, path, epath);
 		break;
 
 	case not_exported:
 		xlog(L_WARNING, "refused %s request from %s for %s (%s): not exported",
-		     what, ai->ai_canonname, path, epath);
+		     what, buf, path, epath);
 		break;
 
 	case illegal_port:
 		xlog(L_WARNING, "refused %s request from %s for %s (%s): illegal port %u",
-		     what, ai->ai_canonname, path, epath, nfs_get_port(caller));
+		     what, buf, path, epath, nfs_get_port(caller));
 		break;
 
 	case success:
 		xlog(L_NOTICE, "authenticated %s request from %s:%u for %s (%s)",
-		     what, ai->ai_canonname, nfs_get_port(caller), path, epath);
+		     what, buf, nfs_get_port(caller), path, epath);
 		break;
 	default:
 		xlog(L_NOTICE, "%s request from %s:%u for %s (%s) gave %d",
-		     what, ai->ai_canonname, nfs_get_port(caller),
-			path, epath, error);
+		     what, buf, nfs_get_port(caller), path, epath, error);
 	}
 
-	freeaddrinfo(ai);
+	nfs_freeaddrinfo(ai);
 	return exp;
 }
 

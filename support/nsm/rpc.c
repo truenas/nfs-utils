@@ -38,8 +38,10 @@
 #include <sys/socket.h>
 #include <sys/time.h>
 
+#include <stdint.h>
 #include <time.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>

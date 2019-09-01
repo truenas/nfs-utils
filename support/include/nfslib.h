@@ -17,6 +17,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include <paths.h>
 #include <rpcsvc/nfs_prot.h>
 #include <nfs/nfs.h>
@@ -128,6 +129,10 @@ void			fputrmtabent(FILE *fp, struct rmtabent *xep, long *pos);
 void			fendrmtabent(FILE *fp);
 void			frewindrmtabent(FILE *fp);
 
+/* mydaemon */
+void daemon_init(bool fg);
+void daemon_ready(void);
+
 /*
  * wildmat borrowed from INN
  */
@@ -148,11 +153,6 @@ struct nfs_fh_len *	getfh(const struct sockaddr_in *sin, const char *path);
 struct nfs_fh_len *	getfh_size(const struct sockaddr_in *sin,
 					const char *path, int const size);
 
-void qword_print(FILE *f, char *str);
-void qword_printhex(FILE *f, char *str, int slen);
-void qword_printint(FILE *f, int num);
-int qword_eol(FILE *f);
-int readline(int fd, char **buf, int *lenp);
 int qword_get(char **bpp, char *dest, int bufsize);
 int qword_get_int(char **bpp, int *anint);
 void cache_flush(int force);
@@ -163,13 +163,12 @@ void qword_addint(char **bpp, int *lp, int n);
 void qword_adduint(char **bpp, int *lp, unsigned int n);
 void qword_addeol(char **bpp, int *lp);
 int qword_get_uint(char **bpp, unsigned int *anint);
-void qword_printuint(FILE *f, unsigned int num);
-void qword_printtimefrom(FILE *f, unsigned int num);
 
 void closeall(int min);
 
 int			svctcp_socket (u_long __number, int __reuse);
 int			svcudp_socket (u_long __number);
+int			svcsock_nonblock (int __sock);
 
 /* Misc shared code prototypes */
 size_t  strlcat(char *, const char *, size_t);
@@ -177,6 +176,9 @@ size_t  strlcpy(char *, const char *, size_t);
 ssize_t atomicio(ssize_t (*f) (int, void*, size_t),
 		 int, void *, size_t);
 
+#ifdef HAVE_LIBTIRPC_SET_DEBUG
+void  libtirpc_set_debug(char *name, int level, int use_stderr);
+#endif
 
 #define UNUSED(x) UNUSED_ ## x __attribute__((unused))
 

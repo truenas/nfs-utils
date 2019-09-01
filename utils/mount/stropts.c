@@ -84,34 +84,49 @@ struct nfsmount_info {
 				*type;		/* "nfs" or "nfs4" */
 	char			*hostname;	/* server's hostname */
 	struct addrinfo		*address;	/* server's addresses */
+	sa_family_t		family;		/* Address family */
 
 	struct mount_options	*options;	/* parsed mount options */
 	char			**extra_opts;	/* string for /etc/mtab */
 
-	unsigned long		version;	/* NFS version */
+	struct nfs_version	version;	/* NFS version */
 	int			flags,		/* MS_ flags */
 				fake,		/* actually do the mount? */
 				child;		/* forked bg child? */
 };
 
-#ifdef MOUNT_CONFIG
-static void nfs_default_version(struct nfsmount_info *mi);
 
 static void nfs_default_version(struct nfsmount_info *mi)
 {
-	extern unsigned long config_default_vers;
+#ifdef MOUNT_CONFIG
+	extern struct nfs_version config_default_vers;
 	/*
 	 * Use the default value set in the config file when
 	 * the version has not been explicitly set.
 	 */
-	if (mi->version == 0 && config_default_vers) {
-		if (config_default_vers < 4)
-			mi->version = config_default_vers;
+	if (config_default_vers.v_mode == V_PARSE_ERR) {
+		mi->version.v_mode = V_PARSE_ERR;
+		return;
 	}
-}
-#else
-inline void nfs_default_version(__attribute__ ((unused)) struct nfsmount_info *mi) {}
+
+	if (mi->version.v_mode == V_DEFAULT &&
+		config_default_vers.v_mode != V_DEFAULT) {
+		mi->version.major = config_default_vers.major;
+		mi->version.minor = config_default_vers.minor;
+		return;
+	}
+
+	if (mi->version.v_mode == V_GENERAL) {
+		if (config_default_vers.v_mode != V_DEFAULT &&
+		    mi->version.major == config_default_vers.major)
+			mi->version.minor = config_default_vers.minor;
+		return;
+	}
+
 #endif /* MOUNT_CONFIG */
+	mi->version.major = 4;
+	mi->version.minor = 2;
+}
 
 /*
  * Obtain a retry timeout value based on the value of the "retry=" option.
@@ -278,6 +293,7 @@ static int nfs_verify_lock_option(struct mount_options *options)
 			    "required for remote locking."), progname);
 		nfs_error(_("%s: Either use '-o nolock' to keep "
 			    "locks local, or start statd."), progname);
+		errno = EALREADY; /* Don't print further error message */
 		return 0;
 	}
 
@@ -300,7 +316,7 @@ static int nfs_set_version(struct nfsmount_info *mi)
 		return 0;
 
 	if (strncmp(mi->type, "nfs4", 4) == 0)
-		mi->version = 4;
+		mi->version.major = 4;
 
 	/*
 	 * Before 2.6.32, the kernel NFS client didn't
@@ -308,28 +324,44 @@ static int nfs_set_version(struct nfsmount_info *mi)
 	 * 4 cannot be included when autonegotiating
 	 * while running on those kernels.
 	 */
-	if (mi->version == 0 &&
-	    linux_version_code() <= MAKE_VERSION(2, 6, 31))
-		mi->version = 3;
+	if (mi->version.v_mode == V_DEFAULT &&
+	    linux_version_code() <= MAKE_VERSION(2, 6, 31)) {
+		mi->version.major = 3;
+		mi->version.v_mode = V_SPECIFIC;
+	}
 
 	/*
 	 * If we still don't know, check for version-specific
 	 * mount options.
 	 */
-	if (mi->version == 0) {
+	if (mi->version.v_mode == V_DEFAULT) {
 		if (po_contains(mi->options, "mounthost") ||
 		    po_contains(mi->options, "mountaddr") ||
 		    po_contains(mi->options, "mountvers") ||
-		    po_contains(mi->options, "mountproto"))
-			mi->version = 3;
+		    po_contains(mi->options, "mountproto")) {
+			mi->version.major = 3;
+			mi->version.v_mode = V_SPECIFIC;
+		}
 	}
 
 	/*
 	 * If enabled, see if the default version was
 	 * set in the config file
 	 */
-	nfs_default_version(mi);
-	
+	if (mi->version.v_mode != V_SPECIFIC) {
+		nfs_default_version(mi);
+		/*
+		 * If the version was not specifically set, it will
+		 * be set by autonegotiation later, so remove it now:
+		 */
+		po_remove_all(mi->options, "v4");
+		po_remove_all(mi->options, "vers");
+		po_remove_all(mi->options, "nfsvers");
+	}
+
+	if (mi->version.v_mode == V_PARSE_ERR)
+		return 0;
+
 	return 1;
 }
 
@@ -340,35 +372,24 @@ static int nfs_set_version(struct nfsmount_info *mi)
  */
 static int nfs_validate_options(struct nfsmount_info *mi)
 {
-	struct addrinfo hint = {
-		.ai_protocol	= (int)IPPROTO_UDP,
-	};
-	sa_family_t family;
-	int error;
-
 	if (!nfs_parse_devname(mi->spec, &mi->hostname, NULL))
 		return 0;
 
-	if (!nfs_nfs_proto_family(mi->options, &family))
+	if (!nfs_nfs_proto_family(mi->options, &mi->family))
 		return 0;
 
-	hint.ai_family = (int)family;
-	error = getaddrinfo(mi->hostname, NULL, &hint, &mi->address);
-	if (error != 0) {
-		nfs_error(_("%s: Failed to resolve server %s: %s"),
-			progname, mi->hostname, gai_strerror(error));
-		mi->address = NULL;
-		return 0;
-	}
+	/*
+	 * A remount is not going to be able to change the server's address,
+	 * nor should we try to resolve another address for the server as we
+	 * may end up with a different address.
+	 * A non-remount will set 'addr' from ->hostname
+	 */
+	po_remove_all(mi->options, "addr");
 
 	if (!nfs_set_version(mi))
 		return 0;
 
 	if (!nfs_append_sloppy_option(mi->options))
-		return 0;
-
-	if (!nfs_append_addr_option(mi->address->ai_addr,
-					mi->address->ai_addrlen, mi->options))
 		return 0;
 
 	return 1;
@@ -484,7 +505,7 @@ static int nfs_construct_new_options(struct mount_options *options,
  * FALSE is returned if some failure occurred.
  */
 static int
-nfs_rewrite_pmap_mount_options(struct mount_options *options)
+nfs_rewrite_pmap_mount_options(struct mount_options *options, int checkv4)
 {
 	union nfs_sockaddr nfs_address;
 	struct sockaddr *nfs_saddr = &nfs_address.sa;
@@ -534,7 +555,7 @@ nfs_rewrite_pmap_mount_options(struct mount_options *options)
 	 * negotiate.  Bail now if we can't contact it.
 	 */
 	if (!nfs_probe_bothports(mnt_saddr, mnt_salen, &mnt_pmap,
-				 nfs_saddr, nfs_salen, &nfs_pmap)) {
+				 nfs_saddr, nfs_salen, &nfs_pmap, checkv4)) {
 		errno = ESPIPE;
 		if (rpc_createerr.cf_stat == RPC_PROGNOTREGISTERED)
 			errno = EOPNOTSUPP;
@@ -595,7 +616,8 @@ static int nfs_sys_mount(struct nfsmount_info *mi, struct mount_options *opts)
 }
 
 static int nfs_do_mount_v3v2(struct nfsmount_info *mi,
-		struct sockaddr *sap, socklen_t salen)
+			     struct sockaddr *sap, socklen_t salen,
+			     int checkv4)
 {
 	struct mount_options *options = po_dup(mi->options);
 	int result = 0;
@@ -637,7 +659,7 @@ static int nfs_do_mount_v3v2(struct nfsmount_info *mi,
 		printf(_("%s: trying text-based options '%s'\n"),
 			progname, *mi->extra_opts);
 
-	if (!nfs_rewrite_pmap_mount_options(options))
+	if (!nfs_rewrite_pmap_mount_options(options, checkv4))
 		goto out_fail;
 
 	result = nfs_sys_mount(mi, options);
@@ -653,13 +675,13 @@ out_fail:
  * Returns TRUE if successful, otherwise FALSE.
  * "errno" is set to reflect the individual error.
  */
-static int nfs_try_mount_v3v2(struct nfsmount_info *mi)
+static int nfs_try_mount_v3v2(struct nfsmount_info *mi, int checkv4)
 {
 	struct addrinfo *ai;
 	int ret = 0;
 
 	for (ai = mi->address; ai != NULL; ai = ai->ai_next) {
-		ret = nfs_do_mount_v3v2(mi, ai->ai_addr, ai->ai_addrlen);
+		ret = nfs_do_mount_v3v2(mi, ai->ai_addr, ai->ai_addrlen, checkv4);
 		if (ret != 0)
 			return ret;
 
@@ -683,6 +705,7 @@ static int nfs_do_mount_v4(struct nfsmount_info *mi,
 {
 	struct mount_options *options = po_dup(mi->options);
 	int result = 0;
+	char version_opt[16];
 	char *extra_opts = NULL;
 
 	if (!options) {
@@ -690,20 +713,29 @@ static int nfs_do_mount_v4(struct nfsmount_info *mi,
 		return result;
 	}
 
-	if (mi->version == 0) {
-		if (po_contains(options, "mounthost") ||
-			po_contains(options, "mountaddr") ||
-			po_contains(options, "mountvers") ||
-			po_contains(options, "mountproto")) {
-		/*
-		 * Since these mountd options are set assume version 3
-		 * is wanted so error out with EPROTONOSUPPORT so the
-		 * protocol negation starts with v3.
-		 */
-			errno = EPROTONOSUPPORT;
-			goto out_fail;
-		}
-		if (po_append(options, "vers=4") == PO_FAILED) {
+	if (po_contains(options, "mounthost") ||
+		po_contains(options, "mountaddr") ||
+		po_contains(options, "mountvers") ||
+		po_contains(options, "mountproto")) {
+	/*
+	 * Since these mountd options are set assume version 3
+	 * is wanted so error out with EPROTONOSUPPORT so the
+	 * protocol negation starts with v3.
+	 */
+		errno = EPROTONOSUPPORT;
+		goto out_fail;
+	}
+
+	if (mi->version.v_mode != V_SPECIFIC) {
+		if (mi->version.v_mode == V_GENERAL)
+			snprintf(version_opt, sizeof(version_opt) - 1,
+				"vers=%lu", mi->version.major);
+		else
+			snprintf(version_opt, sizeof(version_opt) - 1,
+				"vers=%lu.%lu", mi->version.major,
+				mi->version.minor);
+
+		if (po_append(options, version_opt) == PO_FAILED) {
 			errno = EINVAL;
 			goto out_fail;
 		}
@@ -791,13 +823,28 @@ static int nfs_autonegotiate(struct nfsmount_info *mi)
 	int result;
 
 	result = nfs_try_mount_v4(mi);
+check_result:
 	if (result)
 		return result;
-		
+
 	switch (errno) {
 	case EPROTONOSUPPORT:
 		/* A clear indication that the server or our
-		 * client does not support NFS version 4. */
+		 * client does not support NFS version 4 and minor */
+	case EINVAL:
+		/* A less clear indication that our client
+		 * does not support NFSv4 minor version. */
+		if (mi->version.v_mode == V_GENERAL &&
+			mi->version.minor == 0)
+				return result;
+		if (mi->version.v_mode != V_SPECIFIC) {
+			if (mi->version.minor > 0) {
+				mi->version.minor--;
+				result = nfs_try_mount_v4(mi);
+				goto check_result;
+			}
+		}
+
 		goto fall_back;
 	case ENOENT:
 		/* Legacy Linux servers don't export an NFS
@@ -807,12 +854,24 @@ static int nfs_autonegotiate(struct nfsmount_info *mi)
 		/* Linux servers prior to 2.6.25 may return
 		 * EPERM when NFS version 4 is not supported. */
 		goto fall_back;
+	case ECONNREFUSED:
+		/* UDP-Only servers won't support v4, but maybe it
+		 * just isn't ready yet.  So try v3, but double-check
+		 * with rpcbind for v4. */
+		result = nfs_try_mount_v3v2(mi, TRUE);
+		if (result == 0 && errno == EAGAIN) {
+			/* v4 server seems to be registered now. */
+			result = nfs_try_mount_v4(mi);
+			if (result == 0 && errno != ECONNREFUSED)
+				goto check_result;
+		}
+		return result;
 	default:
 		return result;
 	}
 
 fall_back:
-	return nfs_try_mount_v3v2(mi);
+	return nfs_try_mount_v3v2(mi, FALSE);
 }
 
 /*
@@ -825,19 +884,45 @@ static int nfs_try_mount(struct nfsmount_info *mi)
 {
 	int result = 0;
 
-	switch (mi->version) {
-	case 0:
-		result = nfs_autonegotiate(mi);
-		break;
-	case 2:
-	case 3:
-		result = nfs_try_mount_v3v2(mi);
-		break;
-	case 4:
-		result = nfs_try_mount_v4(mi);
-		break;
-	default:
-		errno = EIO;
+	if (mi->address == NULL) {
+		struct addrinfo hint = {
+			.ai_protocol	= (int)IPPROTO_UDP,
+		};
+		int error;
+		struct addrinfo *address;
+
+		hint.ai_family = (int)mi->family;
+		error = getaddrinfo(mi->hostname, NULL, &hint, &address);
+		if (error != 0) {
+			if (error == EAI_AGAIN)
+				errno = EAGAIN;
+			else {
+				nfs_error(_("%s: Failed to resolve server %s: %s"),
+					  progname, mi->hostname, gai_strerror(error));
+				errno = EALREADY;
+			}
+			return 0;
+		}
+
+		if (!nfs_append_addr_option(address->ai_addr,
+					    address->ai_addrlen, mi->options))
+			return 0;
+		mi->address = address;
+	}
+
+	switch (mi->version.major) {
+		case 2:
+		case 3:
+			result = nfs_try_mount_v3v2(mi, FALSE);
+			break;
+		case 4:
+			if (mi->version.v_mode != V_SPECIFIC)
+				result = nfs_autonegotiate(mi);
+			else
+				result = nfs_try_mount_v4(mi);
+			break;
+		default:
+			errno = EIO;
 	}
 
 	return result;
@@ -863,6 +948,7 @@ static int nfs_is_permanent_error(int error)
 	case ETIMEDOUT:
 	case ECONNREFUSED:
 	case EHOSTUNREACH:
+	case EAGAIN:
 		return 0;	/* temporary */
 	default:
 		return 1;	/* permanent */
@@ -889,6 +975,15 @@ static int nfsmount_fg(struct nfsmount_info *mi)
 
 	for (;;) {
 		if (nfs_try_mount(mi))
+			return EX_SUCCESS;
+
+		if (errno == EBUSY)
+			/* The only cause of EBUSY is if exactly the desired
+			 * filesystem is already mounted.  That can arguably
+			 * be seen as success.  "mount -a" tries to optimise
+			 * out this case but sometimes fails.  Help it out
+			 * by pretending everything is rosy
+			 */
 			return EX_SUCCESS;
 
 		if (nfs_is_permanent_error(errno))
@@ -1004,6 +1099,7 @@ static int nfs_remount(struct nfsmount_info *mi)
 {
 	if (nfs_sys_mount(mi, mi->options))
 		return EX_SUCCESS;
+	mount_error(mi->spec, mi->node, errno);
 	return EX_FAIL;
 }
 

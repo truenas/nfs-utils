@@ -391,7 +391,7 @@ po_return_t po_append(struct mount_options *options, char *str)
 }
 
 /**
- * po_contains - check for presense of an option in a group
+ * po_contains - check for presence of an option in a group
  * @options: pointer to mount options
  * @keyword: pointer to a C string containing option keyword for which to search
  *
@@ -404,6 +404,30 @@ po_found_t po_contains(struct mount_options *options, char *keyword)
 		for (option = options->head; option; option = option->next)
 			if (strcmp(option->keyword, keyword) == 0)
 				return PO_FOUND;
+	}
+
+	return PO_NOT_FOUND;
+}
+
+/**
+ * po_contains_prefix - check for presence of an option matching a prefix
+ * @options: pointer to mount options
+ * @prefix: pointer to prefix to match against a keyword
+ * @keyword: pointer to a C string containing the option keyword if found
+ *
+ * On success, *keyword contains the pointer of the matching option's keyword.
+ */
+po_found_t po_contains_prefix(struct mount_options *options,
+								const char *prefix, char **keyword)
+{
+	struct mount_option *option;
+
+	if (options && prefix) {
+		for (option = options->head; option; option = option->next)
+			if (strncmp(option->keyword, prefix, strlen(prefix)) == 0) {
+				*keyword = option->keyword;
+				return PO_FOUND;
+			}
 	}
 
 	return PO_NOT_FOUND;

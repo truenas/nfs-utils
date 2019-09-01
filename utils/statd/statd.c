@@ -28,6 +28,7 @@
 
 #include "statd.h"
 #include "nfslib.h"
+#include "nfsrpc.h"
 #include "nsm.h"
 
 /* Socket operations */
@@ -59,6 +60,8 @@ static struct option longopts[] =
 	{ "notify-mode", 0, 0, 'N' },
 	{ "ha-callout", 1, 0, 'H' },
 	{ "no-notify", 0, 0, 'L' },
+	{ "nlm-port", 1, 0, 'T'},
+	{ "nlm-udp-port", 1, 0, 'U'},
 	{ NULL, 0, 0, 0 }
 };
 
@@ -208,7 +211,32 @@ static void run_sm_notify(int outport)
 	exit(2);
 
 }
-/* 
+
+static void set_nlm_port(char *type, int port)
+{
+	char nbuf[20];
+	char pathbuf[40];
+	int fd;
+	if (!port)
+		return;
+	snprintf(nbuf, sizeof(nbuf), "%d", port);
+	snprintf(pathbuf, sizeof(pathbuf), "/proc/sys/fs/nfs/nlm_%sport", type);
+	fd = open(pathbuf, O_WRONLY);
+	if (fd < 0 && errno == ENOENT) {
+		/* probably module not loaded */
+		system("modprobe lockd");
+		fd = open(pathbuf, O_WRONLY);
+	}
+	if (fd >= 0) {
+		if (write(fd, nbuf, strlen(nbuf)) != (ssize_t)strlen(nbuf))
+			fprintf(stderr, "%s: fail to set NLM %s port: %m\n",
+				name_p, type);
+		close(fd);
+	} else
+		fprintf(stderr, "%s: failed to open %s: %m\n", name_p, pathbuf);
+}
+
+/*
  * Entry routine/main loop.
  */
 int main (int argc, char **argv)
@@ -217,15 +245,16 @@ int main (int argc, char **argv)
 	int pid;
 	int arg;
 	int port = 0, out_port = 0;
+	int nlm_udp = 0, nlm_tcp = 0;
 	struct rlimit rlim;
-
-	int pipefds[2] = { -1, -1};
-	char status;
+	int notify_sockfd;
 
 	/* Default: daemon mode, no other options */
 	run_mode = 0;
-	xlog_stderr(0);
-	xlog_syslog(1);
+
+	/* Log to stderr if there's an error during startup */
+	xlog_stderr(1);
+	xlog_syslog(0);
 
 	/* Set the basename */
 	if ((name_p = strrchr(argv[0],'/')) != NULL) {
@@ -238,7 +267,7 @@ int main (int argc, char **argv)
 	MY_NAME = NULL;
 
 	/* Process command line switches */
-	while ((arg = getopt_long(argc, argv, "h?vVFNH:dn:p:o:P:L", longopts, NULL)) != EOF) {
+	while ((arg = getopt_long(argc, argv, "h?vVFNH:dn:p:o:P:LT:U:", longopts, NULL)) != EOF) {
 		switch (arg) {
 		case 'V':	/* Version */
 		case 'v':
@@ -274,6 +303,26 @@ int main (int argc, char **argv)
 				exit(1);
 			}
 			break;
+		case 'T': /* NLM TCP and UDP port */
+			nlm_tcp = atoi(optarg);
+			if (nlm_tcp < 1 || nlm_tcp > 65535) {
+				fprintf(stderr, "%s: bad nlm port number: %s\n",
+					argv[0], optarg);
+				usage();
+				exit(1);
+			}
+			if (nlm_udp == 0)
+				nlm_udp = nlm_tcp;
+			break;
+		case 'U': /* NLM  UDP port */
+			nlm_udp = atoi(optarg);
+			if (nlm_udp < 1 || nlm_udp > 65535) {
+				fprintf(stderr, "%s: bad nlm UDP port number: %s\n",
+					argv[0], optarg);
+				usage();
+				exit(1);
+			}
+			break;
 		case 'n':	/* Specify local hostname */
 			run_mode |= STATIC_HOSTNAME;
 			MY_NAME = xstrdup(optarg);
@@ -297,6 +346,12 @@ int main (int argc, char **argv)
 			usage();
 			exit(-1);
 		}
+	}
+
+	/* Refuse to start if another statd is running */
+	if (nfs_probe_statd()) {
+		fprintf(stderr, "Statd service already running!\n");
+		exit(1);
 	}
 
 	if (port == out_port && port != 0) {
@@ -330,58 +385,26 @@ int main (int argc, char **argv)
 		}
 	}
 
+	set_nlm_port("tcp", nlm_tcp);
+	set_nlm_port("udp", nlm_udp);
+
 #ifdef SIMULATIONS
 	if (argc > 1)
 		/* LH - I _really_ need to update simulator... */
 		simulator (--argc, ++argv);	/* simulator() does exit() */
 #endif
-	
-	if (!(run_mode & MODE_NODAEMON)) {
-		int tempfd;
 
-		if (pipe(pipefds)<0) {
-			perror("statd: unable to create pipe");
-			exit(1);
-		}
-		if ((pid = fork ()) < 0) {
-			perror ("statd: Could not fork");
-			exit (1);
-		} else if (pid != 0) {
-			/* Parent.
-			 * Wait for status from child.
-			 */
-			close(pipefds[1]);
-			if (read(pipefds[0], &status, 1) != 1)
-				exit(1);
-			exit (0);
-		}
-		/* Child.	*/
-		close(pipefds[0]);
-		setsid ();
-
-		while (pipefds[1] <= 2) {
-			pipefds[1] = dup(pipefds[1]);
-			if (pipefds[1]<0) {
-				perror("statd: dup");
-				exit(1);
-			}
-		}
-		tempfd = open("/dev/null", O_RDWR);
-		dup2(tempfd, 0);
-		dup2(tempfd, 1);
-		dup2(tempfd, 2);
-		dup2(pipefds[1], 3);
-		pipefds[1] = 3;
-		closeall(4);
-	}
-
-	/* Child. */
+	daemon_init((run_mode & MODE_NODAEMON));
 
 	if (run_mode & MODE_LOG_STDERR) {
 		xlog_syslog(0);
 		xlog_stderr(1);
 		xlog_config(D_ALL, 1);
+	} else {
+		xlog_syslog(1);
+		xlog_stderr(0);
 	}
+
 	xlog_open(name_p);
 	xlog(L_NOTICE, "Version " VERSION " starting");
 
@@ -415,7 +438,7 @@ int main (int argc, char **argv)
 		}
 
 	/* Make sure we have a privilege port for calling into the kernel */
-	if (statd_get_socket() < 0)
+	if ((notify_sockfd = statd_get_socket()) < 0)
 		exit(1);
 
 	/* If sm-notify didn't take all the state files, load
@@ -454,23 +477,15 @@ int main (int argc, char **argv)
 	}
 	atexit(statd_unregister);
 
-	/* If we got this far, we have successfully started, so notify parent */
-	if (pipefds[1] > 0) {
-		status = 0;
-		if (write(pipefds[1], &status, 1) != 1) {
-			xlog_warn("writing to parent pipe failed: errno %d (%s)\n",
-				errno, strerror(errno));
-		}
-		close(pipefds[1]);
-		pipefds[1] = -1;
-	}
+	/* If we got this far, we have successfully started */
+	daemon_ready();
 
 	for (;;) {
 		/*
 		 * Handle incoming requests:  SM_NOTIFY socket requests, as
 		 * well as callbacks from lockd.
 		 */
-		my_svc_run();	/* I rolled my own, Olaf made it better... */
+		my_svc_run(notify_sockfd);	/* I rolled my own, Olaf made it better... */
 
 		/* Only get here when simulating a crash so we should probably
 		 * start sm-notify running again.  As we have already dropped

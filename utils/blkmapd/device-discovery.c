@@ -51,6 +51,7 @@
 #include <libdevmapper.h>
 
 #include "device-discovery.h"
+#include "xcommon.h"
 
 #define EVENT_SIZE (sizeof(struct inotify_event))
 #define EVENT_BUFSIZE (1024 * EVENT_SIZE)
@@ -77,16 +78,6 @@ struct bl_disk_path *bl_get_path(const char *filepath,
 	return tmp;
 }
 
-/* Check whether valid_path is a substring(partition) of path */
-int bl_is_partition(struct bl_disk_path *valid_path, struct bl_disk_path *path)
-{
-	if (!strncmp(valid_path->full_path, path->full_path,
-		     strlen(valid_path->full_path)))
-		return 1;
-
-	return 0;
-}
-
 /*
  * For multipath devices, devices state could be PASSIVE/ACTIVE/PSEUDO,
  * where PSEUDO > ACTIVE > PASSIVE. Device with highest state is used to
@@ -95,19 +86,13 @@ int bl_is_partition(struct bl_disk_path *valid_path, struct bl_disk_path *path)
  * If device-mapper multipath support is a must, pseudo devices should
  * exist for each multipath device. If not, active device path will be
  * chosen for device creation.
- * Treat partition as invalid path.
  */
-int bl_update_path(struct bl_disk_path *path, enum bl_path_state_e state,
-		   struct bl_disk *disk)
+int bl_update_path(enum bl_path_state_e state, struct bl_disk *disk)
 {
 	struct bl_disk_path *valid_path = disk->valid_path;
 
-	if (valid_path) {
-		if (valid_path->state >= state) {
-			if (bl_is_partition(valid_path, path))
-				return 0;
-		}
-	}
+	if (valid_path && valid_path->state >= state)
+		return 0;
 	return 1;
 }
 
@@ -164,14 +149,15 @@ void bl_add_disk(char *filepath)
 
 	dev = sb.st_rdev;
 	serial = bldev_read_serial(fd, filepath);
-	if (dm_is_dm_major(major(dev)))
+	if (!serial) {
+		BL_LOG_ERR("%s: no serial found for %s\n",
+				 __func__, filepath);
+		ap_state = BL_PATH_STATE_PASSIVE;
+	} else if (dm_is_dm_major(major(dev)))
 		ap_state = BL_PATH_STATE_PSEUDO;
 	else
 		ap_state = bldev_read_ap_state(fd);
 	close(fd);
-
-	if (ap_state != BL_PATH_STATE_ACTIVE)
-		return;
 
 	for (disk = visible_disk_list; disk != NULL; disk = disk->next) {
 		/* Already scanned or a partition?
@@ -216,7 +202,7 @@ void bl_add_disk(char *filepath)
 		path->next = disk->paths;
 		disk->paths = path;
 		/* check whether we need to update disk info */
-		if (bl_update_path(path, path->state, disk)) {
+		if (bl_update_path(path->state, disk)) {
 			disk->dev = dev;
 			disk->size = size;
 			disk->valid_path = path;
@@ -442,15 +428,17 @@ void sig_die(int signal)
 	BL_LOG_ERR("exit on signal(%d)\n", signal);
 	exit(1);
 }
-
+static void usage(void)
+{
+	fprintf(stderr, "Usage: blkmapd [-hdf]\n" );
+}
 /* Daemon */
 int main(int argc, char **argv)
 {
 	int opt, dflag = 0, fg = 0, ret = 1;
-	struct stat statbuf;
 	char pidbuf[64];
 
-	while ((opt = getopt(argc, argv, "df")) != -1) {
+	while ((opt = getopt(argc, argv, "hdf")) != -1) {
 		switch (opt) {
 		case 'd':
 			dflag = 1;
@@ -458,17 +446,19 @@ int main(int argc, char **argv)
 		case 'f':
 			fg = 1;
 			break;
+		case 'h':
+			usage();
+			exit(0);
+		default:
+			usage();
+			exit(1);
+			
 		}
 	}
 
 	if (fg) {
 		openlog("blkmapd", LOG_PERROR, 0);
 	} else {
-		if (!stat(PID_FILE, &statbuf)) {
-			fprintf(stderr, "Pid file %s already existed\n", PID_FILE);
-			exit(1);
-		}
-
 		if (daemon(0, 0) != 0) {
 			fprintf(stderr, "Daemonize failed\n");
 			exit(1);
@@ -482,7 +472,7 @@ int main(int argc, char **argv)
 		}
 
 		if (lockf(pidfd, F_TLOCK, 0) < 0) {
-			BL_LOG_ERR("Lock pid file %s failed\n", PID_FILE);
+			BL_LOG_ERR("Already running; Exiting!");
 			close(pidfd);
 			exit(1);
 		}
@@ -496,13 +486,13 @@ int main(int argc, char **argv)
 	signal(SIGHUP, SIG_IGN);
 
 	if (dflag) {
-		bl_discover_devices();
-		exit(0);
+		ret = bl_discover_devices();
+		goto out;
 	}
 
 	if ((bl_watch_fd = inotify_init()) < 0) {
 		BL_LOG_ERR("init inotify failed %s\n", strerror(errno));
-		exit(1);
+		goto out;
 	}
 
 	/* open pipe file */
@@ -523,7 +513,7 @@ int main(int argc, char **argv)
 			BL_LOG_ERR("inquiry process return %d\n", ret);
 		}
 	}
-
+out:
 	if (pidfd >= 0) {
 		close(pidfd);
 		unlink(PID_FILE);

@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 dnl
-AC_INIT([linux nfs-utils],[1.2.8],[linux-nfs@vger.kernel.org],[nfs-utils])
+AC_INIT([linux nfs-utils],[1.3.3],[linux-nfs@vger.kernel.org],[nfs-utils])
 AC_CANONICAL_BUILD([])
 AC_CANONICAL_HOST([])
 AC_CONFIG_MACRO_DIR(aclocal)
@@ -8,6 +8,7 @@ AM_INIT_AUTOMAKE
 AC_PREREQ(2.59)
 AC_PREFIX_DEFAULT(/usr)
 AM_MAINTAINER_MODE
+AC_USE_SYSTEM_EXTENSIONS
 
 dnl *************************************************************
 dnl * Define the set of applicable options
@@ -54,9 +55,25 @@ AC_ARG_WITH(start-statd,
 	)
 	AC_SUBST(startstatd)
 	AC_DEFINE_UNQUOTED(START_STATD, "$startstatd", [Define this to a script which can start statd on mount])
+unitdir=/usr/lib/systemd/system
+AC_ARG_WITH(systemd,
+	[AC_HELP_STRING([--with-systemd@<:@=unit-dir-path@:>@],
+			[install systemd unit files @<:@Default: no, and path defaults to /usr/lib/systemd/system if not given@:>@])],
+	if test "$withval" != "no" ; then 
+		use_systemd=1
+		if test "$withval" != "yes" ; then 
+			unitdir=$withval
+		fi
+	else
+		use_systemd=0
+	fi
+	)
+	AM_CONDITIONAL(INSTALL_SYSTEMD, [test "$use_systemd" = 1])
+	AC_SUBST(unitdir)
+
 AC_ARG_ENABLE(nfsv4,
-	[AC_HELP_STRING([--enable-nfsv4],
-                        [enable support for NFSv4 @<:@default=yes@:>@])],
+	[AC_HELP_STRING([--disable-nfsv4],
+                        [disable support for NFSv4 @<:@default=no@:>@])],
 	enable_nfsv4=$enableval,
 	enable_nfsv4=yes)
 	if test "$enable_nfsv4" = yes; then
@@ -70,8 +87,8 @@ AC_ARG_ENABLE(nfsv4,
 	AM_CONDITIONAL(CONFIG_NFSV4, [test "$enable_nfsv4" = "yes"])
 
 AC_ARG_ENABLE(nfsv41,
-	[AC_HELP_STRING([--enable-nfsv41],
-                        [enable support for NFSv41 @<:@default=yes@:>@])],
+	[AC_HELP_STRING([--disable-nfsv41],
+                        [disable support for NFSv41 @<:@default=no@:>@])],
 	enable_nfsv41=$enableval,
 	enable_nfsv41=yes)
 	if test "$enable_nfsv41" = yes; then
@@ -88,22 +105,35 @@ AC_ARG_ENABLE(nfsv41,
 	AM_CONDITIONAL(CONFIG_NFSV41, [test "$enable_nfsv41" = "yes"])
 
 AC_ARG_ENABLE(gss,
-	[AC_HELP_STRING([--enable-gss],
-                        [enable support for rpcsec_gss @<:@default=yes@:>@])],
+	[AC_HELP_STRING([--disable-gss],
+              [disable client support for rpcsec_gss @<:@default=no@:>@])],
 	enable_gss=$enableval,
 	enable_gss=yes)
 	if test "$enable_gss" = yes; then
 		GSSD=gssd
-		SVCGSSD=svcgssd
 	else
 		enable_gss=
 		GSSD=
-		SVCGSSD=
 	fi
 	AC_SUBST(GSSD)
-	AC_SUBST(SVCGSSD)
 	AC_SUBST(enable_gss)
 	AM_CONDITIONAL(CONFIG_GSS, [test "$enable_gss" = "yes"])
+
+AC_ARG_ENABLE(svcgss,
+	[AC_HELP_STRING([--enable-svcgss],
+    [enable building svcgssd for rpcsec_gss server support @<:@default=no@:>@])],
+	enable_svcgss=$enableval,
+	enable_svcgss=no)
+	if test "$enable_gss" = yes -a "$enable_svcgss" = yes; then
+		SVCGSSD=svcgssd
+	else
+		enable_svcgss=
+		SVCGSSD=
+	fi
+	AC_SUBST(SVCGSSD)
+	AC_SUBST(enable_svcgss)
+	AM_CONDITIONAL(CONFIG_SVCGSS, [test "$enable_svcgss" = "yes"])
+
 AC_ARG_ENABLE(kprefix,
 	[AC_HELP_STRING([--enable-kprefix], [install progs as rpc.knfsd etc])],
 	test "$enableval" = "yes" && kprefix=k,
@@ -123,12 +153,13 @@ AC_ARG_WITH(rpcgen,
 	AC_SUBST(RPCGEN_PATH)
 	AM_CONDITIONAL(CONFIG_RPCGEN, [test "$RPCGEN_PATH" = ""])
 AC_ARG_ENABLE(uuid,
-	[AC_HELP_STRING([--disable-uuid], [Exclude uuid support to avoid buggy libblkid])],
+	[AC_HELP_STRING([--disable-uuid], 
+		[Exclude uuid support to avoid buggy libblkid. @<:@default=no@:>@])],
 	if test "$enableval" = "yes" ; then choose_blkid=yes; else choose_blkid=no; fi,
 	choose_blkid=default)
 AC_ARG_ENABLE(mount,
-	[AC_HELP_STRING([--enable-mount],
-			[Create mount.nfs and do not use the util-linux mount(8) functionality. @<:@default=yes@:>@])],
+	[AC_HELP_STRING([--disable-mount],
+		[Don't build mount.nfs and do use the util-linux mount(8) functionality. @<:@default=no@:>@])],
 	enable_mount=$enableval,
 	enable_mount=yes)
 	AM_CONDITIONAL(CONFIG_MOUNT, [test "$enable_mount" = "yes"])
@@ -136,21 +167,23 @@ AC_ARG_ENABLE(mount,
 if test "$enable_mount" = yes; then
 	AC_ARG_ENABLE(libmount-mount,
 		[AC_HELP_STRING([--enable-libmount-mount],
-				[Link mount.nfs with libmount (EXPERIMENTAL)])],
+				[Link mount.nfs with libmount @<:@default=no@:>@])],
 		enable_libmount=$enableval,
 		enable_libmount=no)
+else
+	enable_libmount=no
 fi
 
 AC_ARG_ENABLE(tirpc,
-	[AC_HELP_STRING([--enable-tirpc],
-			[enable use of TI-RPC @<:@default=yes@:>@])],
+	[AC_HELP_STRING([--disable-tirpc],
+			[disable use of TI-RPC library @<:@default=no@:>@])],
 	enable_tirpc=$enableval,
-	enable_tirpc='')
+	enable_tirpc=yes)
 AC_ARG_ENABLE(ipv6,
-	[AC_HELP_STRING([--enable-ipv6],
-                        [enable support for IPv6 @<:@default=no@:>@])],
+	[AC_HELP_STRING([--disable-ipv6],
+                        [disable support for IPv6 @<:@default=no@:>@])],
 	enable_ipv6=$enableval,
-	enable_ipv6=no)
+	enable_ipv6=yes)
 	if test "$enable_ipv6" = yes; then
 		AC_DEFINE(IPV6_SUPPORTED, 1, [Define this if you want IPv6 support compiled in])
 	else
@@ -161,11 +194,13 @@ AC_ARG_ENABLE(ipv6,
 
 if test "$enable_mount" = yes; then
 	AC_ARG_ENABLE(mountconfig,
-	[AC_HELP_STRING([--enable-mountconfig],
-                        [enable mount to use a configuration file])],
-	mountconfig=$enableval,
-	mountconfig=no)
-	if test "$enable_mountconfig" = yes; then
+	[AC_HELP_STRING([--disable-mountconfig],
+        [disable mount to use a configuration file @<:@default=no@:>@])],
+	enable_mountconfig=$enableval,
+	enable_mountconfig=yes)
+	if test "$enable_mountconfig" = no; then
+		enable_mountconfig=
+	else
 		AC_DEFINE(MOUNT_CONFIG, 1, 
 			[Define this if you want mount to read a configuration file])
 		AC_ARG_WITH(mountfile,
@@ -177,8 +212,6 @@ if test "$enable_mount" = yes; then
 		AC_SUBST(mountfile)
 		AC_DEFINE_UNQUOTED(MOUNTOPTS_CONFFILE, "$mountfile", 
 			[This defines the location of the NFS mount configuration file])
-	else
-		enable_mountconfig=
 	fi
 	AC_SUBST(enable_mountconfig)
 	AM_CONDITIONAL(MOUNT_CONFIG, [test "$enable_mountconfig" = "yes"])
@@ -187,10 +220,17 @@ else
 fi
 
 AC_ARG_ENABLE(nfsdcltrack,
-	[AC_HELP_STRING([--enable-nfsdcltrack],
-			[enable NFSv4 clientid tracking programs @<:@default=yes@:>@])],
-	enable_nfsdctrack=$enableval,
+	[AC_HELP_STRING([--disable-nfsdcltrack],
+			[disable NFSv4 clientid tracking programs @<:@default=no@:>@])],
+	enable_nfsdcltrack=$enableval,
 	enable_nfsdcltrack="yes")
+
+AC_ARG_ENABLE(osdlogin,
+	[AC_HELP_STRING([--enable-osdlogin],
+			[enable osd_login scripts @<:@default=no@:>@])],
+	enable_osdlogin=$enableval,
+	enable_osdlogin="no")
+	AM_CONDITIONAL(CONFIG_OSD_LOGIN, [test "$enable_osdlogin" = "yes" ])
 
 dnl Check for TI-RPC library and headers
 AC_LIBTIRPC
@@ -246,9 +286,6 @@ AC_CHECK_FUNC([connect], ,
 
 AC_CHECK_FUNC([getaddrinfo], ,
               [AC_MSG_ERROR([Function 'getaddrinfo' not found.])])
-
-AC_CHECK_FUNC([getrpcbynumber], ,
-              [AC_MSG_ERROR([Function 'getrpcbynumber' not found.])])
 
 AC_CHECK_FUNC([getservbyname], ,
               [AC_MSG_ERROR([Function 'getservbyname' not found.])])
@@ -325,7 +362,7 @@ AC_SUBST(LIBBSD)
 AC_SUBST(LIBBLKID)
 AC_SUBST(LIBDL)
 
-if test "$enable_libmount" != no; then
+if test "$enable_libmount" = yes; then
    AC_CHECK_LIB(mount, mnt_context_do_mount, [LIBMOUNT="-lmount"], AC_MSG_ERROR([libmount needed]))
    AC_CHECK_HEADER(libmount/libmount.h, , AC_MSG_ERROR([Cannot find libmount header file libmount/libmount.h]))
 fi
@@ -336,14 +373,17 @@ if test "$enable_gss" = yes; then
   dnl 'gss' requires getnameinfo - at least for gssd_proc.c
   AC_CHECK_FUNC([getnameinfo], , [AC_MSG_ERROR([GSSAPI support requires 'getnameinfo' function])])
 
+  dnl check for libevent libraries and headers
+  AC_LIBEVENT
+
   dnl 'gss' also depends on nfsidmap.h - at least for svcgssd_proc.c
   AC_LIBNFSIDMAP
 
   dnl Check for Kerberos V5
   AC_KERBEROS_V5
 
-  dnl Invoked after AC_KERBEROS_V5; AC_LIBRPCSECGSS needs to have KRBLIBS set
-  AC_LIBRPCSECGSS
+  dnl Check for pthreads
+  AC_LIBPTHREAD
 
   dnl librpcsecgss already has a dependency on libgssapi,
   dnl but we need to make sure we get the right version
@@ -408,11 +448,10 @@ AC_FUNC_STAT
 AC_FUNC_VPRINTF
 AC_CHECK_FUNCS([alarm atexit dup2 fdatasync ftruncate getcwd \
                gethostbyaddr gethostbyname gethostname getmntent \
-               getnameinfo getrpcbyname getifaddrs \
+               getnameinfo getrpcbyname getrpcbynumber getrpcbynumber_r getifaddrs \
                gettimeofday hasmntopt inet_ntoa innetgr memset mkdir pathconf \
                ppoll realpath rmdir select socket strcasecmp strchr strdup \
-               strerror strrchr strtol strtoul sigprocmask])
-
+               strerror strrchr strtol strtoul sigprocmask name_to_handle_at])
 
 dnl *************************************************************
 dnl Check for data sizes
@@ -506,6 +545,7 @@ AC_CONFIG_FILES([
 	utils/showmount/Makefile
 	utils/statd/Makefile
 	utils/osd_login/Makefile
+	systemd/Makefile
 	tests/Makefile
 	tests/nsm_client/Makefile])
 AC_OUTPUT

@@ -42,7 +42,7 @@ static const struct timeval RETRY_TIMEOUT = { 3, 0 };
 int probe_bothports(clnt_addr_t *, clnt_addr_t *);
 int nfs_probe_bothports(const struct sockaddr *, const socklen_t,
 			struct pmap *, const struct sockaddr *,
-			const socklen_t, struct pmap *);
+			const socklen_t, struct pmap *, int);
 int nfs_gethostbyname(const char *, struct sockaddr_in *);
 int nfs_lookup(const char *hostname, const sa_family_t family,
 		struct sockaddr *sap, socklen_t *salen);
@@ -57,9 +57,22 @@ int clnt_ping(struct sockaddr_in *, const unsigned long,
 
 struct mount_options;
 
+enum {
+	V_DEFAULT = 0,
+	V_GENERAL,
+	V_SPECIFIC,
+	V_PARSE_ERR,
+};
+
+struct nfs_version {
+	unsigned long major;
+	unsigned long minor;
+	int v_mode;
+};
+
 int nfs_nfs_proto_family(struct mount_options *options, sa_family_t *family);
 int nfs_mount_proto_family(struct mount_options *options, sa_family_t *family);
-int nfs_nfs_version(struct mount_options *options, unsigned long *version);
+int nfs_nfs_version(struct mount_options *options, struct nfs_version *version);
 int  nfs_nfs_protocol(struct mount_options *options, unsigned long *protocol);
 
 int nfs_options2pmap(struct mount_options *,

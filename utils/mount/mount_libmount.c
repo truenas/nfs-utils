@@ -29,6 +29,7 @@
 #include <string.h>
 #include <errno.h>
 #include <getopt.h>
+#include <libgen.h>
 
 #include <libmount/libmount.h>
 
@@ -173,7 +174,7 @@ static int umount_main(struct libmnt_context *cxt, int argc, char **argv)
 {
 	int rc, c;
 	char *spec = NULL, *opts = NULL;
-	int ret = EX_FAIL;
+	int ret = EX_FAIL, verbose = 0;
 
 	static const struct option longopts[] = {
 		{ "force", 0, 0, 'f' },
@@ -200,11 +201,14 @@ static int umount_main(struct libmnt_context *cxt, int argc, char **argv)
 		return EX_USAGE;
 	}
 
+	verbose = mnt_context_is_verbose(cxt);
+
 	if (optind < argc)
 		spec = argv[optind++];
 
 	if (!spec || (*spec != '/' && strchr(spec,':') == NULL)) {
 		nfs_error(_("%s: no mount point provided"), progname);
+		umount_usage();
 		return EX_USAGE;
 	}
 
@@ -226,6 +230,10 @@ static int umount_main(struct libmnt_context *cxt, int argc, char **argv)
 		ret = EX_USAGE;
 		goto err;
 	}
+
+	if (verbose)
+		printf(_("%s: %s mount point detected\n"), spec,
+					mnt_context_get_fstype(cxt));
 
 	opts = retrieve_mount_options(mnt_context_get_fs(cxt));
 
@@ -262,6 +270,12 @@ static int umount_main(struct libmnt_context *cxt, int argc, char **argv)
 	}
 	ret = EX_SUCCESS;
 err:
+	if (verbose) {
+		if (ret == EX_SUCCESS)
+			printf(_("%s: umounted\n"), spec);
+		else
+			printf(_("%s: umount failed\n"), spec);
+	}
 	free(opts);
 	return ret;
 }
@@ -316,6 +330,7 @@ static int mount_main(struct libmnt_context *cxt, int argc, char **argv)
 
 	if (!mount_point) {
 		nfs_error(_("%s: no mount point provided"), progname);
+		mount_usage();
 		goto err;
 	}
 	if (!spec) {

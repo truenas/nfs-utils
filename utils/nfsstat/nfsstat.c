@@ -31,8 +31,8 @@ enum {
 	SRVPROC3_SZ = 22,
 	CLTPROC3_SZ = 22,
 	SRVPROC4_SZ = 2,
-	CLTPROC4_SZ = 49,
-	SRVPROC4OPS_SZ = 59,
+	CLTPROC4_SZ = 59,
+	SRVPROC4OPS_SZ = 71,
 };
 
 static unsigned int	srvproc2info[SRVPROC2_SZ+2],
@@ -92,6 +92,15 @@ static unsigned int	srvfhinfo[7], srvfhinfo_old[7];		/* (for kernels >= 2.4.0)
 								 *    compatability.
 								 */
 
+static unsigned int	srvioinfo[3], srvioinfo_old[3];		/* 0  bytes read
+								 * 1  bytes written
+								 */
+
+static unsigned int	srvrainfo[13], srvrainfo_old[13];	/* 0  ra cache size
+								 * 1..11 depth of ra cache hit
+								 * 12 ra cache misses
+								 */
+
 static const char *	nfsv2name[SRVPROC2_SZ] = {
 	"null", "getattr", "setattr", "root",   "lookup",  "readlink",
 	"read", "wrcache", "write",   "create", "remove",  "rename",
@@ -118,19 +127,30 @@ static const char *	nfscltproc4name[CLTPROC4_SZ] = {
 	"remove",    "rename",    "link",    "symlink",     "create",      "pathconf",
 	"statfs",    "readlink",  "readdir", "server_caps", "delegreturn", "getacl",
 	"setacl",    "fs_locations",
-	"rel_lkowner", "secinfo",
+	"rel_lkowner", "secinfo", "fsid_present",
 	/* nfsv4.1 client ops */
 	"exchange_id",
-	"create_ses",
-	"destroy_ses",
+	"create_session",
+	"destroy_session",
 	"sequence",
-	"get_lease_t",
+	"get_lease_time",
 	"reclaim_comp",
 	"layoutget",
 	"getdevinfo",
 	"layoutcommit",
 	"layoutreturn",
-	"getdevlist",
+	"secinfo_no",
+	"test_stateid",
+	"free_stateid",
+	"getdevicelist",
+	"bind_conn_to_ses",
+	"destroy_clientid",
+	/* nfsv4.2 client ops */
+	"seek",
+	"allocate",
+	"deallocate",
+	"layoutstats",
+	"clone",
 };
 
 static const char *     nfssrvproc4opname[SRVPROC4OPS_SZ] = {
@@ -161,12 +181,27 @@ static const char *     nfssrvproc4opname[SRVPROC4OPS_SZ] = {
 	"want_deleg",
 	"destroy_clid",
 	"reclaim_comp",
+	/* nfsv4.2 server ops */
+	"allocate",
+	"copy",
+	"copy_notify",
+	"deallocate",
+	"ioadvise",
+	"layouterror",
+	"layoutstats",
+	"offloadcancel",
+	"offloadstatus",
+	"readplus",
+	"seek",
+	"write_same",
 };
 
 #define LABEL_srvnet		"Server packet stats:\n"
 #define LABEL_srvrpc		"Server rpc stats:\n"
 #define LABEL_srvrc		"Server reply cache:\n"
 #define LABEL_srvfh		"Server file handle cache:\n"
+#define LABEL_srvio		"Server io stats:\n"
+#define LABEL_srvra		"Server read ahead cache:\n"
 #define LABEL_srvproc2		"Server nfs v2:\n"
 #define LABEL_srvproc3		"Server nfs v3:\n"
 #define LABEL_srvproc4		"Server nfs v4:\n"
@@ -198,6 +233,8 @@ typedef struct statinfo {
 					SRV(rpc,s), \
 					SRV(rc,s), \
 					SRV(fh,s), \
+					SRV(io,s), \
+					SRV(ra,s), \
 					SRV(proc2,s), \
 					SRV(proc3,s),\
 					SRV(proc4,s), \
@@ -249,6 +286,8 @@ static time_t		starttime;
 #define PRNT_NET	0x0004
 #define PRNT_FH		0x0008
 #define PRNT_RC		0x0010
+#define PRNT_IO		0x0020
+#define PRNT_RA		0x0040
 #define PRNT_AUTO	0x1000
 #define PRNT_V2		0x2000
 #define PRNT_V3		0x4000
@@ -276,6 +315,8 @@ void usage(char *name)
      rpc		General RPC information\n\
      net		Network layer statistics\n\
      fh			Usage information on the server's file handle cache\n\
+     io			Usage information on the server's io statistics\n\
+     ra			Usage information on the server's read ahead cache\n\
      rc			Usage information on the server's request reply cache\n\
      all		Select all of the above\n\
   -v, --verbose, --all	Same as '-o all'\n\
@@ -336,7 +377,7 @@ main(int argc, char **argv)
 
 	struct sigaction act = {
 		.sa_handler = unpause,
-		.sa_flags = SA_ONESHOT,
+		.sa_flags = SA_RESETHAND,
 	};
 
 	if ((progname = strrchr(argv[0], '/')))
@@ -366,8 +407,12 @@ main(int argc, char **argv)
 				opt_prt |= PRNT_RC;
 			else if (!strcmp(optarg, "fh"))
 				opt_prt |= PRNT_FH;
+			else if (!strcmp(optarg, "io"))
+				opt_prt |= PRNT_IO;
+			else if (!strcmp(optarg, "ra"))
+				opt_prt |= PRNT_RA;
 			else if (!strcmp(optarg, "all"))
-				opt_prt |= PRNT_CALLS | PRNT_RPC | PRNT_NET | PRNT_RC | PRNT_FH;
+				opt_prt |= PRNT_CALLS | PRNT_RPC | PRNT_NET | PRNT_RC | PRNT_FH | PRNT_IO | PRNT_RA;
 			else {
 				fprintf(stderr, "nfsstat: unknown category: "
 						"%s\n", optarg);
@@ -435,9 +480,9 @@ main(int argc, char **argv)
 	if (!(opt_prt & 0xe000)) {
 		opt_prt |= PRNT_AUTO;
 	}
-	if ((opt_prt & (PRNT_FH|PRNT_RC)) && !opt_srv) {
+	if ((opt_prt & (PRNT_FH|PRNT_RC|PRNT_IO|PRNT_RA)) && !opt_srv) {
 		fprintf(stderr,
-			"You requested file handle or request cache "
+			"You requested fh/io/ra/rc "
 			"statistics while using the -c option.\n"
 			"This information is available only for the NFS "
 			"server.\n");
@@ -537,7 +582,7 @@ print_server_stats(int opt_prt)
 			;
 		} else {
 			print_numbers(LABEL_srvrpc
-				"calls      badcalls   badclnt    badauth    xdrcall\n",
+				"calls      badcalls   badfmt     badauth    badclnt\n",
 				srvrpcinfo, 5);
 			printf("\n");
 		}
@@ -549,6 +594,26 @@ print_server_stats(int opt_prt)
 			print_numbers(LABEL_srvrc
 				"hits       misses     nocache\n",
 				srvrcinfo, 3);
+			printf("\n");
+		}
+	}
+	if (opt_prt & PRNT_IO) {
+		if (opt_sleep && !has_rpcstats(srvioinfo, 3)) {
+			;
+		} else {
+			print_numbers(LABEL_srvio
+				"read       write\n",
+				srvioinfo, 2);
+			printf("\n");
+		}
+	}
+	if (opt_prt & PRNT_RA) {
+		if (opt_sleep && !has_rpcstats(srvrainfo, 3)) {
+			;
+		} else {
+			print_numbers(LABEL_srvra
+				"size       0-10%      10-20%     20-30%     30-40%     40-50%     50-60%     60-70%     70-80%     80-90%     90-100%    notfound\n",
+				srvrainfo, 12);
 			printf("\n");
 		}
 	}
@@ -569,7 +634,7 @@ print_server_stats(int opt_prt)
 			
 			print_numbers(
 				LABEL_srvfh
-				"lookup     anon       ncachedir  ncachedir  stale\n",
+				"lookup     anon       ncachedir  ncachenondir  stale\n",
 				srvfhinfo + 1, 5);
 		} else					/* < 2.4 */
 			print_numbers(
@@ -782,13 +847,13 @@ print_callstats(const char *hdr, const char **names,
 		total += info[i];
 	if (!total)
 		total = 1;
-	for (i = 0; i < nr; i += 6) {
-		for (j = 0; j < 6 && i + j < nr; j++)
-			printf("%-13s", names[i+j]);
+	for (i = 0; i < nr; i += 5) {
+		for (j = 0; j < 5 && i + j < nr; j++)
+			printf("%-17s", names[i+j]);
 		printf("\n");
-		for (j = 0; j < 6 && i + j < nr; j++) {
+		for (j = 0; j < 5 && i + j < nr; j++) {
 			pct = ((unsigned long long) info[i+j]*100)/total;
-			printf("%-8u%3llu%% ", info[i+j], pct);
+			printf("%-8u%3llu%%     ", info[i+j], pct);
 		}
 		printf("\n");
 	}

@@ -128,6 +128,7 @@
 
 /* Global list of principals/cache file names for machine credentials */
 struct gssd_k5_kt_princ *gssd_k5_kt_princ_list = NULL;
+pthread_mutex_t ple_lock = PTHREAD_MUTEX_INITIALIZER;
 
 #ifdef HAVE_SET_ALLOWABLE_ENCTYPES
 int limit_to_legacy_enctypes = 0;
@@ -231,7 +232,7 @@ gssd_find_existing_krb5_ccache(uid_t uid, char *dirname,
 				continue;
 			}
 			if (uid == 0 && !root_uses_machine_creds && 
-				strstr(namelist[i]->d_name, "_machine_")) {
+				strstr(namelist[i]->d_name, "machine_")) {
 				printerr(3, "CC '%s' not available to root\n",
 					 statname);
 				free(namelist[i]);
@@ -356,7 +357,7 @@ gssd_get_single_krb5_cred(krb5_context context,
 	 */
 	now += 300;
 	if (ple->ccname && ple->endtime > now && !nocache) {
-		printerr(2, "INFO: Credentials in CC '%s' are good until %d\n",
+		printerr(3, "INFO: Credentials in CC '%s' are good until %d\n",
 			 ple->ccname, ple->endtime);
 		code = 0;
 		goto out;
@@ -383,7 +384,7 @@ gssd_get_single_krb5_cred(krb5_context context,
 			 "tickets.  May have problems behind a NAT.\n");
 #ifdef TEST_SHORT_LIFETIME
 	/* set a short lifetime (for debugging only!) */
-	printerr(0, "WARNING: Using (debug) short machine cred lifetime!\n");
+	printerr(1, "WARNING: Using (debug) short machine cred lifetime!\n");
 	krb5_get_init_creds_opt_set_tkt_life(init_opts, 5*60);
 #endif
 	opts = init_opts;
@@ -451,8 +452,7 @@ gssd_get_single_krb5_cred(krb5_context context,
 	}
 
 	code = 0;
-	printerr(2, "Successfully obtained machine credentials for "
-		 "principal '%s' stored in ccache '%s'\n", pname, cc_name);
+	printerr(2, "%s: principal '%s' ccache:'%s'\n", __func__, pname, cc_name);
   out:
 #if HAVE_KRB5_GET_INIT_CREDS_OPT_SET_ADDRESSLESS
 	if (init_opts)
@@ -465,37 +465,6 @@ gssd_get_single_krb5_cred(krb5_context context,
 	krb5_free_cred_contents(context, &my_creds);
 	free(k5err);
 	return (code);
-}
-
-/*
- * Depending on the version of Kerberos, we either need to use
- * a private function, or simply set the environment variable.
- */
-static void
-gssd_set_krb5_ccache_name(char *ccname)
-{
-#ifdef USE_GSS_KRB5_CCACHE_NAME
-	u_int	maj_stat, min_stat;
-
-	printerr(2, "using gss_krb5_ccache_name to select krb5 ccache %s\n",
-		 ccname);
-	maj_stat = gss_krb5_ccache_name(&min_stat, ccname, NULL);
-	if (maj_stat != GSS_S_COMPLETE) {
-		printerr(0, "WARNING: gss_krb5_ccache_name with "
-			"name '%s' failed (%s)\n",
-			ccname, error_message(min_stat));
-	}
-#else
-	/*
-	 * Set the KRB5CCNAME environment variable to tell the krb5 code
-	 * which credentials cache to use.  (Instead of using the private
-	 * function above for which there is no generic gssapi
-	 * equivalent.)
-	 */
-	printerr(2, "using environment variable to select krb5 ccache %s\n",
-		 ccname);
-	setenv("KRB5CCNAME", ccname, 1);
-#endif
 }
 
 /*
@@ -587,10 +556,12 @@ get_ple_by_princ(krb5_context context, krb5_principal princ)
 
 	/* Need to serialize list if we ever become multi-threaded! */
 
+	pthread_mutex_lock(&ple_lock);
 	ple = find_ple_by_princ(context, princ);
 	if (ple == NULL) {
 		ple = new_ple(context, princ);
 	}
+	pthread_mutex_unlock(&ple_lock);
 
 	return ple;
 }
@@ -772,7 +743,9 @@ gssd_search_krb5_keytab(krb5_context context, krb5_keytab kt,
 			    "keytab '%s'\n", k5err, kt_name);
 	}
 
-	retval = 0;
+	/* Only clear the retval if has not been set */
+	if (retval < 0)
+		retval = 0;
   out:
 	free(k5err);
 	return retval;
@@ -795,12 +768,14 @@ find_keytab_entry(krb5_context context, krb5_keytab kt, const char *tgtname,
 	char **realmnames = NULL;
 	char myhostname[NI_MAXHOST], targethostname[NI_MAXHOST];
 	char myhostad[NI_MAXHOST+1];
-	int i, j, retval;
+	int i, j, k, retval;
 	char *default_realm = NULL;
 	char *realm;
 	char *k5err = NULL;
-	int tried_all = 0, tried_default = 0;
+	int tried_all = 0, tried_default = 0, tried_upper = 0;
 	krb5_principal princ;
+	const char *notsetstr = "not set";
+	char *adhostoverride;
 
 
 	/* Get full target hostname */
@@ -818,15 +793,29 @@ find_keytab_entry(krb5_context context, krb5_keytab kt, const char *tgtname,
 	}
 
 	/* Compute the active directory machine name HOST$ */
-	strcpy(myhostad, myhostname);
-	for (i = 0; myhostad[i] != 0; ++i)
-		myhostad[i] = toupper(myhostad[i]);
-	myhostad[i] = '$';
-	myhostad[i+1] = 0;
+	krb5_appdefault_string(context, "nfs", NULL, "ad_principal_name", 
+		notsetstr, &adhostoverride);
+	if (strcmp(adhostoverride, notsetstr) != 0) {
+	        printerr (1, 
+				"AD host string overridden with \"%s\" from appdefaults\n", 
+				adhostoverride);
+	        /* No overflow: Windows cannot handle strings longer than 19 chars */
+	        strcpy(myhostad, adhostoverride);
+		free(adhostoverride);
+	} else {
+	        strcpy(myhostad, myhostname);
+	        for (i = 0; myhostad[i] != 0; ++i) {
+	          if (myhostad[i] == '.') break;
+	        }
+	        myhostad[i] = '$';
+	        myhostad[i+1] = 0;
+	}
 
 	retval = get_full_hostname(myhostname, myhostname, sizeof(myhostname));
-	if (retval)
-		goto out;
+	if (retval) {
+		/* Don't use myhostname */
+		myhostname[0] = 0;
+	}
 
 	code = krb5_get_default_realm(context, &default_realm);
 	if (code) {
@@ -852,11 +841,19 @@ find_keytab_entry(krb5_context context, krb5_keytab kt, const char *tgtname,
 	}
 
 	/*
-	 * Try the "appropriate" realm first, and if nothing found for that
-	 * realm, try the default realm (if it hasn't already been tried).
+	 * Make sure the preferred_realm, which may have been explicitly set
+	 * on the command line, is tried first. If nothing is found go on with
+	 * the host and local default realm (if that hasn't already been tried).
 	 */
 	i = 0;
 	realm = realmnames[i];
+
+	if (preferred_realm && strcmp (realm, preferred_realm) != 0) {
+		realm = preferred_realm;
+		/* resetting the realmnames index */
+		i = -1;
+	}
+
 	while (1) {
 		if (realm == NULL) {
 			tried_all = 1;
@@ -883,6 +880,8 @@ find_keytab_entry(krb5_context context, krb5_keytab kt, const char *tgtname,
 								myhostad,
 								NULL);
 			} else {
+				if (!myhostname[0])
+					continue;
 				snprintf(spn, sizeof(spn), "%s/%s@%s",
 					 svcnames[j], myhostname, realm);
 				code = krb5_build_principal_ext(context, &princ,
@@ -907,6 +906,19 @@ find_keytab_entry(krb5_context context, krb5_keytab kt, const char *tgtname,
 				k5err = gssd_k5_err_msg(context, code);
 				printerr(3, "%s while getting keytab entry for '%s'\n",
 					 k5err, spn);
+				/*
+				 * We tried the active directory machine account
+				 * with the hostname part as-is and failed...
+				 * convert it to uppercase and try again before
+				 * moving on to the svcname
+				 */
+				if (strcmp(svcnames[j],"$") == 0 && !tried_upper) {
+					for (k = 0; myhostad[k] != '$'; ++k) {
+						myhostad[k] = toupper(myhostad[k]);
+					}
+					j--;
+					tried_upper = 1;
+				}
 			} else {
 				printerr(3, "Success getting keytab entry for '%s'\n",spn);
 				retval = 0;
@@ -1051,9 +1063,10 @@ gssd_setup_krb5_user_gss_ccache(uid_t uid, char *servername, char *dirpattern)
 	const char		*cctype;
 	struct dirent		*d;
 	int			err, i, j;
+	u_int			maj_stat, min_stat;
 
-	printerr(2, "getting credentials for client with uid %u for "
-		    "server %s\n", uid, servername);
+	printerr(3, "looking for client creds with uid %u for "
+		    "server %s in %s\n", uid, servername, dirpattern);
 
 	for (i = 0, j = 0; dirpattern[i] != '\0'; i++) {
 		switch (dirpattern[i]) {
@@ -1086,22 +1099,16 @@ gssd_setup_krb5_user_gss_ccache(uid_t uid, char *servername, char *dirpattern)
 
 	printerr(2, "using %s as credentials cache for client with "
 		    "uid %u for server %s\n", buf, uid, servername);
-	gssd_set_krb5_ccache_name(buf);
-	return 0;
-}
 
-/*
- * Let the gss code know where to find the machine credentials ccache.
- *
- * Returns:
- *	void
- */
-void
-gssd_setup_krb5_machine_gss_ccache(char *ccname)
-{
-	printerr(2, "using %s as credentials cache for machine creds\n",
-		 ccname);
-	gssd_set_krb5_ccache_name(ccname);
+	printerr(3, "using gss_krb5_ccache_name to select krb5 ccache %s\n",
+		 buf);
+	maj_stat = gss_krb5_ccache_name(&min_stat, buf, NULL);
+	if (maj_stat != GSS_S_COMPLETE) {
+		printerr(0, "ERROR: unable to get user cred cache '%s' "
+			 "failed (%s)\n", buf, error_message(min_stat));
+		return maj_stat;
+	}
+	return 0;
 }
 
 /*
@@ -1137,7 +1144,7 @@ gssd_get_krb5_machine_cred_list(char ***list)
 		if (ple->ccname) {
 			/* Make sure cred is up-to-date before returning it */
 			retval = gssd_refresh_krb5_machine_credential(NULL, ple,
-				NULL, NULL);
+				NULL);
 			if (retval)
 				continue;
 			if (i + 1 > listsize) {
@@ -1228,15 +1235,14 @@ gssd_destroy_krb5_machine_creds(void)
 int
 gssd_refresh_krb5_machine_credential(char *hostname,
 				     struct gssd_k5_kt_princ *ple, 
-					 char *service,
-					 char *tgtname)
+					 char *service)
 {
 	krb5_error_code code = 0;
 	krb5_context context;
 	krb5_keytab kt = NULL;;
 	int retval = 0;
 	char *k5err = NULL;
-	const char *svcnames[5] = { "$", "root", "nfs", "host", NULL };
+	const char *svcnames[] = { "$", "root", "nfs", "host", NULL };
 
 	/*
 	 * If a specific service name was specified, use it.
@@ -1268,10 +1274,7 @@ gssd_refresh_krb5_machine_credential(char *hostname,
 	if (ple == NULL) {
 		krb5_keytab_entry kte;
 
-		if (tgtname == NULL)
-			tgtname = hostname;
-
-		code = find_keytab_entry(context, kt, tgtname, &kte, svcnames);
+		code = find_keytab_entry(context, kt, hostname, &kte, svcnames);
 		if (code) {
 			printerr(0, "ERROR: %s: no usable keytab entry found "
 				 "in keytab %s for connection with host %s\n",
@@ -1351,12 +1354,12 @@ gssd_k5_get_default_realm(char **def_realm)
 }
 
 static int
-gssd_acquire_krb5_cred(gss_name_t name, gss_cred_id_t *gss_cred)
+gssd_acquire_krb5_cred(gss_cred_id_t *gss_cred)
 {
 	OM_uint32 maj_stat, min_stat;
 	gss_OID_set_desc desired_mechs = { 1, &krb5oid };
 
-	maj_stat = gss_acquire_cred(&min_stat, name, GSS_C_INDEFINITE,
+	maj_stat = gss_acquire_cred(&min_stat, GSS_C_NO_NAME, GSS_C_INDEFINITE,
 				    &desired_mechs, GSS_C_INITIATE,
 				    gss_cred, NULL, NULL);
 
@@ -1371,33 +1374,25 @@ gssd_acquire_krb5_cred(gss_name_t name, gss_cred_id_t *gss_cred)
 }
 
 int
-gssd_acquire_user_cred(uid_t uid, gss_cred_id_t *gss_cred)
+gssd_acquire_user_cred(gss_cred_id_t *gss_cred)
 {
 	OM_uint32 maj_stat, min_stat;
-	gss_buffer_desc name_buf;
-	gss_name_t name;
-	char buf[11];
 	int ret;
 
-	ret = snprintf(buf, 11, "%u", uid);
-	if (ret < 1 || ret > 10) {
-		return -1;
-	}
-	name_buf.value = buf;
-	name_buf.length = ret + 1;
+	ret = gssd_acquire_krb5_cred(gss_cred);
+	if (ret)
+		return ret;
 
-	maj_stat = gss_import_name(&min_stat, &name_buf,
-				   GSS_C_NT_STRING_UID_NAME, &name);
+	/* force validation of cred to check for expiry */
+	maj_stat = gss_inquire_cred(&min_stat, *gss_cred,
+			NULL, NULL, NULL, NULL);
 	if (maj_stat != GSS_S_COMPLETE) {
 		if (get_verbosity() > 0)
-			pgsserr("gss_import_name",
+			pgsserr("gss_inquire_cred",
 				maj_stat, min_stat, &krb5oid);
-		return -1;
+		ret = -1;
 	}
 
-	ret = gssd_acquire_krb5_cred(name, gss_cred);
-
-	maj_stat = gss_release_name(&min_stat, &name);
 	return ret;
 }
 
@@ -1428,7 +1423,7 @@ limit_krb5_enctypes(struct rpc_gss_sec *sec)
 	int err = -1;
 
 	if (sec->cred == GSS_C_NO_CREDENTIAL) {
-		err = gssd_acquire_krb5_cred(GSS_C_NO_NAME, &sec->cred);
+		err = gssd_acquire_krb5_cred(&sec->cred);
 		if (err)
 			return -1;
 	}

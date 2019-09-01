@@ -157,9 +157,6 @@ static int nfsdopenone(struct idmap_client *);
 static void nfsdreopen_one(struct idmap_client *);
 static void nfsdreopen(void);
 
-void    mydaemon(int, int);
-void    release_parent(void);
-
 static int verbose = 0;
 #define DEFAULT_IDMAP_CACHE_EXPIRY 600 /* seconds */
 static int cache_entry_expiration = 0;
@@ -202,6 +199,12 @@ flush_nfsd_idmap_cache(void)
 	return ret;
 }
 
+void usage(char *progname)
+{
+	fprintf(stderr, "Usage: %s [-hfvCS] [-p path] [-c path]\n",
+		basename(progname));
+}
+
 int
 main(int argc, char **argv)
 {
@@ -228,16 +231,18 @@ main(int argc, char **argv)
 		progname = argv[0];
 	xlog_open(progname);
 
-#define GETOPTSTR "vfd:p:U:G:c:CS"
+#define GETOPTSTR "hvfd:p:U:G:c:CS"
 	opterr=0; /* Turn off error messages */
 	while ((opt = getopt(argc, argv, GETOPTSTR)) != -1) {
 		if (opt == 'c')
 			conf_path = optarg;
 		if (opt == '?') {
 			if (strchr(GETOPTSTR, optopt))
-				errx(1, "'-%c' option requires an argument.", optopt);
+				warnx("'-%c' option requires an argument.", optopt);
 			else
-				errx(1, "'-%c' is an invalid argument.", optopt);
+				warnx("'-%c' is an invalid argument.", optopt);
+			usage(progname);
+			exit(1);
 		}
 	}
 	optind = 1;
@@ -279,6 +284,9 @@ main(int argc, char **argv)
 		case 'S':
 			clientstart = 0;
 			break;
+		case 'h':
+			usage(progname);
+			exit(0);
 		default:
 			break;
 		}
@@ -304,8 +312,7 @@ main(int argc, char **argv)
 	if (nfs4_init_name_mapping(conf_path))
 		errx(1, "Unable to create name to user id mappings.");
 
-	if (!fg)
-		mydaemon(0, 0);
+	daemon_init(fg);
 
 	event_init();
 
@@ -382,7 +389,7 @@ main(int argc, char **argv)
 	if (nfsdret != 0 && fd == 0)
 		xlog_err("main: Neither NFS client nor NFSd found");
 
-	release_parent();
+	daemon_ready();
 
 	if (event_dispatch() < 0)
 		xlog_err("main: event_dispatch returns errno %d (%s)",
@@ -502,7 +509,7 @@ nfsdcb(int UNUSED(fd), short which, void *data)
 	struct idmap_client *ic = data;
 	struct idmap_msg im;
 	u_char buf[IDMAP_MAXMSGSZ + 1];
-	size_t len;
+	ssize_t len;
 	ssize_t bsiz;
 	char *bp, typebuf[IDMAP_MAXMSGSZ],
 		buf1[IDMAP_MAXMSGSZ], authbuf[IDMAP_MAXMSGSZ], *p;
@@ -511,10 +518,14 @@ nfsdcb(int UNUSED(fd), short which, void *data)
 	if (which != EV_READ)
 		goto out;
 
-	if ((len = read(ic->ic_fd, buf, sizeof(buf))) <= 0) {
+	len = read(ic->ic_fd, buf, sizeof(buf));
+	if (len == 0)
+		/* No upcall to read; not necessarily a problem: */
+		return;
+	if (len < 0) {
 		xlog_warn("nfsdcb: read(%s) failed: errno %d (%s)",
-			     ic->ic_path, len?errno:0, 
-			     len?strerror(errno):"End of File");
+			     ic->ic_path, errno,
+			     strerror(errno));
 		nfsdreopen_one(ic);
 		return;
 	}
@@ -714,7 +725,7 @@ nfsdreopen_one(struct idmap_client *ic)
 		xlog_warn("ReOpening %s", ic->ic_path);
 
 	if ((fd = open(ic->ic_path, O_RDWR, 0)) != -1) {
-		if ((ic->ic_event.ev_flags & EVLIST_INIT))
+		if ((event_initialized(&ic->ic_event)))
 			event_del(&ic->ic_event);
 		if (ic->ic_fd != -1)
 			close(ic->ic_fd);
@@ -924,78 +935,4 @@ getfield(char **bpp, char *fld, size_t fldsz)
 	*fld = '\0';
 
 	return (0);
-}
-/*
- * mydaemon creates a pipe between the partent and child
- * process. The parent process will wait until the
- * child dies or writes a '1' on the pipe signaling
- * that it started successfully.
- */
-int pipefds[2] = { -1, -1};
-
-void
-mydaemon(int nochdir, int noclose)
-{
-	int pid, status, tempfd;
-
-	if (pipe(pipefds) < 0)
-		err(1, "mydaemon: pipe() failed: errno %d", errno);
-
-	if ((pid = fork ()) < 0)
-		err(1, "mydaemon: fork() failed: errno %d", errno);
-
-	if (pid != 0) {
-		/*
-		 * Parent. Wait for status from child.
-		 */
-		close(pipefds[1]);
-		if (read(pipefds[0], &status, 1) != 1)
-			exit(1);
-		exit (0);
-	}
-	/* Child.	*/
-	close(pipefds[0]);
-	setsid ();
-	if (nochdir == 0) {
-		if (chdir ("/") == -1)
-			err(1, "mydaemon: chdir() failed: errno %d", errno);
-	}
-
-	while (pipefds[1] <= 2) {
-		pipefds[1] = dup(pipefds[1]);
-		if (pipefds[1] < 0)
-			err(1, "mydaemon: dup() failed: errno %d", errno);
-	}
-
-	if (noclose == 0) {
-		tempfd = open("/dev/null", O_RDWR);
-		if (tempfd < 0)
-			tempfd = open("/", O_RDONLY);
-		if (tempfd >= 0) {
-			dup2(tempfd, 0);
-			dup2(tempfd, 1);
-			dup2(tempfd, 2);
-			close(tempfd);
-		} else {
-			err(1, "mydaemon: can't open /dev/null: errno %d",
-			       errno);
-			exit(1);
-		}
-	}
-
-	return;
-}
-void
-release_parent(void)
-{
-	int status;
-
-	if (pipefds[1] > 0) {
-		if (write(pipefds[1], &status, 1) != 1) {
-			err(1, "Writing to parent pipe failed: errno %d (%s)\n",
-				errno, strerror(errno));
-		}
-		close(pipefds[1]);
-		pipefds[1] = -1;
-	}
 }

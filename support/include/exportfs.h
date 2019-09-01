@@ -10,6 +10,7 @@
 #define EXPORTFS_H
 
 #include <netdb.h>
+#include <string.h>
 
 #include "sockaddr.h"
 #include "nfslib.h"
@@ -133,7 +134,7 @@ struct addrinfo *		client_resolve(const struct sockaddr *sap);
 int 				client_member(const char *client,
 						const char *name);
 
-void				export_read(char *fname);
+int				export_read(char *fname);
 void				export_reset(nfs_export *);
 nfs_export *			export_lookup(char *hname, char *path, int caconical);
 nfs_export *			export_find(const struct addrinfo *ai,
@@ -156,15 +157,15 @@ int				secinfo_addflavor(struct flav_info *, struct exportent *);
 
 char *				host_ntop(const struct sockaddr *sap,
 						char *buf, const size_t buflen);
-__attribute_malloc__
+__attribute__((__malloc__))
 struct addrinfo *		host_pton(const char *paddr);
-__attribute_malloc__
+__attribute__((__malloc__))
 struct addrinfo *		host_addrinfo(const char *hostname);
-__attribute_malloc__
+__attribute__((__malloc__))
 char *				host_canonname(const struct sockaddr *sap);
-__attribute_malloc__
+__attribute__((__malloc__))
 struct addrinfo *		host_reliable_addrinfo(const struct sockaddr *sap);
-__attribute_malloc__
+__attribute__((__malloc__))
 struct addrinfo *		host_numeric_addrinfo(const struct sockaddr *sap);
 
 int				rmtab_read(void);
@@ -178,8 +179,5 @@ struct export_features {
 
 struct export_features *get_export_features(void);
 void fix_pseudoflavor_flags(struct exportent *ep);
-
-/* Record export error.  */
-extern int export_errno;
 
 #endif /* EXPORTFS_H */

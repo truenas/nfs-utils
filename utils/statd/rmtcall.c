@@ -52,6 +52,9 @@
 
 static int		sockfd = -1;	/* notify socket */
 
+/* How many times to try looking for an unused privileged port */
+#define MAX_BRP_RETRIES	100
+
 /*
  * Initialize socket used to notify lockd of peer reboots.
  *
@@ -68,14 +71,14 @@ statd_get_socket(void)
 {
 	struct sockaddr_in	sin;
 	struct servent *se;
-	const int loopcnt = 100;
-	int i, tmp_sockets[loopcnt];
+	static int prevsocks[MAX_BRP_RETRIES];
+	unsigned int retries;
 
 	if (sockfd >= 0)
 		return sockfd;
 
-	for (i = 0; i < loopcnt; ++i) {
-
+	retries = 0;
+	do {
 		if ((sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
 			xlog(L_ERROR, "%s: Can't create socket: %m", __func__);
 			break;
@@ -93,18 +96,23 @@ statd_get_socket(void)
 		se = getservbyport(sin.sin_port, "udp");
 		if (se == NULL)
 			break;
+
+		if (retries == MAX_BRP_RETRIES) {
+			xlog(D_GENERAL, "%s: No unused privileged ports",
+					__func__);
+			break;
+		}
+
 		/* rather not use that port, try again */
+		prevsocks[retries++] = sockfd;
+	} while (1);
 
-		tmp_sockets[i] = sockfd;
-	}
-
-	while (--i >= 0)
-		close(tmp_sockets[i]);
+	while (retries)
+		close(prevsocks[--retries]);
 
 	if (sockfd < 0)
 		return -1;
 
-	FD_SET(sockfd, &SVC_FDSET);
 	return sockfd;
 }
 
@@ -220,6 +228,9 @@ process_reply(FD_SET_TYPE *rfds)
 
 	if (sockfd == -1 || !FD_ISSET(sockfd, rfds))
 		return 0;
+
+	/* Should not be processed again. */
+	FD_CLR (sockfd, rfds);
 
 	if (!(lp = recv_rply(&port)))
 		return 1;

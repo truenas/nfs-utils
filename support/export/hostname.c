@@ -69,7 +69,7 @@ host_ntop(const struct sockaddr *sap, char *buf, const size_t buflen)
 
 	memset(buf, 0, buflen);
 
-	if (sin->sin_family != AF_INET)
+	if (sin->sin_family != AF_INET) {
 		(void)strncpy(buf, "bad family", buflen - 1);
 		return buf;
 	}
@@ -91,7 +91,7 @@ host_ntop(const struct sockaddr *sap, char *buf, const size_t buflen)
  * Returns address info structure, or NULL if an error occurs.  Caller
  * must free the returned structure with freeaddrinfo(3).
  */
-__attribute_malloc__
+__attribute__((__malloc__))
 struct addrinfo *
 host_pton(const char *paddr)
 {
@@ -115,6 +115,11 @@ host_pton(const char *paddr)
 	 * have a real AF_INET presentation address, before invoking
 	 * getaddrinfo(3) to generate the full addrinfo list.
 	 */
+	if (paddr == NULL) {
+		xlog(D_GENERAL, "%s: passed a NULL presentation address",
+			__func__);
+		return NULL;
+	}
 	inet4 = 1;
 	if (inet_pton(AF_INET, paddr, &sin.sin_addr) == 0)
 		inet4 = 0;
@@ -123,21 +128,20 @@ host_pton(const char *paddr)
 	switch (error) {
 	case 0:
 		if (!inet4 && ai->ai_addr->sa_family == AF_INET) {
+			xlog(D_GENERAL, "%s: failed to convert %s",
+					__func__, paddr);
 			freeaddrinfo(ai);
 			break;
 		}
 		return ai;
 	case EAI_NONAME:
-		if (paddr == NULL)
-			xlog(D_GENERAL, "%s: passed a NULL presentation address",
-				__func__);
 		break;
 	case EAI_SYSTEM:
-		xlog(D_GENERAL, "%s: failed to convert %s: (%d) %m",
+		xlog(L_WARNING, "%s: failed to convert %s: (%d) %m",
 				__func__, paddr, errno);
 		break;
 	default:
-		xlog(D_GENERAL, "%s: failed to convert %s: %s",
+		xlog(L_WARNING, "%s: failed to convert %s: %s",
 				__func__, paddr, gai_strerror(error));
 		break;
 	}
@@ -153,7 +157,7 @@ host_pton(const char *paddr)
  * if no information is available for @hostname.  Caller must free the
  * returned structure with freeaddrinfo(3).
  */
-__attribute_malloc__
+__attribute__((__malloc__))
 struct addrinfo *
 host_addrinfo(const char *hostname)
 {
@@ -175,11 +179,11 @@ host_addrinfo(const char *hostname)
 	case 0:
 		return ai;
 	case EAI_SYSTEM:
-		xlog(D_GENERAL, "%s: failed to resolve %s: (%d) %m",
+		xlog(D_PARSE, "%s: failed to resolve %s: (%d) %m",
 				__func__, hostname, errno);
 		break;
 	default:
-		xlog(D_GENERAL, "%s: failed to resolve %s: %s",
+		xlog(D_PARSE, "%s: failed to resolve %s: %s",
 				__func__, hostname, gai_strerror(error));
 		break;
 	}
@@ -199,7 +203,7 @@ host_addrinfo(const char *hostname)
  * the string.
  */
 #ifdef HAVE_GETNAMEINFO
-__attribute_malloc__
+__attribute__((__malloc__))
 char *
 host_canonname(const struct sockaddr *sap)
 {
@@ -226,7 +230,7 @@ host_canonname(const struct sockaddr *sap)
 	default:
 		(void)getnameinfo(sap, salen, buf, (socklen_t)sizeof(buf),
 							NULL, 0, NI_NUMERICHOST);
-		xlog(D_GENERAL, "%s: failed to resolve %s: %s",
+		xlog(D_PARSE, "%s: failed to resolve %s: %s",
 				__func__, buf, gai_strerror(error));
 		return NULL;
 	}
@@ -234,7 +238,7 @@ host_canonname(const struct sockaddr *sap)
 	return strdup(buf);
 }
 #else	/* !HAVE_GETNAMEINFO */
-__attribute_malloc__
+__attribute__((__malloc__))
 char *
 host_canonname(const struct sockaddr *sap)
 {
@@ -266,7 +270,7 @@ host_canonname(const struct sockaddr *sap)
  *
  * Caller must free the returned structure with freeaddrinfo(3).
  */
-__attribute_malloc__
+__attribute__((__malloc__))
 struct addrinfo *
 host_reliable_addrinfo(const struct sockaddr *sap)
 {
@@ -313,7 +317,7 @@ out_free_hostname:
  * Caller must free the returned structure with freeaddrinfo(3).
  */
 #ifdef HAVE_GETNAMEINFO
-__attribute_malloc__
+__attribute__((__malloc__))
 struct addrinfo *
 host_numeric_addrinfo(const struct sockaddr *sap)
 {
@@ -361,7 +365,7 @@ host_numeric_addrinfo(const struct sockaddr *sap)
 	return ai;
 }
 #else	/* !HAVE_GETNAMEINFO */
-__attribute_malloc__
+__attribute__((__malloc__))
 struct addrinfo *
 host_numeric_addrinfo(const struct sockaddr *sap)
 {

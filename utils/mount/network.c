@@ -38,6 +38,7 @@
 #include <sys/socket.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
+#include <linux/in6.h>
 #include <netinet/in.h>
 #include <rpc/rpc.h>
 #include <rpc/pmap_prot.h>
@@ -58,17 +59,13 @@
 #define PMAP_TIMEOUT	(10)
 #define CONNECT_TIMEOUT	(20)
 #define MOUNT_TIMEOUT	(30)
+#define STATD_TIMEOUT	(10)
 
 #define SAFE_SOCKADDR(x)	(struct sockaddr *)(char *)(x)
 
 extern int nfs_mount_data_version;
 extern char *progname;
 extern int verbose;
-
-static const char *nfs_ns_pgmtbl[] = {
-	"status",
-	NULL,
-};
 
 static const char *nfs_mnt_pgmtbl[] = {
 	"mount",
@@ -96,6 +93,7 @@ static const char *nfs_version_opttbl[] = {
 	"v4",
 	"vers",
 	"nfsvers",
+	"minorversion",
 	NULL,
 };
 
@@ -612,18 +610,33 @@ out_ok:
  * returned; rpccreateerr.cf_stat is set to reflect the nature of the error.
  */
 static int nfs_probe_nfsport(const struct sockaddr *sap, const socklen_t salen,
-				struct pmap *pmap)
+			     struct pmap *pmap, int checkv4)
 {
 	if (pmap->pm_vers && pmap->pm_prot && pmap->pm_port)
 		return 1;
 
 	if (nfs_mount_data_version >= 4) {
 		const unsigned int *probe_proto;
+		int ret;
+		struct sockaddr_storage save_sa;
 
 		probe_proto = nfs_default_proto();
+		memcpy(&save_sa, sap, salen);
 
-		return nfs_probe_port(sap, salen, pmap,
-					probe_nfs3_only, probe_proto);
+		ret = nfs_probe_port(sap, salen, pmap,
+				     probe_nfs3_only, probe_proto);
+		if (!ret || !checkv4 || probe_proto != probe_tcp_first)
+			return ret;
+
+		nfs_set_port((struct sockaddr *)&save_sa, NFS_PORT);
+		ret =  nfs_rpc_ping((struct sockaddr *)&save_sa, salen, 
+			NFS_PROGRAM, 4, IPPROTO_TCP, NULL);
+		if (ret) {
+			rpc_createerr.cf_stat = RPC_FAILED;
+			rpc_createerr.cf_error.re_errno = EAGAIN;
+			return 0;
+		}
+		return 1;
 	} else
 		return nfs_probe_port(sap, salen, pmap,
 					probe_nfs2_only, probe_udp_only);
@@ -672,7 +685,7 @@ static int nfs_probe_version_fixed(const struct sockaddr *mnt_saddr,
 			const socklen_t nfs_salen,
 			struct pmap *nfs_pmap)
 {
-	if (!nfs_probe_nfsport(nfs_saddr, nfs_salen, nfs_pmap))
+	if (!nfs_probe_nfsport(nfs_saddr, nfs_salen, nfs_pmap, 0))
 		return 0;
 	return nfs_probe_mntport(mnt_saddr, mnt_salen, mnt_pmap);
 }
@@ -687,6 +700,8 @@ static int nfs_probe_version_fixed(const struct sockaddr *mnt_saddr,
  * @nfs_salen:	length of NFS server's address
  * @nfs_pmap:	IN: partially filled-in NFS RPC service tuple;
  *		OUT: fully filled-in NFS RPC service tuple
+ * @checkv4:	Flag indicating that if v3 is available we must also
+ *		check v4, and if that is available, set re_errno to EAGAIN.
  *
  * Returns 1 and fills in both @pmap structs if the requested service
  * ports are unambiguous and pingable.  Otherwise zero is returned;
@@ -697,7 +712,8 @@ int nfs_probe_bothports(const struct sockaddr *mnt_saddr,
 			struct pmap *mnt_pmap,
 			const struct sockaddr *nfs_saddr,
 			const socklen_t nfs_salen,
-			struct pmap *nfs_pmap)
+			struct pmap *nfs_pmap,
+			int checkv4)
 {
 	struct pmap save_nfs, save_mnt;
 	const unsigned long *probe_vers;
@@ -718,7 +734,7 @@ int nfs_probe_bothports(const struct sockaddr *mnt_saddr,
 
 	for (; *probe_vers; probe_vers++) {
 		nfs_pmap->pm_vers = mntvers_to_nfs(*probe_vers);
-		if (nfs_probe_nfsport(nfs_saddr, nfs_salen, nfs_pmap) != 0) {
+		if (nfs_probe_nfsport(nfs_saddr, nfs_salen, nfs_pmap, checkv4) != 0) {
 			mnt_pmap->pm_vers = *probe_vers;
 			if (nfs_probe_mntport(mnt_saddr, mnt_salen, mnt_pmap) != 0)
 				return 1;
@@ -758,19 +774,7 @@ int probe_bothports(clnt_addr_t *mnt_server, clnt_addr_t *nfs_server)
 	return nfs_probe_bothports(mnt_addr, sizeof(mnt_server->saddr),
 					&mnt_server->pmap,
 					nfs_addr, sizeof(nfs_server->saddr),
-					&nfs_server->pmap);
-}
-
-static int nfs_probe_statd(void)
-{
-	struct sockaddr_in addr = {
-		.sin_family		= AF_INET,
-		.sin_addr.s_addr	= htonl(INADDR_LOOPBACK),
-	};
-	rpcprog_t program = nfs_getrpcbyname(NSMPROG, nfs_ns_pgmtbl);
-
-	return nfs_getport_ping(SAFE_SOCKADDR(&addr), sizeof(addr),
-				program, (rpcvers_t)1, IPPROTO_UDP);
+					&nfs_server->pmap, 0);
 }
 
 /**
@@ -790,21 +794,38 @@ int start_statd(void)
 #ifdef START_STATD
 	if (stat(START_STATD, &stb) == 0) {
 		if (S_ISREG(stb.st_mode) && (stb.st_mode & S_IXUSR)) {
+			int cnt = STATD_TIMEOUT * 10;
+			int status = 0;
+			char * const envp[1] = { NULL };
+			const struct timespec ts = {
+				.tv_sec = 0,
+				.tv_nsec = 100000000,
+			};
 			pid_t pid = fork();
 			switch (pid) {
 			case 0: /* child */
-				execl(START_STATD, START_STATD, NULL);
+				setgid(0);
+				setuid(0);
+				execle(START_STATD, START_STATD, NULL, envp);
 				exit(1);
 			case -1: /* error */
 				nfs_error(_("%s: fork failed: %s"),
 						progname, strerror(errno));
 				break;
 			default: /* parent */
-				waitpid(pid, NULL,0);
+				if (waitpid(pid, &status,0) == pid &&
+				    status == 0)
+					/* assume it worked */
+					return 1;
 				break;
 			}
-			if (nfs_probe_statd())
-				return 1;
+			while (1) {
+				if (nfs_probe_statd())
+					return 1;
+				if (! cnt--)
+					return 0;
+				nanosleep(&ts, NULL);
+			}
 		}
 	}
 #endif
@@ -1093,6 +1114,7 @@ static int nfs_ca_sockname(const struct sockaddr *sap, const socklen_t salen,
 		.sin6_addr		= IN6ADDR_ANY_INIT,
 	};
 	int sock, result = 0;
+	int val;
 
 	sock = socket(sap->sa_family, SOCK_DGRAM, IPPROTO_UDP);
 	if (sock < 0)
@@ -1104,6 +1126,9 @@ static int nfs_ca_sockname(const struct sockaddr *sap, const socklen_t salen,
 			goto out;
 		break;
 	case AF_INET6:
+		/* Make sure the call-back address is public/permanent */
+		val = IPV6_PREFER_SRC_PUBLIC;
+		setsockopt(sock, SOL_IPV6, IPV6_ADDR_PREFERENCES, &val, sizeof(val));
 		if (bind(sock, SAFE_SOCKADDR(&sin6), sizeof(sin6)) < 0)
 			goto out;
 		break;
@@ -1227,62 +1252,73 @@ nfs_nfs_program(struct mount_options *options, unsigned long *program)
  * or FALSE if the option was specified with an invalid value.
  */
 int
-nfs_nfs_version(struct mount_options *options, unsigned long *version)
+nfs_nfs_version(struct mount_options *options, struct nfs_version *version)
 {
-	long tmp;
+	char *version_key, *version_val, *cptr;
+	int i, found = 0;
 
-	switch (po_rightmost(options, nfs_version_opttbl)) {
-	case 0:	/* v2 */
-		*version = 2;
-		return 1;
-	case 1: /* v3 */
-		*version = 3;
-		return 1;
-	case 2: /* v4 */
-		*version = 4;
-		return 1;
-	case 3:	/* vers */
-		switch (po_get_numeric(options, "vers", &tmp)) {
-		case PO_FOUND:
-			if (tmp >= 2 && tmp <= 4) {
-				*version = tmp;
-				return 1;
-			}
-			return 0;
-		case PO_NOT_FOUND:
-			nfs_error(_("%s: parsing error on 'vers=' option\n"),
-					progname);
-			return 0;
-		case PO_BAD_VALUE:
-			nfs_error(_("%s: invalid value for 'vers=' option"),
-					progname);
-			return 0;
-		}
-	case 4: /* nfsvers */
-		switch (po_get_numeric(options, "nfsvers", &tmp)) {
-		case PO_FOUND:
-			if (tmp >= 2 && tmp <= 4) {
-				*version = tmp;
-				return 1;
-			}
-			return 0;
-		case PO_NOT_FOUND:
-			nfs_error(_("%s: parsing error on 'nfsvers=' option\n"),
-					progname);
-			return 0;
-		case PO_BAD_VALUE:
-			nfs_error(_("%s: invalid value for 'nfsvers=' option"),
-					progname);
-			return 0;
+	version->v_mode = V_DEFAULT;
+
+	for (i = 0; nfs_version_opttbl[i]; i++) {
+		if (po_contains_prefix(options, nfs_version_opttbl[i],
+								&version_key) == PO_FOUND) {
+			found++;
+			break;
 		}
 	}
 
-	/*
-	 * NFS version wasn't specified.  The pmap version value
-	 * will be filled in later by an rpcbind query in this case.
-	 */
-	*version = 0;
+	if (!found)
+		return 1;
+
+	if (i <= 2 ) {
+		/* v2, v3, v4 */
+		version_val = version_key + 1;
+		version->v_mode = V_SPECIFIC;
+	} else if (i > 2 ) {
+		/* vers=, nfsvers= */
+		version_val = po_get(options, version_key);
+	}
+
+	if (!version_val)
+		goto ret_error;
+
+	if (!(version->major = strtol(version_val, &cptr, 10)))
+		goto ret_error;
+
+	if (strcmp(nfs_version_opttbl[i], "minorversion") == 0) {
+		version->v_mode = V_SPECIFIC;
+		version->minor = version->major;
+		version->major = 4;
+	} else if (version->major < 4)
+		version->v_mode = V_SPECIFIC;
+
+	if (*cptr == '.') {
+		version_val = ++cptr;
+		if (!(version->minor = strtol(version_val, &cptr, 10)) && cptr == version_val)
+			goto ret_error;
+		version->v_mode = V_SPECIFIC;
+	} else if (version->major > 3 && *cptr == '\0')
+		version->v_mode = V_GENERAL;
+
+	if (*cptr != '\0')
+		goto ret_error;
+
 	return 1;
+
+ret_error:
+	if (i <= 2 ) {
+		nfs_error(_("%s: parsing error on 'v' option"),
+			progname);
+	} else if (i == 3 ) {
+		nfs_error(_("%s: parsing error on 'vers=' option"),
+			progname);
+	} else if (i == 4) {
+		nfs_error(_("%s: parsing error on 'nfsvers=' option"),
+			progname);
+	}
+	version->v_mode = V_PARSE_ERR;
+	errno = EINVAL;
+	return 0;
 }
 
 /*
@@ -1601,10 +1637,16 @@ out_err:
 int nfs_options2pmap(struct mount_options *options,
 		     struct pmap *nfs_pmap, struct pmap *mnt_pmap)
 {
+	struct nfs_version version;
+
 	if (!nfs_nfs_program(options, &nfs_pmap->pm_prog))
 		return 0;
-	if (!nfs_nfs_version(options, &nfs_pmap->pm_vers))
+	if (!nfs_nfs_version(options, &version))
 		return 0;
+	if (version.v_mode == V_DEFAULT)
+		nfs_pmap->pm_vers = 0;
+	else
+		nfs_pmap->pm_vers = version.major;
 	if (!nfs_nfs_protocol(options, &nfs_pmap->pm_prot))
 		return 0;
 	if (!nfs_nfs_port(options, &nfs_pmap->pm_port))

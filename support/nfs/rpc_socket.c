@@ -106,36 +106,6 @@ static CLIENT *nfs_get_localclient(const struct sockaddr *sap,
 	return client;
 }
 
-/*
- * Bind a socket using an unused ephemeral source port.
- *
- * Returns zero on success, or returns -1 on error.  errno is
- * set to reflect the nature of the error.
- */
-static int nfs_bind(const int sock, const sa_family_t family)
-{
-	struct sockaddr_in sin = {
-		.sin_family		= AF_INET,
-		.sin_addr.s_addr	= htonl(INADDR_ANY),
-	};
-	struct sockaddr_in6 sin6 = {
-		.sin6_family		= AF_INET6,
-		.sin6_addr		= IN6ADDR_ANY_INIT,
-	};
-
-	switch (family) {
-	case AF_INET:
-		return bind(sock, (struct sockaddr *)(char *)&sin,
-					(socklen_t)sizeof(sin));
-	case AF_INET6:
-		return bind(sock, (struct sockaddr *)(char *)&sin6,
-					(socklen_t)sizeof(sin6));
-	}
-
-	errno = EAFNOSUPPORT;
-	return -1;
-}
-
 #ifdef HAVE_LIBTIRPC
 
 /*
@@ -215,7 +185,7 @@ static int nfs_connect_nb(const int fd, const struct sockaddr *sap,
 	 * use it later.
 	 */
 	ret = connect(fd, sap, salen);
-	if (ret < 0 && errno != EINPROGRESS) {
+	if (ret < 0 && errno != EINPROGRESS && errno != EINTR) {
 		ret = -1;
 		goto done;
 	}
@@ -227,10 +197,16 @@ static int nfs_connect_nb(const int fd, const struct sockaddr *sap,
 	FD_ZERO(&rset);
 	FD_SET(fd, &rset);
 
-	ret = select(fd + 1, NULL, &rset, NULL, timeout);
-	if (ret <= 0) {
-		if (ret == 0)
-			errno = ETIMEDOUT;
+	while ((ret = select(fd + 1, NULL, &rset, NULL, timeout)) < 0) {
+		if (errno != EINTR) {
+			ret = -1;
+			goto done;
+		} else {
+			continue;
+		}
+	}
+	if (ret == 0) {
+		errno = ETIMEDOUT;
 		ret = -1;
 		goto done;
 	}
@@ -276,7 +252,8 @@ static CLIENT *nfs_get_udpclient(const struct sockaddr *sap,
 				 const int resvport)
 {
 	CLIENT *client;
-	int ret, sock;
+	int ret = 0;
+	int sock = 0;
 #ifdef HAVE_LIBTIRPC
 	struct sockaddr_storage address;
 	const struct netbuf nbuf = {
@@ -300,15 +277,15 @@ static CLIENT *nfs_get_udpclient(const struct sockaddr *sap,
 		return NULL;
 	}
 
-	if (resvport)
+	if (resvport) {
 		ret = nfs_bindresvport(sock, sap->sa_family);
-	else
-		ret = nfs_bind(sock, sap->sa_family);
-	if (ret < 0) {
-		rpc_createerr.cf_stat = RPC_SYSTEMERROR;
-		rpc_createerr.cf_error.re_errno = errno;
-		(void)close(sock);
-		return NULL;
+
+		if (ret < 0) {
+			rpc_createerr.cf_stat = RPC_SYSTEMERROR;
+			rpc_createerr.cf_error.re_errno = errno;
+			(void)close(sock);
+			return NULL;
+		}
 	}
 
 	if (timeout->tv_sec == -1)
@@ -358,7 +335,8 @@ static CLIENT *nfs_get_tcpclient(const struct sockaddr *sap,
 				 const int resvport)
 {
 	CLIENT *client;
-	int ret, sock;
+	int ret = 0;
+	int sock = 0;
 #ifdef HAVE_LIBTIRPC
 	struct sockaddr_storage address;
 	const struct netbuf nbuf = {
@@ -382,15 +360,15 @@ static CLIENT *nfs_get_tcpclient(const struct sockaddr *sap,
 		return NULL;
 	}
 
-	if (resvport)
+	if (resvport) {
 		ret = nfs_bindresvport(sock, sap->sa_family);
-	else
-		ret = nfs_bind(sock, sap->sa_family);
-	if (ret < 0) {
-		rpc_createerr.cf_stat = RPC_SYSTEMERROR;
-		rpc_createerr.cf_error.re_errno = errno;
-		(void)close(sock);
-		return NULL;
+
+		if (ret < 0) {
+			rpc_createerr.cf_stat = RPC_SYSTEMERROR;
+			rpc_createerr.cf_error.re_errno = errno;
+			(void)close(sock);
+			return NULL;
+		}
 	}
 
 	if (timeout->tv_sec == -1)

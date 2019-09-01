@@ -29,6 +29,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <netdb.h>
+#include "nfslib.h"
 
 #include <netinet/in.h>
 
@@ -47,6 +48,8 @@
 #include "xlog.h"
 
 #ifdef HAVE_LIBTIRPC
+
+#include <rpc/rpc_com.h>
 
 #define SVC_CREATE_XPRT_CACHE_SIZE	(8)
 static SVCXPRT *svc_create_xprt_cache[SVC_CREATE_XPRT_CACHE_SIZE] = { NULL, };
@@ -112,7 +115,7 @@ svc_create_find_xprt(const struct sockaddr *bindaddr, const struct netconfig *nc
  *
  * Otherwise NULL is returned if an error occurs.
  */
-__attribute_malloc__
+__attribute__((__malloc__))
 static struct addrinfo *
 svc_create_bindaddr(struct netconfig *nconf, const uint16_t port)
 {
@@ -130,7 +133,7 @@ svc_create_bindaddr(struct netconfig *nconf, const uint16_t port)
 		hint.ai_family = AF_INET6;
 #endif	/* IPV6_SUPPORTED */
 	else {
-		xlog(D_GENERAL, "Unrecognized bind address family: %s",
+		xlog(L_ERROR, "Unrecognized bind address family: %s",
 			nconf->nc_protofmly);
 		return NULL;
 	}
@@ -140,7 +143,7 @@ svc_create_bindaddr(struct netconfig *nconf, const uint16_t port)
 	else if (strcmp(nconf->nc_proto, NC_TCP) == 0)
 		hint.ai_protocol = (int)IPPROTO_TCP;
 	else {
-		xlog(D_GENERAL, "Unrecognized bind address protocol: %s",
+		xlog(L_ERROR, "Unrecognized bind address protocol: %s",
 			nconf->nc_proto);
 		return NULL;
 	}
@@ -272,15 +275,23 @@ svc_create_nconf_rand_port(const char *name, const rpcprog_t program,
 	xprt = svc_tli_create(RPC_ANYFD, nconf, &bindaddr, 0, 0);
 	freeaddrinfo(ai);
 	if (xprt == NULL) {
-		xlog(D_GENERAL, "Failed to create listener xprt "
+		xlog(L_ERROR, "Failed to create listener xprt "
 			"(%s, %u, %s)", name, version, nconf->nc_netid);
 		return 0;
 	}
+	if (svcsock_nonblock(xprt->xp_fd) < 0) {
+		/* close() already done by svcsock_nonblock() */
+		xprt->xp_fd = RPC_ANYFD;
+		SVC_DESTROY(xprt);
+		return 0;
+	}
 
+	rpc_createerr.cf_stat = rpc_createerr.cf_error.re_errno = 0;
 	if (!svc_reg(xprt, program, version, dispatch, nconf)) {
 		/* svc_reg(3) destroys @xprt in this case */
-		xlog(D_GENERAL, "Failed to register (%s, %u, %s)",
-				name, version, nconf->nc_netid);
+		xlog(L_ERROR, "Failed to register (%s, %u, %s): %s",
+				name, version, nconf->nc_netid, 
+				clnt_spcreateerror("svc_reg() err"));
 		return 0;
 	}
 
@@ -331,6 +342,7 @@ svc_create_nconf_fixed_port(const char *name, const rpcprog_t program,
 		int fd;
 
 		fd = svc_create_sock(ai->ai_addr, ai->ai_addrlen, nconf);
+		fd = svcsock_nonblock(fd);
 		if (fd == -1)
 			goto out_free;
 
@@ -393,6 +405,7 @@ nfs_svc_create(char *name, const rpcprog_t program, const rpcvers_t version,
 	const struct sigaction create_sigaction = {
 		.sa_handler	= SIG_IGN,
 	};
+	int maxrec = RPC_MAXDATASIZE;
 	unsigned int visible, up, servport;
 	struct netconfig *nconf;
 	void *handlep;
@@ -403,6 +416,20 @@ nfs_svc_create(char *name, const rpcprog_t program, const rpcvers_t version,
 	 * to them.
 	 */
 	(void)sigaction(SIGPIPE, &create_sigaction, NULL);
+
+	/*
+	 * Setting MAXREC also enables non-blocking mode for tcp connections.
+	 * This avoids DOS attacks by a client sending many requests but never
+	 * reading the reply:
+	 * - if a second request already is present for reading in the socket,
+	 *   after the first request just was read, libtirpc will break the
+	 *   connection. Thus an attacker can't simply send requests as fast as
+	 *   he can without waiting for the response.
+	 * - if the write buffer of the socket is full, the next write() will
+	 *   fail with EAGAIN. libtirpc will retry the write in a loop for max.
+	 *   2 seconds. If write still fails, the connection will be closed.
+	 */   
+	rpc_control(RPC_SVC_CONNMAXREC_SET, &maxrec);
 
 	handlep = setnetconfig();
 	if (handlep == NULL) {
@@ -417,6 +444,13 @@ nfs_svc_create(char *name, const rpcprog_t program, const rpcvers_t version,
 		if (!(nconf->nc_flag & NC_VISIBLE))
 			continue;
 		visible++;
+
+		if (!strcmp(nconf->nc_proto, NC_UDP) && !NFSCTL_UDPISSET(_rpcprotobits))
+			continue;
+
+		if (!strcmp(nconf->nc_proto, NC_TCP) && !NFSCTL_TCPISSET(_rpcprotobits))
+			continue;
+
 		if (port == 0)
 			servport = getservport(program, nconf->nc_proto);
 		else

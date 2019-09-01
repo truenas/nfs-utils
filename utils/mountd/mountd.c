@@ -57,7 +57,6 @@ static struct option longopts[] =
 	{ "descriptors", 1, 0, 'o' },
 	{ "debug", 1, 0, 'd' },
 	{ "help", 0, 0, 'h' },
-	{ "exports-file", 1, 0, 'f' },
 	{ "nfs-version", 1, 0, 'V' },
 	{ "no-nfs-version", 1, 0, 'N' },
 	{ "version", 0, 0, 'v' },
@@ -68,6 +67,7 @@ static struct option longopts[] =
 	{ "num-threads", 1, 0, 't' },
 	{ "reverse-lookup", 0, 0, 'r' },
 	{ "manage-gids", 0, 0, 'g' },
+	{ "no-udp", 0, 0, 'u' },
 	{ NULL, 0, 0, 0 }
 };
 
@@ -688,7 +688,6 @@ get_exportlist(void)
 int
 main(int argc, char **argv)
 {
-	char	*export_file = _PATH_EXPORTS;
 	char    *state_dir = NFS_STATEDIR;
 	char	*progname;
 	unsigned int listeners = 0;
@@ -708,7 +707,7 @@ main(int argc, char **argv)
 
 	/* Parse the command line options and arguments. */
 	opterr = 0;
-	while ((c = getopt_long(argc, argv, "o:nFd:f:p:P:hH:N:V:vrs:t:g", longopts, NULL)) != EOF)
+	while ((c = getopt_long(argc, argv, "o:nFd:p:P:hH:N:V:vurs:t:g", longopts, NULL)) != EOF)
 		switch (c) {
 		case 'g':
 			manage_gids = 1;
@@ -726,9 +725,6 @@ main(int argc, char **argv)
 			break;
 		case 'd':
 			xlog_sconfig(optarg, 1);
-			break;
-		case 'f':
-			export_file = optarg;
 			break;
 		case 'H': /* PRC: specify a high-availability callout program */
 			ha_callout_prog = optarg;
@@ -755,7 +751,7 @@ main(int argc, char **argv)
 			nfs_version &= ~NFSVERSBIT(vers);
 			break;
 		case 'n':
-			_rpcfdtype = SOCK_DGRAM;
+			NFSCTL_TCPUNSET(_rpcprotobits);
 			break;
 		case 'r':
 			reverse_resolve = 1;
@@ -782,6 +778,9 @@ main(int argc, char **argv)
 		case 'v':
 			printf("%s version " VERSION "\n", progname);
 			exit(0);
+		case 'u':
+			NFSCTL_UDPUNSET(_rpcprotobits);
+			break;
 		case 0:
 			break;
 		case '?':
@@ -790,9 +789,10 @@ main(int argc, char **argv)
 		}
 
 	/* No more arguments allowed. */
-	if (optind != argc || !version_any())
+	if (optind != argc || !version_any()) {
+		fprintf(stderr, "%s: No protocol versions specified!\n", progname); 
 		usage(progname, 1);
-
+	}
 	if (chdir(state_dir)) {
 		fprintf(stderr, "%s: chdir(%s) failed: %s\n",
 			progname, state_dir, strerror(errno));
@@ -849,7 +849,7 @@ main(int argc, char **argv)
 		listeners += nfs_svc_create("mountd", MOUNTPROG,
 					MOUNTVERS_NFSV3, mount_dispatch, port);
 	if (version23() && listeners == 0)
-		xlog(L_FATAL, "mountd: could not create listeners\n");
+		xlog(L_WARNING, "mountd: No V2 or V3 listeners created!");
 
 	sa.sa_handler = killer;
 	sigaction(SIGINT, &sa, NULL);
@@ -857,7 +857,7 @@ main(int argc, char **argv)
 	sa.sa_handler = sig_hup;
 	sigaction(SIGHUP, &sa, NULL);
 
-	auth_init(export_file);
+	auth_init();
 
 	if (!foreground) {
 		/* We first fork off a child. */
@@ -903,10 +903,11 @@ usage(const char *prog, int n)
 {
 	fprintf(stderr,
 "Usage: %s [-F|--foreground] [-h|--help] [-v|--version] [-d kind|--debug kind]\n"
-"	[-o num|--descriptors num] [-f exports-file|--exports-file=file]\n"
+"	[-o num|--descriptors num]\n"
 "	[-p|--port port] [-V version|--nfs-version version]\n"
 "	[-N version|--no-nfs-version version] [-n|--no-tcp]\n"
-"	[-H ha-callout-prog] [-s|--state-directory-path path]\n"
-"	[-g|--manage-gids] [-t num|--num-threads=num]\n", prog);
+"	[-H prog |--ha-callout prog] [-r |--reverse-lookup]\n"
+"	[-s|--state-directory-path path] [-g|--manage-gids]\n"
+"	[-t num|--num-threads=num] [-u|--no-udp]\n", prog);
 	exit(n);
 }

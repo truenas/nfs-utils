@@ -47,8 +47,6 @@ struct flav_info flav_map[] = {
 
 const int flav_map_size = sizeof(flav_map)/sizeof(flav_map[0]);
 
-int export_errno;
-
 static char	*efname = NULL;
 static XFILE	*efp = NULL;
 static int	first;
@@ -63,6 +61,7 @@ static int	parsesquash(char *list, int **idp, int *lenp, char **ep);
 static int	parsenum(char **cpp);
 static void	freesquash(void);
 static void	syntaxerr(char *msg);
+static struct flav_info *find_flavor(char *name);
 
 void
 setexportent(char *fname, char *type)
@@ -132,7 +131,6 @@ getexportent(int fromkernel, int fromexports)
 	}
 	if (ok < 0) {
 		xlog(L_ERROR, "expected client(options...)");
-		export_errno = EINVAL;
 		return NULL;
 	}
 	first = 0;
@@ -152,11 +150,11 @@ getexportent(int fromkernel, int fromexports)
 		ok = getexport(exp, sizeof(exp));
 		if (ok < 0) {
 			xlog(L_ERROR, "expected client(options...)");
-			export_errno = EINVAL;
 			return NULL;
 		}
 	}
 
+	xfree(ee.e_hostname);
 	ee = def_ee;
 
 	/* Check for default client */
@@ -172,7 +170,6 @@ getexportent(int fromkernel, int fromexports)
 		*opt++ = '\0';
 		if (!(sp = strchr(opt, ')')) || sp[1] != '\0') {
 			syntaxerr("bad option list");
-			export_errno = EINVAL;
 			return NULL;
 		}
 		*sp = '\0';
@@ -180,7 +177,6 @@ getexportent(int fromkernel, int fromexports)
 		if (!has_default_opts)
 			xlog(L_WARNING, "No options for %s %s: suggest %s(sync) to avoid warning", ee.e_path, exp, exp);
 	}
-	xfree(ee.e_hostname);
 	ee.e_hostname = xstrdup(hostname);
 
 	if (parseopts(opt, &ee, fromexports && !has_default_subtree_opts, NULL) < 0)
@@ -196,11 +192,38 @@ getexportent(int fromkernel, int fromexports)
 	return &ee;
 }
 
+static const struct secinfo_flag_displaymap {
+	unsigned int flag;
+	const char *set;
+	const char *unset;
+} secinfo_flag_displaymap[] = {
+	{ NFSEXP_READONLY, "ro", "rw" },
+	{ NFSEXP_INSECURE_PORT, "insecure", "secure" },
+	{ NFSEXP_ROOTSQUASH, "root_squash", "no_root_squash" },
+	{ NFSEXP_ALLSQUASH, "all_squash", "no_all_squash" },
+	{ 0, NULL, NULL }
+};
+
+static void secinfo_flags_show(FILE *fp, unsigned int flags, unsigned int mask)
+{
+	const struct secinfo_flag_displaymap *p;
+
+	for (p = &secinfo_flag_displaymap[0]; p->flag != 0; p++) {
+		if (!(mask & p->flag))
+			continue;
+		fprintf(fp, ",%s", (flags & p->flag) ? p->set : p->unset);
+	}
+}
+
 void secinfo_show(FILE *fp, struct exportent *ep)
 {
+	const struct export_features *ef;
 	struct sec_entry *p1, *p2;
-	int flags;
 
+	ef = get_export_features();
+
+	if (ep->e_secinfo[0].flav == NULL)
+		secinfo_addflavor(find_flavor("sys"), ep);
 	for (p1=ep->e_secinfo; p1->flav; p1=p2) {
 
 		fprintf(fp, ",sec=%s", p1->flav->flavour);
@@ -208,12 +231,7 @@ void secinfo_show(FILE *fp, struct exportent *ep)
 								p2++) {
 			fprintf(fp, ":%s", p2->flav->flavour);
 		}
-		flags = p1->flags;
-		fprintf(fp, ",%s", (flags & NFSEXP_READONLY) ? "ro" : "rw");
-		fprintf(fp, ",%sroot_squash", (flags & NFSEXP_ROOTSQUASH)?
-				"" : "no_");
-		fprintf(fp, ",%sall_squash", (flags & NFSEXP_ALLSQUASH)?
-				"" : "no_");
+		secinfo_flags_show(fp, p1->flags, ef->secinfo_flags);
 	}
 }
 
@@ -255,6 +273,9 @@ putexportent(struct exportent *ep)
 		"in" : "");
 	fprintf(fp, "%sacl,", (ep->e_flags & NFSEXP_NOACL)?
 		"no_" : "");
+	if (ep->e_flags & NFSEXP_NOREADDIRPLUS)
+		fprintf(fp, "nordirplus,");
+	fprintf(fp, "%spnfs,", (ep->e_flags & NFSEXP_PNFS)? "" : "no_");
 	if (ep->e_flags & NFSEXP_FSID) {
 		fprintf(fp, "fsid=%d,", ep->e_fsid);
 	}
@@ -348,7 +369,7 @@ mkexportent(char *hname, char *path, char *options)
 	ee.e_hostname = xstrdup(hname);
 
 	if (strlen(path) >= sizeof(ee.e_path)) {
-		xlog(L_WARNING, "path name %s too long", path);
+		xlog(L_ERROR, "path name %s too long", path);
 		return NULL;
 	}
 	strncpy(ee.e_path, path, sizeof (ee.e_path));
@@ -387,7 +408,7 @@ int secinfo_addflavor(struct flav_info *flav, struct exportent *ep)
 	struct sec_entry *p;
 
 	for (p=ep->e_secinfo; p->flav; p++) {
-		if (p->flav == flav)
+		if (p->flav == flav || p->flav->fnum == flav->fnum)
 			return p - ep->e_secinfo;
 	}
 	if (p - ep->e_secinfo >= SECFLAVOR_COUNT) {
@@ -521,6 +542,8 @@ parseopts(char *cp, struct exportent *ep, int warn, int *had_subtree_opt_ptr)
 			clearflags(NFSEXP_ASYNC, active, ep);
 		else if (!strcmp(opt, "async"))
 			setflags(NFSEXP_ASYNC, active, ep);
+		else if (!strcmp(opt, "nordirplus"))
+			setflags(NFSEXP_NOREADDIRPLUS, active, ep);
 		else if (!strcmp(opt, "nohide"))
 			setflags(NFSEXP_NOHIDE, active, ep);
 		else if (!strcmp(opt, "hide"))
@@ -559,6 +582,10 @@ parseopts(char *cp, struct exportent *ep, int warn, int *had_subtree_opt_ptr)
 			clearflags(NFSEXP_NOACL, active, ep);
 		else if (strcmp(opt, "no_acl") == 0)
 			setflags(NFSEXP_NOACL, active, ep);
+		else if (!strcmp(opt, "pnfs"))
+			setflags(NFSEXP_PNFS, active, ep);
+		else if (!strcmp(opt, "no_pnfs"))
+			clearflags(NFSEXP_PNFS, active, ep);
 		else if (strncmp(opt, "anonuid=", 8) == 0) {
 			char *oe;
 			ep->e_anonuid = strtol(opt+8, &oe, 10);
@@ -567,7 +594,6 @@ parseopts(char *cp, struct exportent *ep, int warn, int *had_subtree_opt_ptr)
 				     flname, flline, opt);	
 bad_option:
 				free(opt);
-				export_errno = EINVAL;
 				return -1;
 			}
 		} else if (strncmp(opt, "anongid=", 8) == 0) {
@@ -643,8 +669,6 @@ bad_option:
 			cp++;
 	}
 
-	if (ep->e_secinfo[0].flav == NULL)
-		secinfo_addflavor(find_flavor("sys"), ep);
 	fix_pseudoflavor_flags(ep);
 	ep->e_squids = squids;
 	ep->e_sqgids = sqgids;

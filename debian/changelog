@@ -20,6 +20,7 @@ nfs-utils (1:1.3.4-2.6) UNRELEASED; urgency=medium
   * debian/control: Remove Daniel Pocock from Uploaders
   * debian/control: Delete wrong Homepage fields for binary packages
   * debian/control: Change Homepage to HTTP-S URL
+  * debian/copyright: Update upstream source URL to match debian/watch
 
  -- Salvatore Bonaccorso <carnil@debian.org>  Sat, 13 Apr 2019 10:37:07 +0200
 

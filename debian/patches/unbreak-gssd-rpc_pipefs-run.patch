@@ -8,12 +8,12 @@ Bug-Debian: https://bugs.debian.org/632141
 
 --- a/utils/gssd/gssd.h
 +++ b/utils/gssd/gssd.h
-@@ -38,7 +38,7 @@
- #define MAX_FILE_NAMELEN	32
- #define FD_ALLOC_BLOCK		256
+@@ -39,7 +39,7 @@
+ #include <pthread.h>
+ 
  #ifndef GSSD_PIPEFS_DIR
 -#define GSSD_PIPEFS_DIR		"/var/lib/nfs/rpc_pipefs"
 +#define GSSD_PIPEFS_DIR		"/run/rpc_pipefs"
  #endif
- #define INFO			"info"
- #define KRB5			"krb5"
+ #define DNOTIFY_SIGNAL		(SIGRTMIN + 3)
+ 

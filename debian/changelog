@@ -1,4 +1,101 @@
-nfs-utils (1:1.2.8-10) UNRELEASED; urgency=medium
+nfs-utils (1:1.3.4-2.6) UNRELEASED; urgency=medium
+
+  [ Salvatore Bonaccorso ]
+  * nfsiostat: replace 'list' reserved word.
+    Thanks to Matthew Ruffell <matthew.ruffell@canonical.com>
+    (Closes: #925943, LP: #1821261)
+  * Remove Anibal Monsalve Salazar from Uploaders on request of MIA team.
+    Thanks to Anibal Monsalve Salazar for all previous work done on nfs-utils.
+    (Closes: #925089)
+
+  [ Andreas Hasenack ]
+  * debian/nfs-utils_env.sh: Fix mismatching [RPC]SVCGSSDOPTS defaults
+    Export SVCGSSDARGS, which is the variable name expected by the
+    rpc-svcgssd systemd service. The old variable is still being
+    exported to prevent upgrades from breaking for those who may
+    have overridden the systemd service to work around the bug.
+    (Closes: #892654)
+
+ -- Salvatore Bonaccorso <carnil@debian.org>  Sat, 13 Apr 2019 10:37:07 +0200
+
+nfs-utils (1:1.3.4-2.5) unstable; urgency=medium
+
+  * Non-maintainer upload.
+
+  [ Micha Lenk ]
+  * [abaa2ab] handle_gssd_upcall: Fix failure to find uid in upcall string 'mech=krb5'
+    by adding the suggested upstream commits as
+    debian/patches/0010-gssd-replace-non-thread-safe-strtok-with-strsep.patch and
+    debian/patches/0011-gssd-Duplicate-the-upcall-string-for-error-messages.patch.
+    rpc.gssd: WARNING: handle_gssd_upcall: failed to find uid in upcall string 'mech=krb5'
+    (Closes: #895381)
+
+ -- Bernd Zeimetz <bzed@debian.org>  Sat, 06 Apr 2019 18:30:39 +0200
+
+nfs-utils (1:1.3.4-2.4) unstable; urgency=medium
+
+  [ Laurent Bigonville ]
+  * debian/control: Downgrade the priority to optional to match the override
+    file
+
+  [ Hilko Bengen ]
+  * Add missing include, fixing FTBFS with glibc 2.28 (Closes: #915995)
+
+ -- Hilko Bengen <bengen@debian.org>  Sat, 09 Feb 2019 15:26:27 +0100
+
+nfs-utils (1:1.3.4-2.3) unstable; urgency=medium
+
+  * Non-maintainer upload.
+  [ Steve Langasek ]
+  * Fix flaky autopkgtest: a 'sync' after an update on the server does not
+    guarantee that the change is visible on the client.  For that, we need
+    to flush the inode/dentry cache instead.
+
+  [ Laurent Bigonville ]
+  * debian/control: Drop explicit dependency against libtirpc1 and bump
+    libtirpc-dev build-dependency to >= 1.0.2
+  * debian/watch: Update the URL and check the gpg signature (Closes: #895384)
+  * debian/control: Update Vcs-* fields to point to salsa
+  * debian/control: Bump Standards-Version to 4.2.1 (no further changes)
+  * d/p/30-remove-whitespace-service.patch: Remove extra whitespaces to fix
+    service-key-has-whitespace lintian error
+
+ -- Laurent Bigonville <bigon@debian.org>  Sat, 20 Oct 2018 15:04:07 +0200
+
+nfs-utils (1:1.3.4-2.2) unstable; urgency=medium
+
+  * Non-maintainer upload.
+  * Add upstream fix for FTBFS with glibc 2.26,
+    thanks to Juhani Numminen. (Closes: #887695)
+  * Update the build dependency from the obsolete dh-systemd.
+  * Stop using bzip2 for source compression,
+    the default xz compresses better.
+
+ -- Adrian Bunk <bunk@debian.org>  Tue, 06 Feb 2018 21:20:36 +0200
+
+nfs-utils (1:1.3.4-2.1) unstable; urgency=medium
+
+  * Non-maintainer upload.
+  * Fix patch to also change pidfile path in service file (Closes: #850464)
+
+ -- Andreas Henriksson <andreas@fatal.se>  Mon, 20 Mar 2017 16:07:55 +0100
+
+nfs-utils (1:1.3.4-2) unstable; urgency=medium
+
+  [ Daniel Pocock ]
+  * Ignore failure to (re)start service during postinst. (Closes: #848115)
+  * Correct location of nfs-utils_env.sh in service file. (Closes: #848145)
+  * Use FD 9 in start-statd. (Closes: #848277)
+
+  [ Helmut Grohne ]
+  * Fix FTCBFS: Let dh_auto_configure provide cross flags (Closes: #836542)
+
+ -- Daniel Pocock <daniel@pocock.pro>  Sat, 17 Dec 2016 11:49:21 +0100
+
+nfs-utils (1:1.3.4-1) unstable; urgency=medium
+
+  [ Daniel Pocock ]
+  * New upstream release.
 
   [ Ben Hutchings ]
   * Update debian/watch
@@ -7,7 +104,7 @@ nfs-utils (1:1.2.8-10) UNRELEASED; urgency=medium
   * Fix typo in comment for installed idmapd.conf.
     Thanks to Ferenc Wágner (Closes: #841387)
 
- -- Ben Hutchings <ben@decadent.org.uk>  Mon, 23 Mar 2015 16:33:59 +0000
+ -- Daniel Pocock <daniel@pocock.pro>  Tue, 13 Dec 2016 19:37:42 +0100
 
 nfs-utils (1:1.2.8-9.2) unstable; urgency=medium
 

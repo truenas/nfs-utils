@@ -1,4 +1,4 @@
-nfs-utils (1:1.3.4-2.6) UNRELEASED; urgency=medium
+nfs-utils (1:1.3.4-3) UNRELEASED; urgency=medium
 
   [ Salvatore Bonaccorso ]
   * nfsiostat: replace 'list' reserved word.

@@ -12,6 +12,7 @@ nfs-utils (1:1.3.4-3) UNRELEASED; urgency=medium
     Only sm and sm.bak need to be accessible by statd or sm-notify after
     they drop privileges.
   * debian/control: Point Vcs URLs to kernel-team namespace repository
+  * debian/control: Add myself to Uploaders
 
   [ Andreas Hasenack ]
   * debian/nfs-utils_env.sh: Fix mismatching [RPC]SVCGSSDOPTS defaults

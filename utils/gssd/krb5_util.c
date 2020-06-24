@@ -121,6 +121,9 @@
 #include <krb5.h>
 #include <rpc/auth_gss.h>
 
+#include <sys/types.h>
+#include <fcntl.h>
+
 #include "nfslib.h"
 #include "gssd.h"
 #include "err_util.h"
@@ -314,6 +317,25 @@ gssd_find_existing_krb5_ccache(uid_t uid, char *dirname,
 	return err;
 }
 
+/* check if the ticket cache exists, if not set nocache=1 so that new
+ * tgt is gotten
+ */
+static int
+gssd_check_if_cc_exists(struct gssd_k5_kt_princ *ple)
+{
+	int fd;
+	char cc_name[BUFSIZ];
+
+	snprintf(cc_name, sizeof(cc_name), "%s/%s%s_%s",
+		ccachesearch[0], GSSD_DEFAULT_CRED_PREFIX,
+		GSSD_DEFAULT_MACHINE_CRED_SUFFIX, ple->realm);
+	fd = open(cc_name, O_RDONLY);
+	if (fd < 0)
+		return 1;
+	close(fd);
+	return 0;
+}
+
 /*
  * Obtain credentials via a key in the keytab given
  * a keytab handle and a gssd_k5_kt_princ structure.
@@ -348,6 +370,8 @@ gssd_get_single_krb5_cred(krb5_context context,
 
 	memset(&my_creds, 0, sizeof(my_creds));
 
+	if (!nocache && !use_memcache)
+		nocache = gssd_check_if_cc_exists(ple);
 	/*
 	 * Workaround for clock skew among NFS server, NFS client and KDC
 	 * 300 because clock skew must be within 300sec for kerberos
@@ -460,7 +484,7 @@ gssd_get_single_krb5_cred(krb5_context context,
 	if (ccache)
 		krb5_cc_close(context, ccache);
 	krb5_free_cred_contents(context, &my_creds);
-	free(k5err);
+	krb5_free_string(context, k5err);
 	return (code);
 }
 
@@ -699,7 +723,7 @@ gssd_search_krb5_keytab(krb5_context context, krb5_keytab kt,
 				 "we failed to unparse principal name: %s\n",
 				 k5err);
 			k5_free_kt_entry(context, kte);
-			free(k5err);
+			krb5_free_string(context, k5err);
 			k5err = NULL;
 			continue;
 		}
@@ -746,7 +770,7 @@ gssd_search_krb5_keytab(krb5_context context, krb5_keytab kt,
 	if (retval < 0)
 		retval = 0;
   out:
-	free(k5err);
+	krb5_free_string(context, k5err);
 	return retval;
 }
 
@@ -775,7 +799,7 @@ find_keytab_entry(krb5_context context, krb5_keytab kt,
 	int tried_all = 0, tried_default = 0, tried_upper = 0;
 	krb5_principal princ;
 	const char *notsetstr = "not set";
-	char *adhostoverride;
+	char *adhostoverride = NULL;
 
 
 	/* Get full target hostname */
@@ -803,7 +827,6 @@ find_keytab_entry(krb5_context context, krb5_keytab kt,
 				adhostoverride);
 	        /* No overflow: Windows cannot handle strings longer than 19 chars */
 	        strcpy(myhostad, adhostoverride);
-		free(adhostoverride);
 	} else {
 	        strcpy(myhostad, myhostname);
 	        for (i = 0; myhostad[i] != 0; ++i) {
@@ -812,6 +835,8 @@ find_keytab_entry(krb5_context context, krb5_keytab kt,
 	        myhostad[i] = '$';
 	        myhostad[i+1] = 0;
 	}
+	if (adhostoverride)
+		krb5_free_string(context, adhostoverride);
 
 	if (!srchost) {
 		retval = get_full_hostname(myhostname, myhostname, sizeof(myhostname));
@@ -902,7 +927,7 @@ find_keytab_entry(krb5_context context, krb5_keytab kt,
 				k5err = gssd_k5_err_msg(context, code);
 				printerr(1, "%s while building principal for '%s'\n",
 					 k5err, spn);
-				free(k5err);
+				krb5_free_string(context, k5err);
 				k5err = NULL;
 				continue;
 			}
@@ -912,6 +937,8 @@ find_keytab_entry(krb5_context context, krb5_keytab kt,
 				k5err = gssd_k5_err_msg(context, code);
 				printerr(3, "%s while getting keytab entry for '%s'\n",
 					 k5err, spn);
+				krb5_free_string(context, k5err);
+				k5err = NULL;
 				/*
 				 * We tried the active directory machine account
 				 * with the hostname part as-is and failed...
@@ -959,7 +986,7 @@ out:
 		k5_free_default_realm(context, default_realm);
 	if (realmnames)
 		krb5_free_host_realm(context, realmnames);
-	free(k5err);
+	krb5_free_string(context, k5err);
 	return retval;
 }
 
@@ -1014,6 +1041,8 @@ query_krb5_ccache(const char* cred_cache, char **ret_princname,
 	char *str = NULL;
 	char *princstring;
 
+	*ret_princname = *ret_realm = NULL;
+
 	ret = krb5_init_context(&context);
 	if (ret) 
 		return 0;
@@ -1038,8 +1067,6 @@ query_krb5_ccache(const char* cred_cache, char **ret_princname,
 			    *ret_realm = strdup(str+1);
 		    }
 		    k5_free_unparsed_name(context, princstring);
-		} else {
-			found = 0;
 		}
 	}
 	krb5_free_principal(context, principal);
@@ -1048,7 +1075,7 @@ err_princ:
 	krb5_cc_close(context, ccache);
 err_cache:
 	krb5_free_context(context);
-	return found;
+	return (*ret_princname && *ret_realm);
 }
 
 /*==========================*/
@@ -1222,7 +1249,7 @@ gssd_destroy_krb5_machine_creds(void)
 			printerr(0, "WARNING: %s while resolving credential "
 				    "cache '%s' for destruction\n", k5err,
 				    ple->ccname);
-			free(k5err);
+			krb5_free_string(context, k5err);
 			k5err = NULL;
 			continue;
 		}
@@ -1231,11 +1258,13 @@ gssd_destroy_krb5_machine_creds(void)
 			k5err = gssd_k5_err_msg(context, code);
 			printerr(0, "WARNING: %s while destroying credential "
 				    "cache '%s'\n", k5err, ple->ccname);
+			krb5_free_string(context, k5err);
+			k5err = NULL;
 		}
 	}
 	krb5_free_context(context);
   out:
-	free(k5err);
+	krb5_free_string(context, k5err);
 }
 
 /*
@@ -1318,7 +1347,7 @@ out_free_kt:
 out_free_context:
 	krb5_free_context(context);
 out:
-	free(k5err);
+	krb5_free_string(context, k5err);
 	return retval;
 }
 

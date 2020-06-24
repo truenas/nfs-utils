@@ -88,9 +88,11 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 @CONFIG_RPCGEN_TRUE@am__append_1 = rpcgen
+@CONFIG_NFSDCLD_TRUE@am__append_2 = nfsdclddb
 subdir = tools
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/aclocal/bsdsignals.m4 \
+am__aclocal_m4_deps = $(top_srcdir)/aclocal/ax_gcc_func_attribute.m4 \
+	$(top_srcdir)/aclocal/bsdsignals.m4 \
 	$(top_srcdir)/aclocal/ipv6.m4 \
 	$(top_srcdir)/aclocal/kerberos5.m4 \
 	$(top_srcdir)/aclocal/keyutils.m4 \
@@ -166,8 +168,8 @@ am__define_uniq_tagged_files = \
   done | $(am__uniquify_input)`
 ETAGS = etags
 CTAGS = ctags
-DIST_SUBDIRS = locktest rpcdebug nlmtest mountstats nfs-iostat rpcgen \
-	nfsconf
+DIST_SUBDIRS = locktest rpcdebug nlmtest mountstats nfs-iostat \
+	nfsdclnts rpcgen nfsconf nfsdclddb
 am__DIST_COMMON = $(srcdir)/Makefile.in
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 am__relativize = \
@@ -382,8 +384,8 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 unitdir = @unitdir@
-OPTDIRS = $(am__append_1) nfsconf
-SUBDIRS = locktest rpcdebug nlmtest mountstats nfs-iostat $(OPTDIRS)
+OPTDIRS = $(am__append_1) nfsconf $(am__append_2)
+SUBDIRS = locktest rpcdebug nlmtest mountstats nfs-iostat nfsdclnts $(OPTDIRS)
 MAINTAINERCLEANFILES = Makefile.in
 all: all-recursive
 

@@ -101,6 +101,9 @@ host_triplet = @host@
 @CONFIG_GSS_TRUE@@CONFIG_SVCGSS_TRUE@am__append_4 = \
 @CONFIG_GSS_TRUE@@CONFIG_SVCGSS_TRUE@    rpc-svcgssd.service
 
+@CONFIG_NFSDCLD_TRUE@am__append_5 = \
+@CONFIG_NFSDCLD_TRUE@    nfsdcld.service
+
 EXTRA_PROGRAMS = nfs-server-generator$(EXEEXT) \
 	rpc-pipefs-generator$(EXEEXT)
 @INSTALL_SYSTEMD_TRUE@genexec_PROGRAMS =  \
@@ -108,7 +111,8 @@ EXTRA_PROGRAMS = nfs-server-generator$(EXEEXT) \
 @INSTALL_SYSTEMD_TRUE@	rpc-pipefs-generator$(EXEEXT)
 subdir = systemd
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/aclocal/bsdsignals.m4 \
+am__aclocal_m4_deps = $(top_srcdir)/aclocal/ax_gcc_func_attribute.m4 \
+	$(top_srcdir)/aclocal/bsdsignals.m4 \
 	$(top_srcdir)/aclocal/ipv6.m4 \
 	$(top_srcdir)/aclocal/kerberos5.m4 \
 	$(top_srcdir)/aclocal/keyutils.m4 \
@@ -439,7 +443,7 @@ unit_files = nfs-client.target rpc_pipefs.target nfs-mountd.service \
 	nfs-server.service nfs-utils.service rpc-statd-notify.service \
 	rpc-statd.service proc-fs-nfsd.mount \
 	var-lib-nfs-rpc_pipefs.mount $(am__append_1) $(am__append_2) \
-	$(am__append_3) $(am__append_4)
+	$(am__append_3) $(am__append_4) $(am__append_5)
 man5_MANS = nfs.conf.man
 man7_MANS = nfs.systemd.man
 EXTRA_DIST = $(unit_files) $(man5_MANS) $(man7_MANS)

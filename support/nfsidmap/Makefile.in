@@ -92,7 +92,8 @@ build_triplet = @build@
 host_triplet = @host@
 subdir = support/nfsidmap
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/aclocal/bsdsignals.m4 \
+am__aclocal_m4_deps = $(top_srcdir)/aclocal/ax_gcc_func_attribute.m4 \
+	$(top_srcdir)/aclocal/bsdsignals.m4 \
 	$(top_srcdir)/aclocal/ipv6.m4 \
 	$(top_srcdir)/aclocal/kerberos5.m4 \
 	$(top_srcdir)/aclocal/keyutils.m4 \
@@ -170,13 +171,21 @@ nsswitch_la_OBJECTS = $(am_nsswitch_la_OBJECTS)
 nsswitch_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(nsswitch_la_LDFLAGS) $(LDFLAGS) -o $@
+regex_la_DEPENDENCIES = ../../support/nfs/libnfsconf.la
+am_regex_la_OBJECTS = regex.lo
+regex_la_OBJECTS = $(am_regex_la_OBJECTS)
+regex_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
+	$(regex_la_LDFLAGS) $(LDFLAGS) -o $@
 static_la_DEPENDENCIES = ../../support/nfs/libnfsconf.la
 am_static_la_OBJECTS = static.lo
 static_la_OBJECTS = $(am_static_la_OBJECTS)
 static_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(static_la_LDFLAGS) $(LDFLAGS) -o $@
-umich_ldap_la_DEPENDENCIES = ../../support/nfs/libnfsconf.la
+am__DEPENDENCIES_1 =
+umich_ldap_la_DEPENDENCIES = $(am__DEPENDENCIES_1) \
+	../../support/nfs/libnfsconf.la
 am_umich_ldap_la_OBJECTS = umich_ldap.lo
 umich_ldap_la_OBJECTS = $(am_umich_ldap_la_OBJECTS)
 umich_ldap_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
@@ -200,7 +209,8 @@ depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__maybe_remake_depfiles = depfiles
 am__depfiles_remade = ./$(DEPDIR)/gums.Plo ./$(DEPDIR)/libnfsidmap.Plo \
 	./$(DEPDIR)/nfsidmap_common.Plo ./$(DEPDIR)/nss.Plo \
-	./$(DEPDIR)/static.Plo ./$(DEPDIR)/umich_ldap.Plo
+	./$(DEPDIR)/regex.Plo ./$(DEPDIR)/static.Plo \
+	./$(DEPDIR)/umich_ldap.Plo
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -221,11 +231,11 @@ am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
 SOURCES = $(gums_la_SOURCES) $(libnfsidmap_la_SOURCES) \
-	$(nsswitch_la_SOURCES) $(static_la_SOURCES) \
-	$(umich_ldap_la_SOURCES)
+	$(nsswitch_la_SOURCES) $(regex_la_SOURCES) \
+	$(static_la_SOURCES) $(umich_ldap_la_SOURCES)
 DIST_SOURCES = $(gums_la_SOURCES) $(libnfsidmap_la_SOURCES) \
-	$(nsswitch_la_SOURCES) $(static_la_SOURCES) \
-	$(umich_ldap_la_SOURCES)
+	$(nsswitch_la_SOURCES) $(regex_la_SOURCES) \
+	$(static_la_SOURCES) $(umich_ldap_la_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -452,8 +462,9 @@ unitdir = @unitdir@
 @ENABLE_LDAP_TRUE@UMICH_LDAP_LIB = umich_ldap.la
 @ENABLE_GUMS_FALSE@GUMS_MAPPING_LIB = 
 @ENABLE_GUMS_TRUE@GUMS_MAPPING_LIB = gums.la
+@ENABLE_LDAP_SASL_TRUE@KRB5_GSS_LIB = -lgssapi_krb5
 lib_LTLIBRARIES = libnfsidmap.la
-pkgplugin_LTLIBRARIES = nsswitch.la static.la $(UMICH_LDAP_LIB) $(GUMS_MAPPING_LIB)
+pkgplugin_LTLIBRARIES = nsswitch.la static.la regex.la $(UMICH_LDAP_LIB) $(GUMS_MAPPING_LIB)
 
 # Library versioning notes from:
 #  http://sources.redhat.com/autobook/autobook/autobook_91.html
@@ -475,9 +486,12 @@ nsswitch_la_LIBADD = ../../support/nfs/libnfsconf.la
 static_la_SOURCES = static.c
 static_la_LDFLAGS = -module -avoid-version
 static_la_LIBADD = ../../support/nfs/libnfsconf.la
+regex_la_SOURCES = regex.c
+regex_la_LDFLAGS = -module -avoid-version
+regex_la_LIBADD = ../../support/nfs/libnfsconf.la
 umich_ldap_la_SOURCES = umich_ldap.c
 umich_ldap_la_LDFLAGS = -module -avoid-version
-umich_ldap_la_LIBADD = -lldap ../../support/nfs/libnfsconf.la
+umich_ldap_la_LIBADD = -lldap $(KRB5_GSS_LIB) ../../support/nfs/libnfsconf.la
 gums_la_SOURCES = gums.c
 gums_la_LDFLAGS = -module -avoid-version
 man3_MANS = nfs4_uid_to_name.3
@@ -605,6 +619,9 @@ libnfsidmap.la: $(libnfsidmap_la_OBJECTS) $(libnfsidmap_la_DEPENDENCIES) $(EXTRA
 nsswitch.la: $(nsswitch_la_OBJECTS) $(nsswitch_la_DEPENDENCIES) $(EXTRA_nsswitch_la_DEPENDENCIES) 
 	$(AM_V_CCLD)$(nsswitch_la_LINK) -rpath $(pkgplugindir) $(nsswitch_la_OBJECTS) $(nsswitch_la_LIBADD) $(LIBS)
 
+regex.la: $(regex_la_OBJECTS) $(regex_la_DEPENDENCIES) $(EXTRA_regex_la_DEPENDENCIES) 
+	$(AM_V_CCLD)$(regex_la_LINK) -rpath $(pkgplugindir) $(regex_la_OBJECTS) $(regex_la_LIBADD) $(LIBS)
+
 static.la: $(static_la_OBJECTS) $(static_la_DEPENDENCIES) $(EXTRA_static_la_DEPENDENCIES) 
 	$(AM_V_CCLD)$(static_la_LINK) -rpath $(pkgplugindir) $(static_la_OBJECTS) $(static_la_LIBADD) $(LIBS)
 
@@ -621,6 +638,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libnfsidmap.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nfsidmap_common.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nss.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/regex.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/static.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/umich_ldap.Plo@am__quote@ # am--include-marker
 
@@ -916,6 +934,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/libnfsidmap.Plo
 	-rm -f ./$(DEPDIR)/nfsidmap_common.Plo
 	-rm -f ./$(DEPDIR)/nss.Plo
+	-rm -f ./$(DEPDIR)/regex.Plo
 	-rm -f ./$(DEPDIR)/static.Plo
 	-rm -f ./$(DEPDIR)/umich_ldap.Plo
 	-rm -f Makefile
@@ -968,6 +987,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/libnfsidmap.Plo
 	-rm -f ./$(DEPDIR)/nfsidmap_common.Plo
 	-rm -f ./$(DEPDIR)/nss.Plo
+	-rm -f ./$(DEPDIR)/regex.Plo
 	-rm -f ./$(DEPDIR)/static.Plo
 	-rm -f ./$(DEPDIR)/umich_ldap.Plo
 	-rm -f Makefile

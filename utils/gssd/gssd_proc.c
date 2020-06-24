@@ -437,7 +437,11 @@ change_identity(uid_t uid)
 	int res;
 
 	/* drop list of supplimentary groups first */
+#ifdef __NR_setgroups32
+	if (syscall(SYS_setgroups32, 0, 0) != 0) {
+#else
 	if (syscall(SYS_setgroups, 0, 0) != 0) {
+#endif
 		printerr(0, "WARNING: unable to drop supplimentary groups!");
 		return errno;
 	}
@@ -744,7 +748,7 @@ handle_gssd_upcall(struct clnt_upcall_info *info)
 	char			*upcall_str;
 	char			*pbuf = info->lbuf;
 
-	printerr(2, "%s: '%s' (%s)\n", __func__, info->lbuf, clp->relpath);
+	printerr(2, "\n%s: '%s' (%s)\n", __func__, info->lbuf, clp->relpath);
 
 	upcall_str = strdup(info->lbuf);
 	if (upcall_str == NULL) {

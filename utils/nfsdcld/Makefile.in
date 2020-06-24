@@ -92,7 +92,8 @@ host_triplet = @host@
 sbin_PROGRAMS = nfsdcld$(EXEEXT)
 subdir = utils/nfsdcld
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/aclocal/bsdsignals.m4 \
+am__aclocal_m4_deps = $(top_srcdir)/aclocal/ax_gcc_func_attribute.m4 \
+	$(top_srcdir)/aclocal/bsdsignals.m4 \
 	$(top_srcdir)/aclocal/ipv6.m4 \
 	$(top_srcdir)/aclocal/kerberos5.m4 \
 	$(top_srcdir)/aclocal/keyutils.m4 \
@@ -397,10 +398,7 @@ pdfdir = @pdfdir@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
 psdir = @psdir@
-
-# These binaries go in /sbin (not /usr/sbin), and that cannot be
-# overridden at config time. The kernel "knows" the /sbin name.
-sbindir = /sbin
+sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@
 startstatd = @startstatd@

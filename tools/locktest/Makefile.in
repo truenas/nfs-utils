@@ -91,7 +91,8 @@ host_triplet = @host@
 noinst_PROGRAMS = testlk$(EXEEXT)
 subdir = tools/locktest
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/aclocal/bsdsignals.m4 \
+am__aclocal_m4_deps = $(top_srcdir)/aclocal/ax_gcc_func_attribute.m4 \
+	$(top_srcdir)/aclocal/bsdsignals.m4 \
 	$(top_srcdir)/aclocal/ipv6.m4 \
 	$(top_srcdir)/aclocal/kerberos5.m4 \
 	$(top_srcdir)/aclocal/keyutils.m4 \
@@ -199,7 +200,7 @@ AUTOCONF = @AUTOCONF@
 AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
 AWK = @AWK@
-CC = $(CC_FOR_BUILD)
+CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CC_FOR_BUILD = @CC_FOR_BUILD@
 CFLAGS = @CFLAGS@
@@ -262,7 +263,7 @@ LIBS = @LIBS@
 LIBSOCKET = @LIBSOCKET@
 LIBSQLITE = @LIBSQLITE@
 LIBTIRPC = @LIBTIRPC@
-LIBTOOL = @LIBTOOL@ --tag=CC
+LIBTOOL = @LIBTOOL@
 LIBWRAP = @LIBWRAP@
 LIBXML2 = @LIBXML2@
 LIPO = @LIPO@

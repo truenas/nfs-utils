@@ -34,6 +34,10 @@
  *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/inotify.h>
@@ -50,6 +54,7 @@
 #include <dirent.h>
 #include <unistd.h>
 #include <netdb.h>
+#include <inttypes.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -61,10 +66,6 @@
 #include <ctype.h>
 #include <libgen.h>
 #include <nfsidmap.h>
-
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif /* HAVE_CONFIG_H */
 
 #include "xlog.h"
 #include "conffile.h"
@@ -172,7 +173,7 @@ flush_nfsd_cache(char *path, time_t now)
 	int fd;
 	char stime[32];
 
-	sprintf(stime, "%ld\n", now);
+	sprintf(stime, "%" PRId64 "\n", (int64_t)now);
 	fd = open(path, O_RDWR);
 	if (fd == -1)
 		return -1;
@@ -520,14 +521,16 @@ static void
 clntscancb(int UNUSED(fd), short UNUSED(which), void *data)
 {
 	struct idmap_clientq *icq = data;
-	struct idmap_client *ic;
+	struct idmap_client *ic, *ic_next;
 
-	TAILQ_FOREACH(ic, icq, ic_next)
+	for (ic = TAILQ_FIRST(icq); ic != NULL; ic = ic_next) { 
+		ic_next = TAILQ_NEXT(ic, ic_next);
 		if (ic->ic_fd == -1 && nfsopen(ic) == -1) {
 			close(ic->ic_dirfd);
 			TAILQ_REMOVE(icq, ic, ic_next);
 			free(ic);
 		}
+	}
 }
 
 static void
@@ -623,8 +626,8 @@ nfsdcb(int UNUSED(fd), short which, void *data)
 		/* Name */
 		addfield(&bp, &bsiz, im.im_name);
 		/* expiry */
-		snprintf(buf1, sizeof(buf1), "%lu",
-			 time(NULL) + cache_entry_expiration);
+		snprintf(buf1, sizeof(buf1), "%" PRId64,
+			 (int64_t)time(NULL) + cache_entry_expiration);
 		addfield(&bp, &bsiz, buf1);
 		/* Note that we don't want to write the id if the mapping
 		 * failed; instead, by leaving it off, we write a negative
@@ -651,8 +654,8 @@ nfsdcb(int UNUSED(fd), short which, void *data)
 		snprintf(buf1, sizeof(buf1), "%u", im.im_id);
 		addfield(&bp, &bsiz, buf1);
 		/* expiry */
-		snprintf(buf1, sizeof(buf1), "%lu",
-			 time(NULL) + cache_entry_expiration);
+		snprintf(buf1, sizeof(buf1), "%" PRId64,
+			 (int64_t)time(NULL) + cache_entry_expiration);
 		addfield(&bp, &bsiz, buf1);
 		/* Note we're ignoring the status field in this case; we'll
 		 * just map to nobody instead. */

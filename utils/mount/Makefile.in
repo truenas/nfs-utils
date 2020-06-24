@@ -97,7 +97,8 @@ sbin_PROGRAMS = mount.nfs$(EXEEXT)
 @CONFIG_LIBMOUNT_FALSE@am__append_6 = mount.c fstab.c nfsumount.c fstab.h
 subdir = utils/mount
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/aclocal/bsdsignals.m4 \
+am__aclocal_m4_deps = $(top_srcdir)/aclocal/ax_gcc_func_attribute.m4 \
+	$(top_srcdir)/aclocal/bsdsignals.m4 \
 	$(top_srcdir)/aclocal/ipv6.m4 \
 	$(top_srcdir)/aclocal/kerberos5.m4 \
 	$(top_srcdir)/aclocal/keyutils.m4 \

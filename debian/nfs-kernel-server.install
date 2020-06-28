@@ -11,3 +11,4 @@ debian/tmp/lib/systemd/system/nfs-blkmap.service
 debian/tmp/lib/systemd/system/nfs-mountd.service
 debian/tmp/lib/systemd/system/nfs-server.service
 debian/tmp/lib/systemd/system/nfsdcld.service
+debian/tmp/lib/systemd/system-generators/nfs-server-generator

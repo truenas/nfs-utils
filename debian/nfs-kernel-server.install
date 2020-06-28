@@ -7,7 +7,7 @@ debian/tmp/var/lib/nfs/etab
 debian/tmp/var/lib/nfs/rmtab
 debian/nfs-kernel-server.default /usr/share/nfs-kernel-server/conffiles/
 debian/etc.exports /usr/share/nfs-kernel-server/conffiles/
-systemd/nfs-blkmap.service /lib/systemd/system
-systemd/nfs-mountd.service /lib/systemd/system
-systemd/nfs-server.service /lib/systemd/system
-systemd/nfsdcld.service /lib/systemd/system
+debian/tmp/lib/systemd/system/nfs-blkmap.service
+debian/tmp/lib/systemd/system/nfs-mountd.service
+debian/tmp/lib/systemd/system/nfs-server.service
+debian/tmp/lib/systemd/system/nfsdcld.service

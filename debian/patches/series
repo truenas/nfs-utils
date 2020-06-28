@@ -1,6 +1,5 @@
 01-sm-notify-in-sbin.patch
 25-systemd-daemon-paths.patch
-27-systemd-enable-with-systemctl-statd.patch
 multiarch-kerberos-paths.patch
 mount.nfs-Fix-the-sloppy-option-processing.patch
 nfsdcltrack-sqlite-Fix-printf-format.patch

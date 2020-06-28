@@ -14,6 +14,12 @@ case "$1" in
 	    [ -e $f ] || touch $f
 	done
 
+	# Since upstream version 2.1.1 use of /var/lib/nfs/xtab
+	# has been removed and nfs-utils stops creating the file
+	if dpkg --compare-versions "$2" lt 1:2.1.1; then
+		    rm -f /var/lib/nfs/xtab
+	fi
+
 	update-rc.d nfs-kernel-server defaults 20 80 >/dev/null
     ;;
 esac

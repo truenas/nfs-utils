@@ -1,5 +1,6 @@
 debian/tmp/usr/sbin/exportfs
 debian/tmp/sbin/nfsdcltrack
+debian/tmp/usr/sbin/nfsdcld
 debian/tmp/usr/sbin/rpc.mountd
 debian/tmp/usr/sbin/rpc.nfsd
 debian/tmp/var/lib/nfs/etab
@@ -9,3 +10,4 @@ debian/etc.exports /usr/share/nfs-kernel-server/conffiles/
 systemd/nfs-blkmap.service /lib/systemd/system
 systemd/nfs-mountd.service /lib/systemd/system
 systemd/nfs-server.service /lib/systemd/system
+systemd/nfsdcld.service /lib/systemd/system

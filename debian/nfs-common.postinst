@@ -6,6 +6,7 @@ case "$1" in
     configure)
         ucf --three-way /usr/share/nfs-common/conffiles/idmapd.conf /etc/idmapd.conf
         ucf --three-way /usr/share/nfs-common/conffiles/nfs-common.default /etc/default/nfs-common
+        ucf --three-way /usr/share/nfs-common/conffiles/nfs.conf /etc/nfs.conf
 
         if [ "$2" != "" ] && dpkg --compare-versions "$2" lt 1:1.1.0-10; then
             update-rc.d -f nfs-common remove >/dev/null

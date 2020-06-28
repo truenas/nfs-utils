@@ -29,7 +29,8 @@ build-stamp:
 	CFLAGS="$(CFLAGS)" dh_auto_configure -- \
 		--enable-libmount-mount \
 		--enable-svcgss \
-		--with-tcp-wrappers
+		--with-tcp-wrappers \
+		--with-systemd=/lib/systemd/system
 	$(MAKE) $(MAKEFLAGS)
 	touch build-stamp
 

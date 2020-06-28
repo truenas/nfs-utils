@@ -3,6 +3,7 @@ nfs-utils (1:2.5.4-1~exp5) UNRELEASED; urgency=medium
   * Handle fade out-of /var/lib/nfs/xtab file
   * debian/rules: configure: remove explicit options which are enabled by
     default
+  * debian/rules: configure to install systemd unit files
 
  -- Salvatore Bonaccorso <carnil@debian.org>  Tue, 14 Sep 2021 06:40:53 +0200
 

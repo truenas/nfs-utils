@@ -27,10 +27,8 @@ build-stamp:
 	dh_testdir
 	dh_autoreconf
 	CFLAGS="$(CFLAGS)" dh_auto_configure -- \
-		--enable-nfsv41 \
-		--enable-ipv6 \
 		--enable-libmount-mount \
-                --enable-svcgss \
+		--enable-svcgss \
 		--with-tcp-wrappers
 	$(MAKE) $(MAKEFLAGS)
 	touch build-stamp

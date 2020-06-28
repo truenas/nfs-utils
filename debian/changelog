@@ -10,6 +10,7 @@ nfs-utils (1:2.5.4-1~exp5) UNRELEASED; urgency=medium
   * nfs-common: Install rpc_pipefs.target and rpc-pipefs-generator
   * nfs-kernel-server: Install nfsdcld service
   * Drop "Let sysadmins enable/disable statd services"
+  * nfs-common: Install systemd unit files from debian/tmp/
 
  -- Salvatore Bonaccorso <carnil@debian.org>  Tue, 14 Sep 2021 06:40:53 +0200
 

@@ -20,13 +20,13 @@ debian/idmapd.conf usr/share/nfs-common/conffiles/
 debian/nfs.conf usr/share/nfs-common/conffiles/
 debian/nfs-common.default usr/share/nfs-common/conffiles/
 debian/id_resolver.conf etc/request-key.d/
-systemd/rpc-pipefs-generator /lib/systemd/system-generators
-systemd/rpc_pipefs.target /lib/systemd/system
-systemd/*.mount /lib/systemd/system
-systemd/*rpc*.service /lib/systemd/system
-systemd/nfs-idmapd.service /lib/systemd/system
-systemd/nfs-client.target /lib/systemd/system
-systemd/nfs-utils.service /lib/systemd/system
+debian/tmp/lib/systemd/system-generators/rpc-pipefs-generator
+debian/tmp/lib/systemd/system/rpc_pipefs.target
+debian/tmp/lib/systemd/system/*.mount
+debian/tmp/lib/systemd/system/*rpc*.service
+debian/tmp/lib/systemd/system/nfs-idmapd.service
+debian/tmp/lib/systemd/system/nfs-client.target
+debian/tmp/lib/systemd/system/nfs-utils.service
 debian/tmp/usr/sbin/nfsconf
 debian/tmp/usr/sbin/nfsdcld
 debian/tmp/usr/sbin/nfsdclddb

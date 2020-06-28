@@ -1,0 +1,32 @@
+From 9ee24169e8a228411259ab2ba14e59c7bf127faf Mon Sep 17 00:00:00 2001
+From: Salvatore Bonaccorso <carnil@debian.org>
+Date: Sun, 28 Jun 2020 17:49:19 +0200
+Subject: [PATCH 2/2] systemd generators: Install depending on location for
+ systemd unit files
+
+While it is possible to configure the systemd unit files directory on
+configure time with --with-systemd=unit-dir-path, this path is not taken
+into account for installing the systemd unit generators, as they are
+installed unconditionally in /usr/lib/systemd/system-generators.
+
+Signed-off-by: Salvatore Bonaccorso <carnil@debian.org>
+---
+ systemd/Makefile.am | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/systemd/Makefile.am b/systemd/Makefile.am
+index f089c8831902..9ee4f1c8f967 100644
+--- a/systemd/Makefile.am
++++ b/systemd/Makefile.am
+@@ -45,7 +45,7 @@ man5_MANS	= nfs.conf.man
+ man7_MANS	= nfs.systemd.man
+ EXTRA_DIST = $(unit_files) $(man5_MANS) $(man7_MANS)
+ 
+-generator_dir = /usr/lib/systemd/system-generators
++generator_dir = $(unitdir)/../system-generators
+ 
+ EXTRA_PROGRAMS	= nfs-server-generator rpc-pipefs-generator
+ genexecdir = $(generator_dir)
+-- 
+2.27.0
+

@@ -11,3 +11,5 @@ nfs-utils-Fix-mem-leaks-in-gssd.patch
 nfs-utils-Fix-mem-leaks-in-krb5_util.patch
 nfs-utils-Fix-mem-leak-in-mountd.patch
 nfs-utils-add-install-dep-for-installing-all-depende.patch
+systemd-Makefile-Drop-exlicit-setting-of-unit_dir.patch
+systemd-generators-Install-depending-on-location-for.patch

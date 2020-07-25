@@ -17,3 +17,4 @@ fix-glibc2.28-ftbfs.patch
 0011-gssd-Duplicate-the-upcall-string-for-error-messages.patch
 nfsiostat-replace-list-reserved-word.patch
 statd-take-user-id-from-var-lib-nfs-sm.patch
+Allow-compilation-to-succeed-with-fno-common.patch

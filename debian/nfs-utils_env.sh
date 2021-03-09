@@ -19,6 +19,7 @@ echo STATDARGS=\"$STATDOPTS\"
 # are being exported now.
 # See https://bugs.launchpad.net/bugs/1616123 and
 # https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=892654 for more details.
+echo GSSDARGS=\"$RPCGSSDOPTS\"
 echo RPCSVCGSSDARGS=\"$RPCSVCGSSDOPTS\"
 echo SVCGSSDARGS=\"$RPCSVCGSSDOPTS\"
 } > /run/sysconfig/nfs-utils
@@ -26,6 +27,5 @@ echo SVCGSSDARGS=\"$RPCSVCGSSDOPTS\"
 # the following are supported by the systemd units, but not exposed in default files
 # echo SMNOTIFYARGS=\"$SMNOTIFYARGS\"
 # echo RPCIDMAPDARGS=\"$RPCIDMAPDARGS\"
-# echo RPCGSSDARGS=\"$RPCGSSDARGS\"
 # echo BLKMAPDARGS=\"$BLKMAPDARGS\"
 # echo GSS_USE_PROXY=\"$GSS_USE_PROXY\"

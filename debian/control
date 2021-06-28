@@ -31,7 +31,7 @@ Description: support for NFS kernel server
 Package: nfs-common
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, rpcbind, adduser, ucf, lsb-base (>= 1.3-9ubuntu3), keyutils
-Recommends: python
+Recommends: python3
 Suggests: open-iscsi, watchdog
 Provides: nfs-client
 Conflicts: nfs-client

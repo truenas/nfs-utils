@@ -40,7 +40,7 @@
 
 #include <dirent.h>
 #include <errno.h>
-#include <event.h>
+#include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -51,6 +51,7 @@
 #include <linux/limits.h>
 
 #include "xlog.h"
+#include "sqlite.h"
 
 #define CLTRACK_SQLITE_LATEST_SCHEMA_VERSION 2
 
@@ -101,7 +102,7 @@ sqlite_query_schema_version(void)
 		"SELECT value FROM parameters WHERE key == \"version\";",
 		 -1, &stmt, NULL);
 	if (ret != SQLITE_OK) {
-		xlog(L_ERROR, "Unable to prepare select statement: %s",
+		xlog(D_GENERAL, "Unable to prepare select statement: %s",
 			sqlite3_errmsg(dbh));
 		ret = 0;
 		goto out;
@@ -110,7 +111,7 @@ sqlite_query_schema_version(void)
 	/* query schema version */
 	ret = sqlite3_step(stmt);
 	if (ret != SQLITE_ROW) {
-		xlog(L_ERROR, "Select statement execution failed: %s",
+		xlog(D_GENERAL, "Select statement execution failed: %s",
 				sqlite3_errmsg(dbh));
 		ret = 0;
 		goto out;
@@ -203,7 +204,7 @@ rollback:
  * then insert schema version into the parameters table and commit the
  * transaction. On any error, rollback the transaction.
  */
-int
+static int
 sqlite_maindb_init_v2(void)
 {
 	int ret, ret2;
@@ -214,6 +215,8 @@ sqlite_maindb_init_v2(void)
 				&err);
 	if (ret != SQLITE_OK) {
 		xlog(L_ERROR, "Unable to begin transaction: %s", err);
+		if (err)
+			sqlite3_free(err);
 		return ret;
 	}
 

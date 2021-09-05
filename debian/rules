@@ -1,5 +1,7 @@
 #! /usr/bin/make -f
 
+#export DH_VERBOSE = 1
+
 # Parsing of DEB_BUILD_OPTIONS flags.
 # Note that nostrip is handled automatically by debhelper.
 CFLAGS := -g -Wall -DPIPEFS_DIR=\\\"/run/rpc_pipefs\\\" \
@@ -51,14 +53,14 @@ binary-arch: build
 	mkdir $(DEBTMP)
 	$(MAKE) DESTDIR='$(DEBTMP)' install
 	dh_installman
-	dh_install -Xman --fail-missing
+	dh_install -Xman
 	dh_installdocs -A
 	dh_installdocs -pnfs-common debian/README.Debian.nfsv4
-	dh_systemd_enable -p nfs-common nfs-client.target
-	dh_systemd_enable -p nfs-kernel-server nfs-server.service
+	dh_installsystemd -p nfs-common nfs-client.target
+	dh_installsystemd -p nfs-kernel-server nfs-server.service
 	dh_installinit -pnfs-common -R
-	dh_systemd_start -p nfs-common --restart-after-upgrade nfs-utils.service
-	dh_systemd_start -p nfs-kernel-server --restart-after-upgrade nfs-server.service
+	dh_installsystemd -p nfs-common --restart-after-upgrade nfs-utils.service
+	dh_installsystemd -p nfs-kernel-server --restart-after-upgrade nfs-server.service
 	install -m 0755 debian/nfs-kernel-server.init debian/nfs-kernel-server/etc/init.d/nfs-kernel-server
 	install -m 0644 debian/nfs-common.bugcontrol debian/nfs-common/usr/share/bug/nfs-common/control
 	install -m 0755 debian/nfs-common.bugscript debian/nfs-common/usr/share/bug/nfs-common/script
@@ -73,11 +75,13 @@ binary-arch: build
 	dh_fixperms
 	chmod +x debian/nfs-common/usr/lib/systemd/scripts/nfs-utils_env.sh
 	chmod u+s debian/nfs-common/sbin/mount.nfs
+	dh_makeshlibs
 	dh_installdeb
 	dh_shlibdeps
 	dh_gencontrol
 	dh_md5sums -Xvar/lib
 	dh_builddeb
+	dh_missing --list-missing
 
 binary: binary-indep binary-arch
 .PHONY: build clean binary-indep binary-arch binary

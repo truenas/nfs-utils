@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 dnl
-AC_INIT([linux nfs-utils],[1.3.3],[linux-nfs@vger.kernel.org],[nfs-utils])
+AC_INIT([linux nfs-utils],[2.5.4],[linux-nfs@vger.kernel.org],[nfs-utils])
 AC_CANONICAL_BUILD([])
 AC_CANONICAL_HOST([])
 AC_CONFIG_MACRO_DIR(aclocal)
@@ -24,6 +24,12 @@ AC_ARG_WITH(statedir,
 	statedir=$withval,
 	statedir=/var/lib/nfs)
 	AC_SUBST(statedir)
+AC_ARG_WITH(nfsconfig,
+	[AC_HELP_STRING([--with-nfsconfig=/config/file],
+			[use general config file /config/file @<:@default=/etc/nfs.conf@:>@])],
+	nfsconfig=$withval,
+	nfsconfig=/etc/nfs.conf)
+	AC_SUBST(nfsconfig)
 AC_ARG_WITH(statdpath,
 	[AC_HELP_STRING([--with-statdpath=/foo],
 			[define the statd state dir as /foo instead of the NFS statedir @<:@default=/var/lib/nfs@:>@])],
@@ -143,15 +149,22 @@ AC_ARG_WITH(rpcgen,
 	[AC_HELP_STRING([--with-rpcgen=internal], [use internal rpcgen instead of system one])],
 	rpcgen_path=$withval,
 	rpcgen_path=yes )
+	rpcgen_cflags=-Werror=strict-prototypes
 	RPCGEN_PATH=
 	if test "$rpcgen_path" = "yes"; then
 	    for p in /usr/local/bin/rpcgen /usr/bin/rpcgen /bin/rpcgen
 	    do if test -f $p ; then RPCGEN_PATH=$p ; break; fi ; done
+		if test -z "$RPCGEN_PATH"; then
+			AC_MSG_ERROR([Please install rpcgen or use --with-rpcgen])
+		fi
 	elif test "$rpcgen_path" != "internal"; then
 	    RPCGEN_PATH=$rpcgen_path
+	else
+	    RPCGEN_PATH=internal
+	    rpcgen_cflags=-Wstrict-prototypes
 	fi
 	AC_SUBST(RPCGEN_PATH)
-	AM_CONDITIONAL(CONFIG_RPCGEN, [test "$RPCGEN_PATH" = ""])
+	AM_CONDITIONAL(CONFIG_RPCGEN, [test "$RPCGEN_PATH" = "internal"])
 AC_ARG_ENABLE(uuid,
 	[AC_HELP_STRING([--disable-uuid], 
 		[Exclude uuid support to avoid buggy libblkid. @<:@default=no@:>@])],
@@ -159,7 +172,7 @@ AC_ARG_ENABLE(uuid,
 	choose_blkid=default)
 AC_ARG_ENABLE(mount,
 	[AC_HELP_STRING([--disable-mount],
-		[Don't build mount.nfs and do use the util-linux mount(8) functionality. @<:@default=no@:>@])],
+		[Do not build mount.nfs and do use the util-linux mount(8) functionality. @<:@default=no@:>@])],
 	enable_mount=$enableval,
 	enable_mount=yes)
 	AM_CONDITIONAL(CONFIG_MOUNT, [test "$enable_mount" = "yes"])
@@ -173,6 +186,19 @@ if test "$enable_mount" = yes; then
 else
 	enable_libmount=no
 fi
+
+AC_ARG_ENABLE(junction,
+	[AC_HELP_STRING([--enable-junction],
+			[enable support for NFS junctions @<:@default=no@:>@])],
+	enable_junction=$enableval,
+	enable_junction=no)
+	if test "$enable_junction" = yes; then
+		AC_DEFINE(HAVE_JUNCTION_SUPPORT, 1,
+                          [Define this if you want junction support compiled in])
+	else
+		enable_junction=
+	fi
+	AM_CONDITIONAL(CONFIG_JUNCTION, [test "$enable_junction" = "yes" ])
 
 AC_ARG_ENABLE(tirpc,
 	[AC_HELP_STRING([--disable-tirpc],
@@ -219,24 +245,37 @@ else
 	AM_CONDITIONAL(MOUNT_CONFIG, [test "$enable_mount" = "yes"])
 fi
 
+AC_ARG_ENABLE(nfsdcld,
+	[AC_HELP_STRING([--disable-nfsdcld],
+			[disable NFSv4 clientid tracking daemon @<:@default=no@:>@])],
+	enable_nfsdcld=$enableval,
+	enable_nfsdcld="yes")
+
 AC_ARG_ENABLE(nfsdcltrack,
 	[AC_HELP_STRING([--disable-nfsdcltrack],
 			[disable NFSv4 clientid tracking programs @<:@default=no@:>@])],
 	enable_nfsdcltrack=$enableval,
 	enable_nfsdcltrack="yes")
 
-AC_ARG_ENABLE(osdlogin,
-	[AC_HELP_STRING([--enable-osdlogin],
-			[enable osd_login scripts @<:@default=no@:>@])],
-	enable_osdlogin=$enableval,
-	enable_osdlogin="no")
-	AM_CONDITIONAL(CONFIG_OSD_LOGIN, [test "$enable_osdlogin" = "yes" ])
+AC_ARG_ENABLE(nfsv4server,
+	[AC_HELP_STRING([--enable-nfsv4server],
+			[enable support for NFSv4 only server  @<:@default=no@:>@])],
+	enable_nfsv4server=$enableval,
+	enable_nfsv4server="no")
+	if test "$enable_nfsv4server" = yes; then
+		AC_DEFINE(HAVE_NFSV4SERVER_SUPPORT, 1,
+                          [Define this if you want NFSv4 server only support compiled in])
+	fi
+	AM_CONDITIONAL(CONFIG_NFSV4SERVER, [test "$enable_nfsv4server" = "yes" ])
 
 dnl Check for TI-RPC library and headers
 AC_LIBTIRPC
 
 dnl Check for -lcap
 AC_LIBCAP
+
+dnl Check for -lxml2
+AC_LIBXML2
 
 # Check whether user wants TCP wrappers support
 AC_TCP_WRAPPERS
@@ -292,20 +331,40 @@ AC_CHECK_FUNC([getservbyname], ,
 
 AC_CHECK_LIB([crypt], [crypt], [LIBCRYPT="-lcrypt"])
 
-AC_CHECK_LIB([dl], [dlclose], [LIBDL="-ldl"])
+AC_CHECK_HEADERS([sched.h], [], [])
+AC_CHECK_FUNCS([unshare fstatat statx], [] , [])
+AC_LIBPTHREAD([])
+
+# rpc/rpc.h can come from the glibc or from libtirpc
+nfsutils_save_CPPFLAGS="${CPPFLAGS}"
+CPPFLAGS="${CPPFLAGS} ${TIRPC_CFLAGS}"
+AC_CHECK_HEADER(rpc/rpc.h, ,
+                AC_MSG_ERROR([Header file rpc/rpc.h not found - maybe try building with --enable-tirpc]))
+CPPFLAGS="${nfsutils_save_CPPFLAGS}"
 
 if test "$enable_nfsv4" = yes; then
   dnl check for libevent libraries and headers
   AC_LIBEVENT
-
-  dnl check for nfsidmap libraries and headers
-  AC_LIBNFSIDMAP
 
   dnl check for the keyutils libraries and headers
   AC_KEYUTILS
 
   dnl Check for sqlite3
   AC_SQLITE3_VERS
+
+  if test "$enable_nfsdcld" = "yes"; then
+	AC_CHECK_HEADERS([libgen.h sys/inotify.h], ,
+		AC_MSG_ERROR([Cannot find header needed for nfsdcld]))
+
+    case $libsqlite3_cv_is_recent in
+    yes) ;;
+    unknown)
+      dnl do not fail when cross-compiling
+      AC_MSG_WARN([assuming sqlite is at least v3.3]) ;;
+    *)
+      AC_MSG_ERROR([nfsdcld requires sqlite-devel]) ;;
+    esac
+  fi
 
   if test "$enable_nfsdcltrack" = "yes"; then
 	AC_CHECK_HEADERS([libgen.h sys/inotify.h], ,
@@ -322,6 +381,7 @@ if test "$enable_nfsv4" = yes; then
   fi
 
 else
+  enable_nfsdcld="no"
   enable_nfsdcltrack="no"
 fi
 
@@ -332,8 +392,8 @@ if test "$enable_nfsv41" = yes; then
 fi
 
 dnl enable nfsidmap when its support by libnfsidmap
+AM_CONDITIONAL(CONFIG_NFSDCLD, [test "$enable_nfsdcld" = "yes" ])
 AM_CONDITIONAL(CONFIG_NFSDCLTRACK, [test "$enable_nfsdcltrack" = "yes" ])
-AM_CONDITIONAL(CONFIG_NFSIDMAP, [test "$ac_cv_header_keyutils_h$ac_cv_lib_nfsidmap_nfs4_owner_to_uid" = "yesyes"])
 
 
 if test "$knfsd_cv_glibc2" = no; then
@@ -360,7 +420,6 @@ AC_SUBST(LIBSOCKET)
 AC_SUBST(LIBCRYPT)
 AC_SUBST(LIBBSD)
 AC_SUBST(LIBBLKID)
-AC_SUBST(LIBDL)
 
 if test "$enable_libmount" = yes; then
    AC_CHECK_LIB(mount, mnt_context_do_mount, [LIBMOUNT="-lmount"], AC_MSG_ERROR([libmount needed]))
@@ -376,14 +435,11 @@ if test "$enable_gss" = yes; then
   dnl check for libevent libraries and headers
   AC_LIBEVENT
 
-  dnl 'gss' also depends on nfsidmap.h - at least for svcgssd_proc.c
-  AC_LIBNFSIDMAP
-
   dnl Check for Kerberos V5
   AC_KERBEROS_V5
 
   dnl Check for pthreads
-  AC_LIBPTHREAD
+  AC_LIBPTHREAD([AC_MSG_ERROR([libpthread not found.])])
 
   dnl librpcsecgss already has a dependency on libgssapi,
   dnl but we need to make sure we get the right version
@@ -401,6 +457,74 @@ if test "$enable_gss" = yes; then
   fi
 fi
 
+dnl libdnsidmap specific checks
+AC_CHECK_LIB([resolv], [__res_querydomain], ,
+	AC_CHECK_LIB([resolv], [res_querydomain], , AC_MSG_ERROR(res_querydomain needed)))
+
+AC_ARG_ENABLE([ldap],
+	[AS_HELP_STRING([--disable-ldap],[Disable support for LDAP @<:default=detect@:>@])])
+
+dnl will libdnsidmap support LDAP ?
+if test "x$enable_ldap" != "xno" ; then
+        AC_CHECK_HEADER([ldap.h],
+                [AC_CHECK_LIB([ldap], [ldap_initialize],
+                              [have_ldap="yes"],[have_ldap="no"])],
+                [have_ldap="no"])
+        if test "x$have_ldap" = "xyes" ; then
+                dnl check for sasl funcs
+                AC_CHECK_HEADERS(sasl.h sasl/sasl.h)
+                AC_CHECK_HEADERS(gsssasl.h)
+                AC_CHECK_TYPE(sasl_interact_t,[have_sasl_interact_t="yes"],,[
+                        #ifdef HAVE_SASL_SASL_H
+                        #include <sasl/sasl.h>
+                        #elif defined(HAVE_SASL_H)
+                        #include <sasl.h>
+                        #endif])
+		AC_CHECK_LIB([ldap],[ldap_sasl_interactive_bind_s],[have_ldap_sasl_interactive_bind_s="yes"])
+		AC_CHECK_LIB([gssapi_krb5],[gss_krb5_ccache_name],[have_gss_krb5_ccache_name="yes"])
+		if test "x$have_sasl_interact_t" = "xyes" -a \
+			"x$have_ldap_sasl_interactive_bind_s" = "xyes" -a \
+			"x$have_gss_krb5_ccache_name" = "xyes"; then
+			AC_DEFINE([HAVE_LDAP_SASL_INTERACTIVE_BIND_S],[1],[Has ldap_sasl_interactive_bind_s function])
+			AC_DEFINE([HAVE_GSS_KRB5_CCACHE_NAME],[1],[Has gss_krb5_ccache_name function])
+			AC_CHECK_HEADERS(gssapi/gssapi.h gssapi/gssapi_generic.h gssapi/gssapi_krb5.h gssapi.h krb5.h)
+			AC_DEFINE([ENABLE_LDAP_SASL],1,[Enable LDAP SASL support])
+			have_ldap_sasl="yes"
+		fi
+		AC_DEFINE([ENABLE_LDAP], 1, [Enable LDAP Support])
+        elif test "x$enable_ldap$have_ldap" = "xyesno" ; then
+                AC_MSG_ERROR(LDAP support not found!)
+        fi
+fi
+AM_CONDITIONAL(ENABLE_LDAP, test "x$have_ldap" = "xyes")
+AM_CONDITIONAL(ENABLE_LDAP_SASL, test "x$have_ldap_sasl" = "xyes")
+
+dnl Should we build gums mapping library?
+AC_ARG_ENABLE([gums],
+        [AS_HELP_STRING([--enable-gums],[Enable support for the GUMS mapping library @<:@default=false@:>@])])
+if test "x$enable_gums" = "xyes" ; then
+        AC_DEFINE([ENABLE_GUMS], 1, [Enable GUMS mapping library support])
+fi
+AM_CONDITIONAL(ENABLE_GUMS, test "x$enable_gums" = "xyes")
+
+dnl Where do the Plugins live
+AC_ARG_WITH(pluginpath,
+    [AS_HELP_STRING([--with-pluginpath=/foo],[Causes the library to look in /foo instead of /usr/lib/libnfsidmap for plugins
+    ])],
+    path_plugins=$withval,
+    path_plugins=""
+    )
+if test -n "$path_plugins" ; then
+        AC_DEFINE_UNQUOTED(PATH_PLUGINS, "$path_plugins",
+                [Define this to change the plugins path])
+fi
+AM_CONDITIONAL(PATH_PLUGINS, test -n "$path_plugins")
+AC_SUBST(PATH_PLUGINS, "$path_plugins")
+
+AC_SUBST(AM_CPPFLAGS, "$AM_CPPFLAGS")
+AC_DEFINE([HAVE_NFS4_SET_DEBUG], 1,
+          [Bundled lib always has the `nfs4_set_debug' function.])
+
 dnl Check for IPv6 support
 AC_IPV6
 
@@ -412,7 +536,7 @@ AC_CHECK_HEADERS([arpa/inet.h fcntl.h libintl.h limits.h \
                  stdlib.h string.h sys/file.h sys/ioctl.h sys/mount.h \
                  sys/param.h sys/socket.h sys/time.h sys/vfs.h \
                  syslog.h unistd.h com_err.h et/com_err.h \
-                 ifaddrs.h nfs-plugin.h libio.h])
+                 ifaddrs.h])
 
 dnl *************************************************************
 dnl Checks for typedefs, structures, and compiler characteristics
@@ -425,6 +549,12 @@ AC_TYPE_PID_T
 AC_TYPE_SIZE_T
 AC_HEADER_TIME
 AC_STRUCT_TM
+AC_CHECK_TYPES([struct file_handle], [], [], [[
+		#define _GNU_SOURCE
+		#include <sys/types.h>
+		#include <sys/stat.h>
+		#include <fcntl.h>
+	]])
 
 dnl *************************************************************
 dnl Check for functions
@@ -448,10 +578,22 @@ AC_FUNC_STAT
 AC_FUNC_VPRINTF
 AC_CHECK_FUNCS([alarm atexit dup2 fdatasync ftruncate getcwd \
                gethostbyaddr gethostbyname gethostname getmntent \
-               getnameinfo getrpcbyname getrpcbynumber getrpcbynumber_r getifaddrs \
+               getnameinfo getrpcbyname getifaddrs \
                gettimeofday hasmntopt inet_ntoa innetgr memset mkdir pathconf \
                ppoll realpath rmdir select socket strcasecmp strchr strdup \
                strerror strrchr strtol strtoul sigprocmask name_to_handle_at])
+
+save_CFLAGS=$CFLAGS
+save_LIBS=$LIBS
+CFLAGS="$CFLAGS $AM_CPPFLAGS"
+LIBS="$LIBS $LIBTIRPC"
+AC_CHECK_FUNCS([getrpcbynumber getrpcbynumber_r])
+CFLAGS=$save_CFLAGS
+LIBS=$save_LIBS
+
+if test "$ac_cv_func_getrpcbynumber_r" != "yes" -a "$ac_cv_func_getrpcbynumber" != "yes"; then
+   AC_MSG_ERROR([Neither getrpcbynumber_r nor getrpcbynumber are available])
+fi
 
 dnl *************************************************************
 dnl Check for data sizes
@@ -460,7 +602,10 @@ AC_CHECK_SIZEOF(short)
 AC_CHECK_SIZEOF(int)
 AC_CHECK_SIZEOF(long)
 AC_CHECK_SIZEOF(size_t)
-AC_CHECK_SIZEOF(socklen_t)
+AC_CHECK_SIZEOF(socklen_t,, [AC_INCLUDES_DEFAULT
+                             #ifdef HAVE_SYS_SOCKET_H
+                             # include <sys/socket.h>
+                             #endif])
 
 
 dnl *************************************************************
@@ -468,6 +613,7 @@ dnl Export some path names to config.h
 dnl *************************************************************
 AC_DEFINE_UNQUOTED(NFS_STATEDIR, "$statedir", [This defines the location of the NFS state files. Warning: this must match definitions in config.mk!])
 AC_DEFINE_UNQUOTED(NSM_DEFAULT_STATEDIR, "$statdpath", [Define this to the pathname where statd keeps its state file])
+AC_DEFINE_UNQUOTED(NFS_CONFFILE, "$nfsconfig", [This defines the location of NFS daemon config file])
 
 if test "x$cross_compiling" = "xno"; then
 	CFLAGS_FOR_BUILD=${CFLAGS_FOR_BUILD-"$CFLAGS"}
@@ -491,28 +637,60 @@ AC_SUBST(CXXFLAGS_FOR_BUILD)
 AC_SUBST(CPPFLAGS_FOR_BUILD)
 AC_SUBST(LDFLAGS_FOR_BUILD)
 
-dnl *************************************************************
-dnl Set up "global" CFLAGS
-dnl *************************************************************
-dnl Use architecture-specific compile flags
-dnl (We use $host and not $build in case we are cross-compiling)
-dnl *************************************************************
-dnl Note: we no longer have arch specific compile flags, but 
-dnl the stub is left here in case they are needed one day.
-case $host in
-  *)
-    ARCHFLAGS="" ;;
-esac
+my_am_cflags="\
+ -pipe \
+ -Wall \
+ -Wextra \
+ $rpcgen_cflags \
+ -Werror=missing-prototypes \
+ -Werror=missing-declarations \
+ -Werror=format=2 \
+ -Werror=undef \
+ -Werror=missing-include-dirs \
+ -Werror=strict-aliasing=2 \
+ -Werror=init-self \
+ -Werror=implicit-function-declaration \
+ -Werror=return-type \
+ -Werror=switch \
+ -Werror=overflow \
+ -Werror=parentheses \
+ -Werror=aggregate-return \
+ -Werror=unused-result \
+ -fno-strict-aliasing \
+"
 
-my_am_cflags="-Wall -Wextra -Wstrict-prototypes $ARCHFLAGS -pipe"
+AC_DEFUN([CHECK_CCSUPPORT], [
+  my_save_cflags="$CFLAGS"
+  CFLAGS="-Werror $1"
+  AC_MSG_CHECKING([whether CC supports $1])
+  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([])],
+    [AC_MSG_RESULT([yes])]
+    [$2+=$1],
+    [AC_MSG_RESULT([no])]
+  )
+  CFLAGS="$my_save_cflags"
+])
 
-AC_SUBST([AM_CFLAGS], ["$my_am_cflags"])
+CHECK_CCSUPPORT([-Werror=format-overflow=2], [flg1])
+CHECK_CCSUPPORT([-Werror=int-conversion], [flg2])
+CHECK_CCSUPPORT([-Werror=incompatible-pointer-types], [flg3])
+CHECK_CCSUPPORT([-Werror=misleading-indentation], [flg4])
+CHECK_CCSUPPORT([-Wno-cast-function-type], [flg5])
+AX_GCC_FUNC_ATTRIBUTE([format])
+
+AC_SUBST([AM_CFLAGS], ["$my_am_cflags $flg1 $flg2 $flg3 $flg4 $flg5"])
 
 # Make sure that $ACLOCAL_FLAGS are used during a rebuild
 AC_SUBST([ACLOCAL_AMFLAGS], ["-I $ac_macro_dir \$(ACLOCAL_FLAGS)"])
 
+# make _sysconfdir available for substituion in config files
+# 2 "evals" needed late to expand variable names.
+AC_SUBST([_sysconfdir])
+AC_CONFIG_COMMANDS_PRE([eval eval _sysconfdir=$sysconfdir])
+
 AC_CONFIG_FILES([
 	Makefile
+	systemd/rpc-gssd.service
 	linux-nfs/Makefile
 	support/Makefile
 	support/export/Makefile
@@ -521,9 +699,12 @@ AC_CONFIG_FILES([
 	support/include/sys/fs/Makefile
 	support/include/sys/Makefile
 	support/include/Makefile
+	support/junction/Makefile
 	support/misc/Makefile
 	support/nfs/Makefile
 	support/nsm/Makefile
+	support/nfsidmap/Makefile
+	support/nfsidmap/libnfsidmap.pc
 	tools/Makefile
 	tools/locktest/Makefile
 	tools/nlmtest/Makefile
@@ -531,20 +712,25 @@ AC_CONFIG_FILES([
 	tools/rpcgen/Makefile
 	tools/mountstats/Makefile
 	tools/nfs-iostat/Makefile
+	tools/nfsdclnts/Makefile
+	tools/nfsconf/Makefile
+	tools/nfsdclddb/Makefile
 	utils/Makefile
 	utils/blkmapd/Makefile
+	utils/nfsdcld/Makefile
 	utils/nfsdcltrack/Makefile
 	utils/exportfs/Makefile
 	utils/gssd/Makefile
 	utils/idmapd/Makefile
 	utils/mount/Makefile
 	utils/mountd/Makefile
+	utils/exportd/Makefile
 	utils/nfsd/Makefile
+	utils/nfsref/Makefile
 	utils/nfsstat/Makefile
 	utils/nfsidmap/Makefile
 	utils/showmount/Makefile
 	utils/statd/Makefile
-	utils/osd_login/Makefile
 	systemd/Makefile
 	tests/Makefile
 	tests/nsm_client/Makefile])

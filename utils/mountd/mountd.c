@@ -22,11 +22,16 @@
 #include <fcntl.h>
 #include <sys/resource.h>
 #include <sys/wait.h>
+
+#include "conffile.h"
 #include "xmalloc.h"
 #include "misc.h"
 #include "mountd.h"
 #include "rpcmisc.h"
 #include "pseudoflavors.h"
+#include "nfsd_path.h"
+#include "nfslib.h"
+#include "export.h"
 
 extern void my_svc_run(void);
 
@@ -35,7 +40,6 @@ static exports		get_exportlist(void);
 static struct nfs_fh_len *get_rootfh(struct svc_req *, dirpath *, nfs_export **, mountstat3 *, int v3);
 
 int reverse_resolve = 0;
-int new_cache = 0;
 int manage_gids;
 int use_ipaddr = -1;
 
@@ -68,8 +72,12 @@ static struct option longopts[] =
 	{ "reverse-lookup", 0, 0, 'r' },
 	{ "manage-gids", 0, 0, 'g' },
 	{ "no-udp", 0, 0, 'u' },
+	{ "log-auth", 0, 0, 'l'},
+	{ "cache-use-ipaddr", 0, 0, 'i'},
+	{ "ttl", 1, 0, 'T'},
 	{ NULL, 0, 0, 0 }
 };
+static char shortopts[] = "o:nFd:p:P:hH:N:V:vurs:t:gliT:";
 
 #define NFSVERSBIT(vers)	(0x1 << (vers - 1))
 #define NFSVERSBIT_ALL		(NFSVERSBIT(2) | NFSVERSBIT(3) | NFSVERSBIT(4))
@@ -107,9 +115,8 @@ unregister_services (void)
 static void
 cleanup_lockfiles (void)
 {
-	unlink(_PATH_XTABLCK);
-	unlink(_PATH_ETABLCK);
-	unlink(_PATH_RMTABLCK);
+	unlink(etab.lockfn);
+	unlink(rmtab.lockfn);
 }
 
 /* Wait for all worker child processes to exit and reap them */
@@ -179,6 +186,8 @@ fork_workers(void)
 	wait_for_workers();
 	unregister_services();
 	cleanup_lockfiles();
+	free_state_path_names(&etab);
+	free_state_path_names(&rmtab);
 	xlog(L_NOTICE, "mountd: no more workers, exiting\n");
 	exit(0);
 }
@@ -196,15 +205,17 @@ killer (int sig)
 		wait_for_workers();
 	}
 	cleanup_lockfiles();
+	free_state_path_names(&etab);
+	free_state_path_names(&rmtab);
 	xlog (L_NOTICE, "Caught signal %d, un-registering and exiting.", sig);
 	exit(0);
 }
 
 static void
-sig_hup (int sig)
+sig_hup (int UNUSED(sig))
 {
 	/* don't exit on SIGHUP */
-	xlog (L_NOTICE, "Received SIGHUP... Ignoring.\n", sig);
+	xlog (L_NOTICE, "Received SIGHUP... Ignoring.\n");
 	return;
 }
 
@@ -263,7 +274,7 @@ mount_umnt_1_svc(struct svc_req *rqstp, dirpath *argp, void *UNUSED(resp))
 	if (*p == '\0')
 		p = "/";
 
-	if (realpath(p, rpath) != NULL) {
+	if (nfsd_realpath(p, rpath) != NULL) {
 		rpath[sizeof (rpath) - 1] = '\0';
 		p = rpath;
 	}
@@ -289,7 +300,7 @@ mount_umntall_1_svc(struct svc_req *rqstp, void *UNUSED(argp),
 	xlog(D_CALL, "Received UMNTALL request from %s",
 		host_ntop(sap, buf, sizeof(buf)));
 
-	/* Reload /etc/xtab if necessary */
+	/* Reload /etc/exports if necessary */
 	auth_reload();
 
 	mountlist_del_all(nfs_getrpccaller(rqstp->rq_xprt));
@@ -350,11 +361,11 @@ mount_pathconf_2_svc(struct svc_req *rqstp, dirpath *path, ppathcnf *res)
 	if (*p == '\0')
 		p = "/";
 
-	/* Reload /etc/xtab if necessary */
+	/* Reload /etc/exports if necessary */
 	auth_reload();
 
 	/* Resolve symlinks */
-	if (realpath(p, rpath) != NULL) {
+	if (nfsd_realpath(p, rpath) != NULL) {
 		rpath[sizeof (rpath) - 1] = '\0';
 		p = rpath;
 	}
@@ -366,7 +377,7 @@ mount_pathconf_2_svc(struct svc_req *rqstp, dirpath *path, ppathcnf *res)
 	exp = auth_authenticate("pathconf", sap, p);
 	if (exp == NULL)
 		return 1;
-	else if (stat(p, &stb) < 0) {
+	else if (nfsd_path_stat(p, &stb) < 0) {
 		xlog(L_WARNING, "can't stat exported dir %s: %s",
 				p, strerror(errno));
 		return 1;
@@ -464,7 +475,7 @@ get_rootfh(struct svc_req *rqstp, dirpath *path, nfs_export **expret,
 	auth_reload();
 
 	/* Resolve symlinks */
-	if (realpath(p, rpath) != NULL) {
+	if (nfsd_realpath(p, rpath) != NULL) {
 		rpath[sizeof (rpath) - 1] = '\0';
 		p = rpath;
 	}
@@ -475,7 +486,7 @@ get_rootfh(struct svc_req *rqstp, dirpath *path, nfs_export **expret,
 		*error = MNT3ERR_ACCES;
 		return NULL;
 	}
-	if (stat(p, &stb) < 0) {
+	if (nfsd_path_stat(p, &stb) < 0) {
 		xlog(L_WARNING, "can't stat exported dir %s: %s",
 				p, strerror(errno));
 		if (errno == ENOENT)
@@ -489,75 +500,42 @@ get_rootfh(struct svc_req *rqstp, dirpath *path, nfs_export **expret,
 		*error = MNT3ERR_NOTDIR;
 		return NULL;
 	}
-	if (stat(exp->m_export.e_path, &estb) < 0) {
+	if (nfsd_path_stat(exp->m_export.e_path, &estb) < 0) {
 		xlog(L_WARNING, "can't stat export point %s: %s",
 		     p, strerror(errno));
 		*error = MNT3ERR_NOENT;
 		return NULL;
 	}
 	if (estb.st_dev != stb.st_dev
-		   && (!new_cache
-			   || !(exp->m_export.e_flags & NFSEXP_CROSSMOUNT))) {
+	    && !(exp->m_export.e_flags & NFSEXP_CROSSMOUNT)) {
 		xlog(L_WARNING, "request to export directory %s below nearest filesystem %s",
 		     p, exp->m_export.e_path);
 		*error = MNT3ERR_ACCES;
 		return NULL;
 	}
 	if (exp->m_export.e_mountpoint &&
-		   !is_mountpoint(exp->m_export.e_mountpoint[0]?
+		   !check_is_mountpoint(exp->m_export.e_mountpoint[0]?
 				  exp->m_export.e_mountpoint:
-				  exp->m_export.e_path)) {
+				  exp->m_export.e_path,
+				  nfsd_path_lstat)) {
 		xlog(L_WARNING, "request to export an unmounted filesystem: %s",
 		     p);
 		*error = MNT3ERR_NOENT;
 		return NULL;
 	}
 
-	if (new_cache) {
-		/* This will be a static private nfs_export with just one
-		 * address.  We feed it to kernel then extract the filehandle,
-		 * 
-		 */
+	/* This will be a static private nfs_export with just one
+	 * address.  We feed it to kernel then extract the filehandle,
+	 */
 
-		if (cache_export(exp, p)) {
-			*error = MNT3ERR_ACCES;
-			return NULL;
-		}
-		fh = cache_get_filehandle(exp, v3?64:32, p);
-		if (fh == NULL) {
-			*error = MNT3ERR_ACCES;
-			return NULL;
-		}
-	} else {
-		int did_export = 0;
-	retry:
-		if (exp->m_exported<1) {
-			export_export(exp);
-			did_export = 1;
-		}
-		if (!exp->m_xtabent)
-			xtab_append(exp);
-
-		if (v3)
-			fh = getfh_size((struct sockaddr_in *)sap, p, 64);
-		if (!v3 || (fh == NULL && errno == EINVAL)) {
-			/* We first try the new nfs syscall. */
-			fh = getfh((struct sockaddr_in *)sap, p);
-			if (fh == NULL && errno == EINVAL)
-				/* Let's try the old one. */
-				fh = getfh_old((struct sockaddr_in *)sap,
-						stb.st_dev, stb.st_ino);
-		}
-		if (fh == NULL && !did_export) {
-			exp->m_exported = 0;
-			goto retry;
-		}
-
-		if (fh == NULL) {
-			xlog(L_WARNING, "getfh failed: %s", strerror(errno));
-			*error = MNT3ERR_ACCES;
-			return NULL;
-		}
+	if (cache_export(exp, p)) {
+		*error = MNT3ERR_ACCES;
+		return NULL;
+	}
+	fh = cache_get_filehandle(exp, v3?64:32, p);
+	if (fh == NULL) {
+		*error = MNT3ERR_ACCES;
+		return NULL;
 	}
 	*error = MNT_OK;
 	mountlist_add(host_ntop(sap, buf, sizeof(buf)), p);
@@ -604,10 +582,10 @@ static void prune_clients(nfs_export *exp, struct exportnode *e)
 				*cp = c->gr_next;
 				xfree(c->gr_name);
 				xfree(c);
-				freeaddrinfo(ai);
+				nfs_freeaddrinfo(ai);
 				continue;
 			}
-			freeaddrinfo(ai);
+			nfs_freeaddrinfo(ai);
 		}
 		cp = &(c->gr_next);
 	}
@@ -685,17 +663,63 @@ get_exportlist(void)
 	return elist;
 }
 
+int	vers;
+int	port = 0;
+int	descriptors = 0;
+
+inline static void 
+read_mountd_conf(char **argv)
+{
+	char	*s;
+	int	ttl;
+
+	conf_init_file(NFS_CONFFILE);
+
+	xlog_set_debug("mountd");
+	manage_gids = conf_get_bool("mountd", "manage-gids", manage_gids);
+	descriptors = conf_get_num("mountd", "descriptors", descriptors);
+	port = conf_get_num("mountd", "port", port);
+	num_threads = conf_get_num("mountd", "threads", num_threads);
+	reverse_resolve = conf_get_bool("mountd", "reverse-lookup", reverse_resolve);
+	ha_callout_prog = conf_get_str("mountd", "ha-callout");
+	if (conf_get_bool("mountd", "cache-use-ipaddr", 0))
+		use_ipaddr = 2;
+
+	s = conf_get_str("mountd", "state-directory-path");
+	if (s && !state_setup_basedir(argv[0], s))
+		exit(1);
+
+	/* NOTE: following uses "nfsd" section of nfs.conf !!!! */
+	if (conf_get_bool("nfsd", "udp", NFSCTL_UDPISSET(_rpcprotobits)))
+		NFSCTL_UDPSET(_rpcprotobits);
+	else
+		NFSCTL_UDPUNSET(_rpcprotobits);
+	if (conf_get_bool("nfsd", "tcp", NFSCTL_TCPISSET(_rpcprotobits)))
+		NFSCTL_TCPSET(_rpcprotobits);
+	else
+		NFSCTL_TCPUNSET(_rpcprotobits);
+	for (vers = 2; vers <= 4; vers++) {
+		char tag[20];
+		sprintf(tag, "vers%d", vers);
+		if (conf_get_bool("nfsd", tag, NFSCTL_VERISSET(nfs_version, vers)))
+			NFSCTL_VERSET(nfs_version, vers);
+		else
+			NFSCTL_VERUNSET(nfs_version, vers);
+	}
+
+	ttl = conf_get_num("mountd", "ttl", default_ttl);
+	if (ttl > 0)
+		default_ttl = ttl;
+}
+
 int
 main(int argc, char **argv)
 {
-	char    *state_dir = NFS_STATEDIR;
 	char	*progname;
 	unsigned int listeners = 0;
 	int	foreground = 0;
-	int	port = 0;
-	int	descriptors = 0;
 	int	c;
-	int	vers;
+	int	ttl;
 	struct sigaction sa;
 	struct rlimit rlim;
 
@@ -705,9 +729,15 @@ main(int argc, char **argv)
 	else
 		progname = argv[0];
 
+	/* Initialize logging. */
+	xlog_open(progname);
+
+	/* Read in config setting */
+	read_mountd_conf(argv);
+
 	/* Parse the command line options and arguments. */
 	opterr = 0;
-	while ((c = getopt_long(argc, argv, "o:nFd:p:P:hH:N:V:vurs:t:g", longopts, NULL)) != EOF)
+	while ((c = getopt_long(argc, argv, shortopts, longopts, NULL)) != EOF)
 		switch (c) {
 		case 'g':
 			manage_gids = 1;
@@ -757,11 +787,8 @@ main(int argc, char **argv)
 			reverse_resolve = 1;
 			break;
 		case 's':
-			if ((state_dir = xstrdup(optarg)) == NULL) {
-				fprintf(stderr, "%s: xstrdup(%s) failed!\n",
-					progname, optarg);
+			if (!state_setup_basedir(argv[0], optarg))
 				exit(1);
-			}
 			break;
 		case 't':
 			num_threads = atoi (optarg);
@@ -781,6 +808,21 @@ main(int argc, char **argv)
 		case 'u':
 			NFSCTL_UDPUNSET(_rpcprotobits);
 			break;
+		case 'l':
+			xlog_sconfig("auth", 1);
+			break;
+		case 'i':
+			use_ipaddr = 2;
+			break;
+		case 'T':
+			ttl = atoi(optarg);
+			if (ttl <= 0) {
+				fprintf(stderr, "%s: bad ttl number of seconds: %s\n",
+					argv[0], optarg);
+				usage(argv[0], 1);
+			}
+			default_ttl = ttl;
+			break;
 		case 0:
 			break;
 		case '?':
@@ -793,11 +835,10 @@ main(int argc, char **argv)
 		fprintf(stderr, "%s: No protocol versions specified!\n", progname); 
 		usage(progname, 1);
 	}
-	if (chdir(state_dir)) {
-		fprintf(stderr, "%s: chdir(%s) failed: %s\n",
-			progname, state_dir, strerror(errno));
-		exit(1);
-	}
+	if (!setup_state_path_names(progname, ETAB, ETABTMP, ETABLCK, &etab))
+		return 1;
+	if (!setup_state_path_names(progname, RMTAB, RMTABTMP, RMTABLCK, &rmtab))
+		return 1;
 
 	if (getrlimit (RLIMIT_NOFILE, &rlim) != 0)
 		fprintf(stderr, "%s: getrlimit (RLIMIT_NOFILE) failed: %s\n",
@@ -816,9 +857,7 @@ main(int argc, char **argv)
 			}
 		}
 	}
-	/* Initialize logging. */
 	if (!foreground) xlog_stderr(0);
-	xlog_open(progname);
 
 	sa.sa_handler = SIG_IGN;
 	sa.sa_flags = 0;
@@ -829,14 +868,6 @@ main(int argc, char **argv)
 	sigaction(SIGPIPE, &sa, NULL);
 	/* WARNING: the following works on Linux and SysV, but not BSD! */
 	sigaction(SIGCHLD, &sa, NULL);
-
-	/* Daemons should close all extra filehandles ... *before* RPC init. */
-	if (!foreground)
-		closeall(3);
-
-	new_cache = check_new_cache();
-	if (new_cache)
-		cache_open();
 
 	unregister_services();
 	if (version2()) {
@@ -856,8 +887,6 @@ main(int argc, char **argv)
 	sigaction(SIGTERM, &sa, NULL);
 	sa.sa_handler = sig_hup;
 	sigaction(SIGHUP, &sa, NULL);
-
-	auth_init();
 
 	if (!foreground) {
 		/* We first fork off a child. */
@@ -890,11 +919,18 @@ main(int argc, char **argv)
 	if (num_threads > 1)
 		fork_workers();
 
+	nfsd_path_init();
+	/* Open files now to avoid sharing descriptors among forked processes */
+	cache_open();
+	v4clients_init();
+
 	xlog(L_NOTICE, "Version " VERSION " starting");
 	my_svc_run();
 
 	xlog(L_ERROR, "RPC service loop terminated unexpectedly. Exiting...\n");
 	unregister_services();
+	free_state_path_names(&etab);
+	free_state_path_names(&rmtab);
 	exit(1);
 }
 
@@ -903,6 +939,7 @@ usage(const char *prog, int n)
 {
 	fprintf(stderr,
 "Usage: %s [-F|--foreground] [-h|--help] [-v|--version] [-d kind|--debug kind]\n"
+"	[-l|--log-auth] [-i|--cache-use-ipaddr] [-T|--ttl ttl]\n"
 "	[-o num|--descriptors num]\n"
 "	[-p|--port port] [-V version|--nfs-version version]\n"
 "	[-N version|--no-nfs-version version] [-n|--no-tcp]\n"

@@ -11,6 +11,15 @@
 /* Define to 1 if using `alloca.c'. */
 #undef C_ALLOCA
 
+/* Enable GUMS mapping library support */
+#undef ENABLE_GUMS
+
+/* Enable LDAP Support */
+#undef ENABLE_LDAP
+
+/* Enable LDAP SASL support */
+#undef ENABLE_LDAP_SASL
+
 /* Define to the type of elements in the array set by `getgroups'. Usually
    this is either `int' or `gid_t'. */
 #undef GETGROUPS_T
@@ -56,8 +65,8 @@
 /* Define to 1 if you have the <et/com_err.h> header file. */
 #undef HAVE_ET_COM_ERR_H
 
-/* Define to 1 if you have the <event.h> header file. */
-#undef HAVE_EVENT_H
+/* Define to 1 if you have the <event2/event.h> header file. */
+#undef HAVE_EVENT2_EVENT_H
 
 /* Define to 1 if you have the <fcntl.h> header file. */
 #undef HAVE_FCNTL_H
@@ -71,8 +80,14 @@
 /* Define to 1 if you have the `fork' function. */
 #undef HAVE_FORK
 
+/* Define to 1 if you have the `fstatat' function. */
+#undef HAVE_FSTATAT
+
 /* Define to 1 if you have the `ftruncate' function. */
 #undef HAVE_FTRUNCATE
+
+/* Define to 1 if the system has the `format' function attribute */
+#undef HAVE_FUNC_ATTRIBUTE_FORMAT
 
 /* Define to 1 if you have the `getcwd' function. */
 #undef HAVE_GETCWD
@@ -110,6 +125,24 @@
 /* Define to 1 if you have the `gettimeofday' function. */
 #undef HAVE_GETTIMEOFDAY
 
+/* Define to 1 if you have the <gssapi/gssapi_generic.h> header file. */
+#undef HAVE_GSSAPI_GSSAPI_GENERIC_H
+
+/* Define to 1 if you have the <gssapi/gssapi.h> header file. */
+#undef HAVE_GSSAPI_GSSAPI_H
+
+/* Define to 1 if you have the <gssapi/gssapi_krb5.h> header file. */
+#undef HAVE_GSSAPI_GSSAPI_KRB5_H
+
+/* Define to 1 if you have the <gssapi.h> header file. */
+#undef HAVE_GSSAPI_H
+
+/* Define to 1 if you have the <gsssasl.h> header file. */
+#undef HAVE_GSSSASL_H
+
+/* Has gss_krb5_ccache_name function */
+#undef HAVE_GSS_KRB5_CCACHE_NAME
+
 /* Define this if the Kerberos GSS library supports
    gss_krb5_free_lucid_sec_context */
 #undef HAVE_GSS_KRB5_FREE_LUCID_SEC_CONTEXT
@@ -132,6 +165,9 @@
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
+/* Define this if you want junction support compiled in */
+#undef HAVE_JUNCTION_SUPPORT
+
 /* Define to 1 if you have the <keyutils.h> header file. */
 #undef HAVE_KEYUTILS_H
 
@@ -145,6 +181,12 @@
    available */
 #undef HAVE_KRB5_GET_INIT_CREDS_OPT_SET_ADDRESSLESS
 
+/* Define to 1 if you have the <krb5.h> header file. */
+#undef HAVE_KRB5_H
+
+/* Has ldap_sasl_interactive_bind_s function */
+#undef HAVE_LDAP_SASL_INTERACTIVE_BIND_S
+
 /* Define to 1 if you have the <libgen.h> header file. */
 #undef HAVE_LIBGEN_H
 
@@ -154,8 +196,11 @@
 /* Define to 1 if you have the <libintl.h> header file. */
 #undef HAVE_LIBINTL_H
 
-/* Define to 1 if you have the <libio.h> header file. */
-#undef HAVE_LIBIO_H
+/* Define to 1 if you have libpthread. */
+#undef HAVE_LIBPTHREAD
+
+/* Define to 1 if you have the `resolv' library (-lresolv). */
+#undef HAVE_LIBRESOLV
 
 /* Define to 1 if you have and wish to use libtirpc. */
 #undef HAVE_LIBTIRPC
@@ -165,6 +210,9 @@
 
 /* tcp-wrapper */
 #undef HAVE_LIBWRAP
+
+/* Define to 1 if you have and wish to use libxml2. */
+#undef HAVE_LIBXML2
 
 /* Define to 1 if you have the <limits.h> header file. */
 #undef HAVE_LIMITS_H
@@ -201,14 +249,11 @@
 /* Define to 1 if you have the <netinet/in.h> header file. */
 #undef HAVE_NETINET_IN_H
 
-/* Define to 1 if you have the `nfs4_set_debug' function. */
+/* Bundled lib always has the `nfs4_set_debug' function. */
 #undef HAVE_NFS4_SET_DEBUG
 
-/* Define to 1 if you have the <nfsidmap.h> header file. */
-#undef HAVE_NFSIDMAP_H
-
-/* Define to 1 if you have the <nfs-plugin.h> header file. */
-#undef HAVE_NFS_PLUGIN_H
+/* Define this if you want NFSv4 server only support compiled in */
+#undef HAVE_NFSV4SERVER_SUPPORT
 
 /* Define to 1 if you have the `pathconf' function. */
 #undef HAVE_PATHCONF
@@ -228,6 +273,15 @@
 /* Define to 1 if you have the `rmdir' function. */
 #undef HAVE_RMDIR
 
+/* Define to 1 if you have the <sasl.h> header file. */
+#undef HAVE_SASL_H
+
+/* Define to 1 if you have the <sasl/sasl.h> header file. */
+#undef HAVE_SASL_SASL_H
+
+/* Define to 1 if you have the <sched.h> header file. */
+#undef HAVE_SCHED_H
+
 /* Define to 1 if you have the `select' function. */
 #undef HAVE_SELECT
 
@@ -243,6 +297,9 @@
 
 /* Define to 1 if you have the <sqlite3.h> header file. */
 #undef HAVE_SQLITE3_H
+
+/* Define to 1 if you have the `statx' function. */
+#undef HAVE_STATX
 
 /* Define to 1 if `stat' has the bug that it succeeds when given the
    zero-length file name argument. */
@@ -280,6 +337,9 @@
 
 /* Define to 1 if you have the `strtoul' function. */
 #undef HAVE_STRTOUL
+
+/* Define to 1 if the system has the type `struct file_handle'. */
+#undef HAVE_STRUCT_FILE_HANDLE
 
 /* Define to 1 if you have the <syslog.h> header file. */
 #undef HAVE_SYSLOG_H
@@ -334,6 +394,9 @@
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
 
+/* Define to 1 if you have the `unshare' function. */
+#undef HAVE_UNSHARE
+
 /* Define to 1 if you have the `vfork' function. */
 #undef HAVE_VFORK
 
@@ -379,6 +442,9 @@
 /* Define this if you want mount to read a configuration file */
 #undef MOUNT_CONFIG
 
+/* This defines the location of NFS daemon config file */
+#undef NFS_CONFFILE
+
 /* This defines the location of the NFS state files. Warning: this must match
    definitions in config.mk! */
 #undef NFS_STATEDIR
@@ -406,6 +472,9 @@
 
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
+
+/* Define this to change the plugins path */
+#undef PATH_PLUGINS
 
 /* Define as the return type of signal handlers (`int' or `void'). */
 #undef RETSIGTYPE

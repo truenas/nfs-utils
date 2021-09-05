@@ -26,6 +26,11 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif /* HAVE_CONFIG_H */
+
+#include <sys/sysmacros.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
@@ -52,20 +57,31 @@
 
 #include "device-discovery.h"
 #include "xcommon.h"
+#include "nfslib.h"
+#include "conffile.h"
 
 #define EVENT_SIZE (sizeof(struct inotify_event))
 #define EVENT_BUFSIZE (1024 * EVENT_SIZE)
 
-#define BL_PIPE_FILE	"/var/lib/nfs/rpc_pipefs/nfs/blocklayout"
-#define NFSPIPE_DIR	"/var/lib/nfs/rpc_pipefs/nfs"
 #define RPCPIPE_DIR	"/var/lib/nfs/rpc_pipefs"
-#define PID_FILE	"/var/run/blkmapd.pid"
+#define PID_FILE	"/run/blkmapd.pid"
+
+#define CONF_SAVE(w, f) do {			\
+	char *p = f;				\
+	if (p != NULL)				\
+		(w) = p;			\
+} while (0)
+
+static char bl_pipe_file[PATH_MAX];
+static char nfspipe_dir[PATH_MAX];
+static char rpcpipe_dir[PATH_MAX];
 
 struct bl_disk *visible_disk_list;
 int    bl_watch_fd, bl_pipe_fd, nfs_pipedir_wfd, rpc_pipedir_wfd;
 int    pidfd = -1;
 
-struct bl_disk_path *bl_get_path(const char *filepath,
+
+static struct bl_disk_path *bl_get_path(const char *filepath,
 				 struct bl_disk_path *paths)
 {
 	struct bl_disk_path *tmp = paths;
@@ -87,7 +103,7 @@ struct bl_disk_path *bl_get_path(const char *filepath,
  * exist for each multipath device. If not, active device path will be
  * chosen for device creation.
  */
-int bl_update_path(enum bl_path_state_e state, struct bl_disk *disk)
+static int bl_update_path(enum bl_path_state_e state, struct bl_disk *disk)
 {
 	struct bl_disk_path *valid_path = disk->valid_path;
 
@@ -96,7 +112,7 @@ int bl_update_path(enum bl_path_state_e state, struct bl_disk *disk)
 	return 1;
 }
 
-void bl_release_disk(void)
+static void bl_release_disk(void)
 {
 	struct bl_disk *disk;
 	struct bl_disk_path *path = NULL;
@@ -117,7 +133,7 @@ void bl_release_disk(void)
 	}
 }
 
-void bl_add_disk(char *filepath)
+static void bl_add_disk(char *filepath)
 {
 	struct bl_disk *disk = NULL;
 	int fd = 0;
@@ -170,8 +186,13 @@ void bl_add_disk(char *filepath)
 		}
 	}
 
-	if (disk && diskpath)
+	if (disk && diskpath) {
+		if (serial) {
+			free(serial->data);
+			free(serial);
+		}
 		return;
+	}
 
 	/* add path */
 	path = malloc(sizeof(struct bl_disk_path));
@@ -207,6 +228,10 @@ void bl_add_disk(char *filepath)
 			disk->size = size;
 			disk->valid_path = path;
 		}
+		if (serial) {
+			free(serial->data);
+			free(serial);
+		}
 	}
 	return;
 
@@ -216,6 +241,10 @@ void bl_add_disk(char *filepath)
 			free(path->full_path);
 		free(path);
 	}
+	if (serial) {
+		free(serial->data);
+		free(serial);
+	}
 	return;
 }
 
@@ -223,7 +252,7 @@ int bl_discover_devices(void)
 {
 	FILE *f;
 	int n;
-	char buf[PATH_MAX], devname[PATH_MAX], fulldevname[PATH_MAX];
+	char buf[PATH_MAX], devname[NAME_MAX], fulldevname[PATH_MAX];
 
 	/* release previous list */
 	bl_release_disk();
@@ -358,8 +387,13 @@ static void bl_rpcpipe_cb(void)
 				continue;
 			if (event->mask & IN_CREATE) {
 				BL_LOG_WARNING("nfs pipe dir created\n");
-				bl_watch_dir(NFSPIPE_DIR, &nfs_pipedir_wfd);
-				bl_pipe_fd = open(BL_PIPE_FILE, O_RDWR);
+				bl_watch_dir(nfspipe_dir, &nfs_pipedir_wfd);
+				if (bl_pipe_fd >= 0)
+					close(bl_pipe_fd);
+				bl_pipe_fd = open(bl_pipe_file, O_RDWR);
+				if (bl_pipe_fd < 0)
+					BL_LOG_ERR("open %s failed: %s\n",
+						event->name, strerror(errno));
 			} else if (event->mask & IN_DELETE) {
 				BL_LOG_WARNING("nfs pipe dir deleted\n");
 				inotify_rm_watch(bl_watch_fd, nfs_pipedir_wfd);
@@ -372,7 +406,9 @@ static void bl_rpcpipe_cb(void)
 				continue;
 			if (event->mask & IN_CREATE) {
 				BL_LOG_WARNING("blocklayout pipe file created\n");
-				bl_pipe_fd = open(BL_PIPE_FILE, O_RDWR);
+				if (bl_pipe_fd >= 0)
+					close(bl_pipe_fd);
+				bl_pipe_fd = open(bl_pipe_file, O_RDWR);
 				if (bl_pipe_fd < 0)
 					BL_LOG_ERR("open %s failed: %s\n",
 						event->name, strerror(errno));
@@ -419,7 +455,7 @@ static int bl_event_helper(void)
 	return ret;
 }
 
-void sig_die(int signal)
+static void sig_die(int signal)
 {
 	if (pidfd >= 0) {
 		close(pidfd);
@@ -437,6 +473,18 @@ int main(int argc, char **argv)
 {
 	int opt, dflag = 0, fg = 0, ret = 1;
 	char pidbuf[64];
+	char *xrpcpipe_dir = NULL;
+
+	strncpy(rpcpipe_dir, RPCPIPE_DIR, sizeof(rpcpipe_dir));
+	conf_init_file(NFS_CONFFILE);
+	CONF_SAVE(xrpcpipe_dir, conf_get_str("general", "pipefs-directory"));
+	if (xrpcpipe_dir != NULL)
+		strlcpy(rpcpipe_dir, xrpcpipe_dir, sizeof(rpcpipe_dir));
+
+	strncpy(nfspipe_dir, rpcpipe_dir, sizeof(nfspipe_dir));
+	strlcat(nfspipe_dir, "/nfs", sizeof(nfspipe_dir));
+	strncpy(bl_pipe_file, rpcpipe_dir, sizeof(bl_pipe_file));
+	strlcat(bl_pipe_file, "/nfs/blocklayout", sizeof(bl_pipe_file));
 
 	while ((opt = getopt(argc, argv, "hdf")) != -1) {
 		switch (opt) {
@@ -476,9 +524,11 @@ int main(int argc, char **argv)
 			close(pidfd);
 			exit(1);
 		}
-		ftruncate(pidfd, 0);
+		if (ftruncate(pidfd, 0) < 0)
+			BL_LOG_WARNING("ftruncate on %s failed: m\n", PID_FILE);
 		sprintf(pidbuf, "%d\n", getpid());
-		write(pidfd, pidbuf, strlen(pidbuf));
+		if (write(pidfd, pidbuf, strlen(pidbuf)) != (ssize_t)strlen(pidbuf))
+			BL_LOG_WARNING("write on %s failed: m\n", PID_FILE);
 	}
 
 	signal(SIGINT, sig_die);
@@ -496,12 +546,12 @@ int main(int argc, char **argv)
 	}
 
 	/* open pipe file */
-	bl_watch_dir(RPCPIPE_DIR, &rpc_pipedir_wfd);
-	bl_watch_dir(NFSPIPE_DIR, &nfs_pipedir_wfd);
+	bl_watch_dir(rpcpipe_dir, &rpc_pipedir_wfd);
+	bl_watch_dir(nfspipe_dir, &nfs_pipedir_wfd);
 
-	bl_pipe_fd = open(BL_PIPE_FILE, O_RDWR);
+	bl_pipe_fd = open(bl_pipe_file, O_RDWR);
 	if (bl_pipe_fd < 0)
-		BL_LOG_ERR("open pipe file %s failed: %s\n", BL_PIPE_FILE, strerror(errno));
+		BL_LOG_ERR("open pipe file %s failed: %s\n", bl_pipe_file, strerror(errno));
 
 	while (1) {
 		/* discover device when needed */

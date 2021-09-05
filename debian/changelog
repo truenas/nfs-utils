@@ -1,3 +1,35 @@
+nfs-utils (1:2.5.4-1~exp1) experimental; urgency=medium
+
+  * New upstream release
+    Closes: #917706, #933998, #952446, #991631
+  * Standars-Version is 4.6.0
+  * dh compatibility level is 13
+  * Source now includes libnfsidmap
+  * var/lib/nfs/xtab does not exist
+  * sbin/osd_login does not exist
+  * systemd/nfs-config.service does not exist
+  * Drop 21-no-more-var-run.patch
+  * Drop 03-handle-mtab-symlink.patch
+  * Drop 17-multiarch-kerberos-paths.patch
+  * Drop 19-iscsiadm-path.patch
+  * Drop 24-systemd-pipefs_in_run.patch
+  * can't find file to patch: systemd/nfs-config.service
+    Drop 28-nfs-utils_env-location.patch
+  * Drop 29-start-statd-fd-9.patch
+  * Drop 0001-rpc.c-added-include-file-so-UINT16_MAX-is-defined.patch
+  * Drop 30-remove-whitespace-service.patch
+  * Drop fix-glibc2.28-ftbfs.patch
+  * Drop 0010-gssd-replace-non-thread-safe-strtok-with-strsep.patch
+  * Drop 0011-gssd-Duplicate-the-upcall-string-for-error-messages.patch
+  * Drop nfsiostat-replace-list-reserved-word.patch
+  * Drop statd-take-user-id-from-var-lib-nfs-sm.patch
+  * Drop Allow-compilation-to-succeed-with-fno-common.patch
+  * Drop mountstats-Remove-a-shebang.patch
+  * Drop Convert-remaining-python-scripts-to-python3.patch
+  * Drop Removed-a-resource-leak-from-mountd-fsloc.c.patch
+
+ -- Anibal Monsalve Salazar <anibal@debian.org>  Sun, 05 Sep 2021 23:50:09 +1000
+
 nfs-utils (1:1.3.4-6) unstable; urgency=medium
 
   * mountstats:  Remove a shebang

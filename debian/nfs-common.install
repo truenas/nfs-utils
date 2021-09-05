@@ -2,7 +2,6 @@ debian/tmp/sbin/mount.nfs
 debian/tmp/sbin/mount.nfs4
 debian/tmp/sbin/umount.nfs
 debian/tmp/sbin/umount.nfs4
-debian/tmp/sbin/osd_login
 debian/tmp/usr/sbin/blkmapd
 debian/tmp/usr/sbin/rpc.statd sbin/
 debian/tmp/usr/sbin/sm-notify sbin/
@@ -23,7 +22,6 @@ debian/id_resolver.conf etc/request-key.d/
 debian/nfs-utils_env.sh /usr/lib/systemd/scripts/
 systemd/*.mount /lib/systemd/system
 systemd/*rpc*.service /lib/systemd/system
-systemd/nfs-config.service /lib/systemd/system
 systemd/nfs-idmapd.service /lib/systemd/system
 systemd/nfs-client.target /lib/systemd/system
 systemd/nfs-utils.service /lib/systemd/system

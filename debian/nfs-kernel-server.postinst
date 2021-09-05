@@ -10,8 +10,7 @@ case "$1" in
 	ucf --three-way /usr/share/nfs-kernel-server/conffiles/nfs-kernel-server.default /etc/default/nfs-kernel-server
 
 	for f in /var/lib/nfs/etab  \
-		 /var/lib/nfs/rmtab \
-		 /var/lib/nfs/xtab; do
+		 /var/lib/nfs/rmtab; do
 	    [ -e $f ] || touch $f
 	done
 

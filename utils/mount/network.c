@@ -33,16 +33,25 @@
 #include <errno.h>
 #include <netdb.h>
 #include <time.h>
+#include <grp.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
-#include <linux/in6.h>
+#if defined(__GLIBC__) && ((__GLIBC__ < 2) || (__GLIBC__ == 2 && __GLIBC_MINOR__ < 24))
+/* Cannot safely include linux/in6.h in old glibc, so hardcode the needed values */
+# define IPV6_PREFER_SRC_PUBLIC 2
+# define IPV6_ADDR_PREFERENCES 72
+#else
+# include <linux/in6.h>
+#endif
 #include <netinet/in.h>
 #include <rpc/rpc.h>
 #include <rpc/pmap_prot.h>
 #include <rpc/pmap_clnt.h>
+#include <net/if.h>
+#include <ifaddrs.h>
 
 #include "sockaddr.h"
 #include "xcommon.h"
@@ -93,7 +102,6 @@ static const char *nfs_version_opttbl[] = {
 	"v4",
 	"vers",
 	"nfsvers",
-	"minorversion",
 	NULL,
 };
 
@@ -242,7 +250,7 @@ int nfs_lookup(const char *hostname, const sa_family_t family,
 		break;
 	}
 
-	freeaddrinfo(gai_results);
+	nfs_freeaddrinfo(gai_results);
 	return ret;
 }
 
@@ -299,7 +307,7 @@ int nfs_string_to_sockaddr(const char *address, struct sockaddr *sap,
 			}
 			break;
 		}
-		freeaddrinfo(gai_results);
+		nfs_freeaddrinfo(gai_results);
 	}
 
 	return ret;
@@ -804,8 +812,13 @@ int start_statd(void)
 			pid_t pid = fork();
 			switch (pid) {
 			case 0: /* child */
-				setgid(0);
-				setuid(0);
+				setgroups(0, NULL);
+				if (setgid(0) < 0)
+					nfs_error(_("%s: setgid(0) failed: %s"),
+						progname, strerror(errno));
+				if (setuid(0) < 0)
+					nfs_error(_("%s: setuid(0) failed: %s"),
+						progname, strerror(errno));
 				execle(START_STATD, START_STATD, NULL, envp);
 				exit(1);
 			case -1: /* error */
@@ -1049,7 +1062,7 @@ int clnt_ping(struct sockaddr_in *saddr, const unsigned long prog,
 	if (caddr) {
 		/* Get the address of our end of this connection */
 		socklen_t len = sizeof(*caddr);
-		if (getsockname(sock, caddr, &len) != 0)
+		if (getsockname(sock, (struct sockaddr *) caddr, &len) != 0)
 			caddr->sin_family = 0;
 	}
 
@@ -1167,7 +1180,7 @@ static int nfs_ca_gai(const struct sockaddr *sap,
 	*buflen = gai_results->ai_addrlen;
 	memcpy(buf, gai_results->ai_addr, *buflen);
 
-	freeaddrinfo(gai_results);
+	nfs_freeaddrinfo(gai_results);
 
 	return 1;
 }
@@ -1233,6 +1246,7 @@ nfs_nfs_program(struct mount_options *options, unsigned long *program)
 			*program = tmp;
 			return 1;
 		}
+		/* FALLTHRU */
 	case PO_BAD_VALUE:
 		nfs_error(_("%s: invalid value for 'nfsprog=' option"),
 				progname);
@@ -1252,29 +1266,34 @@ nfs_nfs_program(struct mount_options *options, unsigned long *program)
  * or FALSE if the option was specified with an invalid value.
  */
 int
-nfs_nfs_version(struct mount_options *options, struct nfs_version *version)
+nfs_nfs_version(char *type, struct mount_options *options, struct nfs_version *version)
 {
-	char *version_key, *version_val, *cptr;
-	int i, found = 0;
+	char *version_key, *version_val = NULL, *cptr;
+	int i, found = -1;
 
 	version->v_mode = V_DEFAULT;
 
 	for (i = 0; nfs_version_opttbl[i]; i++) {
 		if (po_contains_prefix(options, nfs_version_opttbl[i],
-								&version_key) == PO_FOUND) {
-			found++;
-			break;
+				       &version_key, 0) == PO_FOUND) {
+			if (found >= 0)
+				goto ret_error_multiple;
+			if (po_contains_prefix(options, nfs_version_opttbl[i],
+					       NULL, 1) == PO_FOUND)
+				goto ret_error_multiple;
+			found = i;
 		}
 	}
 
-	if (!found)
+	if (found < 0 && strcmp(type, "nfs4") == 0)
+		version_val = type + 3;
+	else if (found < 0)
 		return 1;
-
-	if (i <= 2 ) {
+	else if (found <= 2 ) {
 		/* v2, v3, v4 */
 		version_val = version_key + 1;
 		version->v_mode = V_SPECIFIC;
-	} else if (i > 2 ) {
+	} else if (found > 2 ) {
 		/* vers=, nfsvers= */
 		version_val = po_get(options, version_key);
 	}
@@ -1282,37 +1301,51 @@ nfs_nfs_version(struct mount_options *options, struct nfs_version *version)
 	if (!version_val)
 		goto ret_error;
 
-	if (!(version->major = strtol(version_val, &cptr, 10)))
+	version->major = strtol(version_val, &cptr, 10);
+	if (cptr == version_val || (*cptr && *cptr != '.'))
 		goto ret_error;
-
-	if (strcmp(nfs_version_opttbl[i], "minorversion") == 0) {
+	if (version->major == 4 && *cptr != '.' &&
+	    (version_val = po_get(options, "minorversion")) != NULL) {
+		version->minor = strtol(version_val, &cptr, 10);
+		found = -1;
+		if (*cptr)
+			goto ret_error;
 		version->v_mode = V_SPECIFIC;
-		version->minor = version->major;
-		version->major = 4;
 	} else if (version->major < 4)
 		version->v_mode = V_SPECIFIC;
-
-	if (*cptr == '.') {
+	else if (*cptr == '.') {
 		version_val = ++cptr;
 		if (!(version->minor = strtol(version_val, &cptr, 10)) && cptr == version_val)
 			goto ret_error;
 		version->v_mode = V_SPECIFIC;
-	} else if (version->major > 3 && *cptr == '\0')
-		version->v_mode = V_GENERAL;
-
+	} else if (version->major > 3 && *cptr == '\0') {
+		version_val = po_get(options, "minorversion");
+		if (version_val != NULL) {
+			version->minor = strtol(version_val, &cptr, 10);
+			version->v_mode = V_SPECIFIC;
+		} else
+			version->v_mode = V_GENERAL;
+	}
 	if (*cptr != '\0')
 		goto ret_error;
 
 	return 1;
 
+ret_error_multiple:
+	nfs_error(_("%s: multiple version options not permitted"),
+		  progname);
+	found = 10; /* avoid other errors */
 ret_error:
-	if (i <= 2 ) {
+	if (found < 0) {
+		nfs_error(_("%s: parsing error on 'minorversion=' option"),
+			progname);
+	} else if (found <= 2 ) {
 		nfs_error(_("%s: parsing error on 'v' option"),
 			progname);
-	} else if (i == 3 ) {
+	} else if (found == 3 ) {
 		nfs_error(_("%s: parsing error on 'vers=' option"),
 			progname);
-	} else if (i == 4) {
+	} else if (found == 4) {
 		nfs_error(_("%s: parsing error on 'nfsvers=' option"),
 			progname);
 	}
@@ -1381,6 +1414,7 @@ nfs_nfs_port(struct mount_options *options, unsigned long *port)
 			*port = tmp;
 			return 1;
 		}
+		/* FALLTHRU */
 	case PO_BAD_VALUE:
 		nfs_error(_("%s: invalid value for 'port=' option"),
 				progname);
@@ -1476,6 +1510,7 @@ nfs_mount_program(struct mount_options *options, unsigned long *program)
 			*program = tmp;
 			return 1;
 		}
+		/* FALLTHRU */
 	case PO_BAD_VALUE:
 		nfs_error(_("%s: invalid value for 'mountprog=' option"),
 				progname);
@@ -1507,6 +1542,7 @@ nfs_mount_version(struct mount_options *options, unsigned long *version)
 			*version = tmp;
 			return 1;
 		}
+		/* FALLTHRU */
 	case PO_BAD_VALUE:
 		nfs_error(_("%s: invalid value for 'mountvers=' option"),
 				progname);
@@ -1573,6 +1609,7 @@ nfs_mount_port(struct mount_options *options, unsigned long *port)
 			*port = tmp;
 			return 1;
 		}
+		/* FALLTHRU */
 	case PO_BAD_VALUE:
 		nfs_error(_("%s: invalid value for 'mountport=' option"),
 				progname);
@@ -1638,10 +1675,11 @@ int nfs_options2pmap(struct mount_options *options,
 		     struct pmap *nfs_pmap, struct pmap *mnt_pmap)
 {
 	struct nfs_version version;
+	memset(&version, 0, sizeof(version));
 
 	if (!nfs_nfs_program(options, &nfs_pmap->pm_prog))
 		return 0;
-	if (!nfs_nfs_version(options, &version))
+	if (!nfs_nfs_version("nfs", options, &version))
 		return 0;
 	if (version.v_mode == V_DEFAULT)
 		nfs_pmap->pm_vers = 0;
@@ -1730,4 +1768,49 @@ int nfs_umount_do_umnt(struct mount_options *options,
 		return EX_FAIL;
 
 	return EX_SUCCESS;
+}
+
+int nfs_is_inaddr_any(struct sockaddr *nfs_saddr)
+{
+	switch (nfs_saddr->sa_family) {
+	case AF_INET: {
+		if (((struct sockaddr_in *)nfs_saddr)->sin_addr.s_addr ==
+				INADDR_ANY)
+			return 1;
+		break;
+	}
+	case AF_INET6:
+		if (!memcmp(&((struct sockaddr_in6 *)nfs_saddr)->sin6_addr,
+				&in6addr_any, sizeof(in6addr_any)))
+			return 1;
+		break;
+	}
+	return 0;
+}
+
+int nfs_addr_matches_localips(struct sockaddr *nfs_saddr)
+{
+	struct ifaddrs *myaddrs, *ifa;
+	int found = 0;
+
+	/* acquire exiting network interfaces */
+	if (getifaddrs(&myaddrs) != 0)
+		return 0;
+
+	/* interate over the available interfaces and check if we
+	 * we find a match to the supplied clientaddr value
+	 */
+	for (ifa = myaddrs; ifa != NULL; ifa = ifa->ifa_next) {
+		if (ifa->ifa_addr == NULL)
+			continue;
+		if (!(ifa->ifa_flags & IFF_UP))
+			continue;
+		if (!memcmp(ifa->ifa_addr, nfs_saddr,
+				sizeof(struct sockaddr))) {
+			found = 1;
+			break;
+		}
+	}
+	freeifaddrs(myaddrs);
+	return found;
 }

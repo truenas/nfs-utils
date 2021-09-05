@@ -43,6 +43,7 @@
 #include <sys/capability.h>
 #endif
 
+#include "conffile.h"
 #include "xlog.h"
 #include "sqlite.h"
 
@@ -97,7 +98,7 @@ static unsigned char blob[NFS4_OPAQUE_LIMIT];
 static void
 usage(char *progname)
 {
-	printf("%s [ -hfd ] [ -s dir ] < cmd > < arg >\n", progname);
+	printf("Usage: %s [ -hfd ] [ -s dir ] < cmd > < arg >\n", progname);
 	printf("Where < cmd > is one of the following and takes the following < arg >:\n");
 	printf("    init\n");
 	printf("    create <nfs_client_id4>\n");
@@ -548,11 +549,21 @@ find_cmd(char *cmdname)
 			__func__, cmdname);
 	return NULL;
 }
+inline static void 
+read_nfsdcltrack_conf(void)
+{
+	char *val;
 
+	conf_init_file(NFS_CONFFILE); 
+	xlog_set_debug("nfsdcltrack");
+	val = conf_get_str("nfsdcltrack", "storagedir");
+	if (val)
+		storagedir = val;
+}
 int
 main(int argc, char **argv)
 {
-	char arg;
+	int arg;
 	int rc = 0;
 	char *progname, *cmdarg = NULL;
 	struct cltrack_cmd *cmd;
@@ -562,12 +573,16 @@ main(int argc, char **argv)
 	xlog_syslog(1);
 	xlog_stderr(0);
 
+	/* Read in config setting */
+	read_nfsdcltrack_conf();
+
 	/* process command-line options */
 	while ((arg = getopt_long(argc, argv, "hdfs:", longopts,
 				  NULL)) != EOF) {
 		switch (arg) {
 		case 'd':
 			xlog_config(D_ALL, 1);
+			break;
 		case 'f':
 			xlog_syslog(0);
 			xlog_stderr(1);
@@ -577,7 +592,7 @@ main(int argc, char **argv)
 			break;
 		default:
 			usage(progname);
-			return 0;
+			return 1;
 		}
 	}
 

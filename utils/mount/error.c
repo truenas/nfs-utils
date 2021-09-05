@@ -50,8 +50,8 @@
 
 extern char *progname;
 
-static char errbuf[BUFSIZ];
-static char *erreob = &errbuf[BUFSIZ];
+static char errbuf[PATH_MAX];
+static char *erreob = &errbuf[PATH_MAX];
 
 /* Convert RPC errors into strings */
 static int rpc_strerror(int spos)
@@ -62,7 +62,7 @@ static int rpc_strerror(int spos)
 	char *tmp;
 
 	if (estr) {
-		if ((ptr = index(estr, ':')))
+		if ((ptr = strchr(estr, ':')))
 			estr = ++ptr;
 
 		tmp = &errbuf[spos];
@@ -210,8 +210,7 @@ void mount_error(const char *spec, const char *mount_point, int error)
 		nfs_error(_("%s: an incorrect mount option was specified"), progname);
 		break;
 	case EOPNOTSUPP:
-		nfs_error(_("%s: requested NFS version or transport"
-				" protocol is not supported"),
+		nfs_error(_("%s: requested NFS version or transport protocol is not supported"),
 				progname);
 		break;
 	case ENOTDIR:
@@ -223,7 +222,7 @@ void mount_error(const char *spec, const char *mount_point, int error)
 				  progname, mount_point);
 		break;
 	case EBUSY:
-		nfs_error(_("%s: %s is busy or already mounted"),
+		nfs_error(_("%s: %s is busy or already mounted or sharecache fail"),
 			progname, mount_point);
 		break;
 	case ENOENT:

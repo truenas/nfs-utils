@@ -3,3 +3,14 @@
 27-systemd-enable-with-systemctl-statd.patch
 unbreak-blkmapd-rpc_pipefs-run.patch
 unbreak-gssd-rpc_pipefs-run.patch
+multiarch-kerberos-paths.patch
+mount.nfs-Fix-the-sloppy-option-processing.patch
+nfsdcltrack-sqlite-Fix-printf-format.patch
+nfsdcltrack-nfsdcltrack.c-Fix-printf-format.patch
+systemd-Fix-non-default-statedir-paths.patch
+nfsdcltrack-Use-uint64_t-instead-of-time_t.patch
+nfs-utils-Fix-potential-memory-leaks-in-idmap.patch
+nfs-utils-Fix-mem-leaks-in-gssd.patch
+nfs-utils-Fix-mem-leaks-in-krb5_util.patch
+nfs-utils-Fix-mem-leak-in-mountd.patch
+nfs-utils-add-install-dep-for-installing-all-depende.patch

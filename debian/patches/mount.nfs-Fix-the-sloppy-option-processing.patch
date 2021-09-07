@@ -1,0 +1,74 @@
+From 4dd8d833c9350d42528ada0fd65aee41b712f41d Mon Sep 17 00:00:00 2001
+From: Steve Dickson <steved@redhat.com>
+Date: Tue, 20 Jul 2021 17:14:04 -0400
+Subject: [PATCH 02/11] mount.nfs: Fix the sloppy option processing
+
+The new mount API broke how the sloppy option is parsed.
+So the option processing needs to be moved up in
+the mount.nfs command.
+
+The option needs to be the first option in the string
+that is passed into the kernel with the -s mount(8)
+and/or the -o sloppy is used.
+
+Commit 92b664ef fixed the process of the -s flag
+and this version fixes the -o sloppy processing
+as well works when libmount-mount is and is not
+enabled plus cleans up the mount options passed
+to the kernel.
+
+Reviewed-and-tested-by: Dave Wysochanski <dwysocha@redhat.com>
+Signed-off-by: Steve Dickson <steved@redhat.com>
+---
+ utils/mount/nfs.man   |  7 +++++++
+ utils/mount/stropts.c | 14 +++++++++++---
+ 2 files changed, 18 insertions(+), 3 deletions(-)
+
+diff --git a/utils/mount/nfs.man b/utils/mount/nfs.man
+index f98cb47d..f1b76936 100644
+--- a/utils/mount/nfs.man
++++ b/utils/mount/nfs.man
+@@ -555,6 +555,13 @@ using the FS-Cache facility. See cachefilesd(8)
+ and <kernel_source>/Documentation/filesystems/caching
+ for detail on how to configure the FS-Cache facility.
+ Default value is nofsc.
++.TP 1.5i
++.B sloppy
++The
++.B sloppy
++option is an alternative to specifying
++.BR mount.nfs " -s " option.
++
+ .SS "Options for NFS versions 2 and 3 only"
+ Use these options, along with the options in the above subsection,
+ for NFS versions 2 and 3 only.
+diff --git a/utils/mount/stropts.c b/utils/mount/stropts.c
+index 82b054a5..fa67a66f 100644
+--- a/utils/mount/stropts.c
++++ b/utils/mount/stropts.c
+@@ -339,11 +339,19 @@ static int nfs_verify_lock_option(struct mount_options *options)
+ 
+ static int nfs_insert_sloppy_option(struct mount_options *options)
+ {
+-	if (!sloppy || linux_version_code() < MAKE_VERSION(2, 6, 27))
++	if (linux_version_code() < MAKE_VERSION(2, 6, 27))
+ 		return 1;
+ 
+-	if (po_insert(options, "sloppy") == PO_FAILED)
+-		return 0;
++	if (po_contains(options, "sloppy")) {
++		po_remove_all(options, "sloppy");
++		sloppy++;
++	}
++
++	if (sloppy) {
++		if (po_insert(options, "sloppy") == PO_FAILED)
++			return 0;
++	}
++
+ 	return 1;
+ }
+ 
+-- 
+2.33.0
+

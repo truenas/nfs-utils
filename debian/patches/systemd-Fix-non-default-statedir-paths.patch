@@ -1,0 +1,155 @@
+From 364b7fefd6680d592fe14cb2ba838843b1124048 Mon Sep 17 00:00:00 2001
+From: James Hilliard <james.hilliard1@gmail.com>
+Date: Mon, 26 Jul 2021 12:03:09 -0400
+Subject: [PATCH 05/11] systemd: Fix non-default statedir paths.
+
+Make the state directory configurable.
+
+Signed-off-by: Steve Dickson <steved@redhat.com>
+---
+ configure.ac                            | 19 +++++++++++++++++++
+ systemd/Makefile.am                     |  5 ++++-
+ systemd/rpc-pipefs-generator.c          |  2 +-
+ systemd/rpc_pipefs.target.in            |  3 +++
+ systemd/var-lib-nfs-rpc_pipefs.mount.in | 10 ++++++++++
+ utils/blkmapd/device-discovery.c        |  2 +-
+ utils/gssd/gssd.h                       |  2 +-
+ utils/idmapd/idmapd.c                   |  2 +-
+ 8 files changed, 40 insertions(+), 5 deletions(-)
+ create mode 100644 systemd/rpc_pipefs.target.in
+ create mode 100644 systemd/var-lib-nfs-rpc_pipefs.mount.in
+
+diff --git a/configure.ac b/configure.ac
+index 93520a80..bc2d0f02 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -688,9 +688,28 @@ AC_SUBST([ACLOCAL_AMFLAGS], ["-I $ac_macro_dir \$(ACLOCAL_FLAGS)"])
+ AC_SUBST([_sysconfdir])
+ AC_CONFIG_COMMANDS_PRE([eval eval _sysconfdir=$sysconfdir])
+ 
++# make _statedir available for substituion in config files
++# 2 "evals" needed late to expand variable names.
++AC_SUBST([_statedir])
++AC_CONFIG_COMMANDS_PRE([eval eval _statedir=$statedir])
++
++if test "$statedir" = "/var/lib/nfs"; then
++	rpc_pipefsmount="var-lib-nfs-rpc_pipefs.mount"
++else
++	rpc_pipefsmount="$(systemd-escape -p "$statedir/rpc_pipefs").mount"
++fi
++AC_SUBST(rpc_pipefsmount)
++
++# make _rpc_pipefsmount available for substituion in config files
++# 2 "evals" needed late to expand variable names.
++AC_SUBST([_rpc_pipefsmount])
++AC_CONFIG_COMMANDS_PRE([eval eval _rpc_pipefsmount=$rpc_pipefsmount])
++
+ AC_CONFIG_FILES([
+ 	Makefile
+ 	systemd/rpc-gssd.service
++	systemd/rpc_pipefs.target
++	systemd/var-lib-nfs-rpc_pipefs.mount
+ 	linux-nfs/Makefile
+ 	support/Makefile
+ 	support/export/Makefile
+diff --git a/systemd/Makefile.am b/systemd/Makefile.am
+index 650ad25c..8c7b676f 100644
+--- a/systemd/Makefile.am
++++ b/systemd/Makefile.am
+@@ -12,7 +12,9 @@ unit_files =  \
+     rpc-statd-notify.service \
+     rpc-statd.service \
+     \
+-    proc-fs-nfsd.mount \
++    proc-fs-nfsd.mount
++
++rpc_pipefs_mount_file = \
+     var-lib-nfs-rpc_pipefs.mount
+ 
+ if CONFIG_NFSV4
+@@ -75,4 +77,5 @@ genexec_PROGRAMS = nfs-server-generator rpc-pipefs-generator
+ install-data-hook: $(unit_files)
+ 	mkdir -p $(DESTDIR)/$(unitdir)
+ 	cp $(unit_files) $(DESTDIR)/$(unitdir)
++	cp $(rpc_pipefs_mount_file) $(DESTDIR)/$(unitdir)/$(rpc_pipefsmount)
+ endif
+diff --git a/systemd/rpc-pipefs-generator.c b/systemd/rpc-pipefs-generator.c
+index 8e218aa7..c24db567 100644
+--- a/systemd/rpc-pipefs-generator.c
++++ b/systemd/rpc-pipefs-generator.c
+@@ -21,7 +21,7 @@
+ #include "conffile.h"
+ #include "systemd.h"
+ 
+-#define RPC_PIPEFS_DEFAULT "/var/lib/nfs/rpc_pipefs"
++#define RPC_PIPEFS_DEFAULT NFS_STATEDIR "/rpc_pipefs"
+ 
+ static int generate_mount_unit(const char *pipefs_path, const char *pipefs_unit,
+ 			       const char *dirname)
+diff --git a/systemd/rpc_pipefs.target.in b/systemd/rpc_pipefs.target.in
+new file mode 100644
+index 00000000..332f62b6
+--- /dev/null
++++ b/systemd/rpc_pipefs.target.in
+@@ -0,0 +1,3 @@
++[Unit]
++Requires=@_rpc_pipefsmount@
++After=@_rpc_pipefsmount@
+diff --git a/systemd/var-lib-nfs-rpc_pipefs.mount.in b/systemd/var-lib-nfs-rpc_pipefs.mount.in
+new file mode 100644
+index 00000000..4c5d6ce4
+--- /dev/null
++++ b/systemd/var-lib-nfs-rpc_pipefs.mount.in
+@@ -0,0 +1,10 @@
++[Unit]
++Description=RPC Pipe File System
++DefaultDependencies=no
++After=systemd-tmpfiles-setup.service
++Conflicts=umount.target
++
++[Mount]
++What=sunrpc
++Where=@_statedir@/rpc_pipefs
++Type=rpc_pipefs
+diff --git a/utils/blkmapd/device-discovery.c b/utils/blkmapd/device-discovery.c
+index 77ebe736..2736ac89 100644
+--- a/utils/blkmapd/device-discovery.c
++++ b/utils/blkmapd/device-discovery.c
+@@ -63,7 +63,7 @@
+ #define EVENT_SIZE (sizeof(struct inotify_event))
+ #define EVENT_BUFSIZE (1024 * EVENT_SIZE)
+ 
+-#define RPCPIPE_DIR	"/run/rpc_pipefs"
++#define RPCPIPE_DIR	NFS_STATEDIR "/rpc_pipefs"
+ #define PID_FILE	"/run/blkmapd.pid"
+ 
+ #define CONF_SAVE(w, f) do {			\
+diff --git a/utils/gssd/gssd.h b/utils/gssd/gssd.h
+index c52c5b48..519dc431 100644
+--- a/utils/gssd/gssd.h
++++ b/utils/gssd/gssd.h
+@@ -39,7 +39,7 @@
+ #include <pthread.h>
+ 
+ #ifndef GSSD_PIPEFS_DIR
+-#define GSSD_PIPEFS_DIR		"/run/rpc_pipefs"
++#define GSSD_PIPEFS_DIR		NFS_STATEDIR "/rpc_pipefs"
+ #endif
+ #define DNOTIFY_SIGNAL		(SIGRTMIN + 3)
+ 
+diff --git a/utils/idmapd/idmapd.c b/utils/idmapd/idmapd.c
+index 51c71fbb..e2c160e8 100644
+--- a/utils/idmapd/idmapd.c
++++ b/utils/idmapd/idmapd.c
+@@ -73,7 +73,7 @@
+ #include "nfslib.h"
+ 
+ #ifndef PIPEFS_DIR
+-#define PIPEFS_DIR  "/var/lib/nfs/rpc_pipefs/"
++#define PIPEFS_DIR  NFS_STATEDIR "/rpc_pipefs/"
+ #endif
+ 
+ #ifndef NFSD_DIR
+-- 
+2.33.0
+

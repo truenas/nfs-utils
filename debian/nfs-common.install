@@ -25,3 +25,7 @@ systemd/*rpc*.service /lib/systemd/system
 systemd/nfs-idmapd.service /lib/systemd/system
 systemd/nfs-client.target /lib/systemd/system
 systemd/nfs-utils.service /lib/systemd/system
+debian/tmp/usr/sbin/nfsconf
+debian/tmp/usr/sbin/nfsdcld
+debian/tmp/usr/sbin/nfsdclddb
+debian/tmp/usr/sbin/nfsdclnts

@@ -30,7 +30,7 @@ Description: support for NFS kernel server
 
 Package: nfs-common
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, rpcbind, adduser, ucf, lsb-base (>= 1.3-9ubuntu3), keyutils
+Depends: ${shlibs:Depends}, ${misc:Depends}, libnfsidmap1 (= ${binary:Version}), rpcbind, adduser, ucf, lsb-base (>= 1.3-9ubuntu3), keyutils
 Recommends: python3
 Suggests: open-iscsi, watchdog
 Provides: nfs-client
@@ -60,9 +60,10 @@ Architecture: any
 Multi-Arch: same
 Pre-Depends: ${misc:Pre-Depends}
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Conflicts: libnfsidmap1
-Breaks: nfs-common (<< 1:1.2.2-1), libnfsidmap2 (<< 0.25-7~)
-Replaces: nfs-common (<< 1:1.2.2-1), libnfsidmap2 (<< 0.25-7~)
+Conflicts: libnfsidmap2, libnfsidmap-regex
+Provides: libnfsidmap2, libnfsidmap-regex
+Breaks: nfs-common (<< 1:1.2.2-1), libnfsidmap2 (<< 0.25-7~), libnfsidmap-regex
+Replaces: nfs-common (<< 1:1.2.2-1), libnfsidmap2 (<< 0.25-7~), libnfsidmap-regex
 Description: NFS idmapping library
  libnfsidmap provides functions to map between NFSv4 names (which are
  of the form user@domain) and local uid's and gid's.

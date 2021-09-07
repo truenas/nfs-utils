@@ -1,0 +1,38 @@
+From 5a53426c0f4e84f6644c11e4f01015597d3bb82c Mon Sep 17 00:00:00 2001
+From: Petr Vorel <petr.vorel@gmail.com>
+Date: Sun, 25 Jul 2021 13:13:40 -0400
+Subject: [PATCH 04/11] nfsdcltrack/nfsdcltrack.c: Fix printf format
+
+nfsdcltrack.c: In function 'cltrack_gracedone':
+nfsdcltrack.c:528:47: error: format '%ld' expects argument of type 'long int', but argument 4 has type 'time_t' {aka 'long long int'} [-Werror=format=]
+
+Signed-off-by: Petr Vorel <petr.vorel@gmail.com>
+Signed-off-by: Steve Dickson <steved@redhat.com>
+---
+ utils/nfsdcltrack/nfsdcltrack.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/utils/nfsdcltrack/nfsdcltrack.c b/utils/nfsdcltrack/nfsdcltrack.c
+index e926f1c0..0b37c094 100644
+--- a/utils/nfsdcltrack/nfsdcltrack.c
++++ b/utils/nfsdcltrack/nfsdcltrack.c
+@@ -33,6 +33,7 @@
+ #include <sys/stat.h>
+ #include <sys/types.h>
+ #include <fcntl.h>
++#include <inttypes.h>
+ #include <unistd.h>
+ #include <libgen.h>
+ #include <sys/inotify.h>
+@@ -525,7 +526,7 @@ cltrack_gracedone(const char *timestr)
+ 	if (*tail)
+ 		return -EINVAL;
+ 
+-	xlog(D_GENERAL, "%s: grace done. gracetime=%ld", __func__, gracetime);
++	xlog(D_GENERAL, "%s: grace done. gracetime=%"PRIu64, __func__, gracetime);
+ 
+ 	ret = sqlite_remove_unreclaimed(gracetime);
+ 
+-- 
+2.33.0
+

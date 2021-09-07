@@ -1,3 +1,27 @@
+nfs-utils (1:2.5.4-1~exp2) experimental; urgency=medium
+
+  * nfs-utils needs to take over libnfsidmap-regex
+    Closes: #993804
+  * nfs-common depends on libnfsidmap1 (= ${binary:Version})
+    and libnfsidmap1 provides libnfsidmap2
+    Closes: #993789
+  * Fix FTBFS on most architectures
+    Add multiarch-kerberos-paths.patch
+    Closes: #993785
+  * Add mount.nfs-Fix-the-sloppy-option-processing.patch
+    Closes: #992833
+  * Add nfsdcltrack-sqlite-Fix-printf-format.patch
+  * Add nfsdcltrack-nfsdcltrack.c-Fix-printf-format.patch
+  * Add systemd-Fix-non-default-statedir-paths.patch
+  * Add nfsdcltrack-Use-uint64_t-instead-of-time_t.patch
+  * Add nfs-utils-Fix-potential-memory-leaks-in-idmap.patch
+  * Add nfs-utils-Fix-mem-leaks-in-gssd.patch
+  * Add nfs-utils-Fix-mem-leaks-in-krb5_util.patch
+  * Add nfs-utils-Fix-mem-leak-in-mountd.patch
+  * Add nfs-utils-add-install-dep-for-installing-all-depende.patch
+
+ -- Anibal Monsalve Salazar <anibal@debian.org>  Tue, 07 Sep 2021 21:22:46 +1000
+
 nfs-utils (1:2.5.4-1~exp1) experimental; urgency=medium
 
   * New upstream release

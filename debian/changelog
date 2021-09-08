@@ -1,3 +1,11 @@
+nfs-utils (1:2.5.4-1~exp3) experimental; urgency=medium
+
+  * Fix upgrade failure
+    Put idmapd.conf.5 in debian/libnfsidmap1.manpages
+    Closes: #993885
+
+ -- Anibal Monsalve Salazar <anibal@debian.org>  Wed, 08 Sep 2021 21:27:04 +1000
+
 nfs-utils (1:2.5.4-1~exp2) experimental; urgency=medium
 
   * nfs-utils needs to take over libnfsidmap-regex

@@ -53,6 +53,7 @@ binary-arch: build
 	mkdir $(DEBTMP)
 	$(MAKE) DESTDIR='$(DEBTMP)' install
 	dh_installman
+	rm debian/nfs-common/usr/share/man/man5/idmapd.conf.5
 	dh_install -Xman
 	dh_installdocs -A
 	dh_installdocs -pnfs-common debian/README.Debian.nfsv4

@@ -1,3 +1,11 @@
+nfs-utils (1:2.5.4-1~exp4) experimental; urgency=medium
+
+  * Fix upgrade failure
+    Keep both rpc.mountd.8 and rpc.nfsd.8 in package nfs-kernel-server only
+    Closes: #993956
+
+ -- Anibal Monsalve Salazar <anibal@debian.org>  Thu, 09 Sep 2021 20:11:48 +1000
+
 nfs-utils (1:2.5.4-1~exp3) experimental; urgency=medium
 
   * Fix upgrade failure

@@ -22,7 +22,7 @@
 #include "misc.h"
 #include "nfslib.h"
 #include "exportfs.h"
-#include "mountd.h"
+#include "export.h"
 #include "v4root.h"
 
 enum auth_error
@@ -41,13 +41,13 @@ static nfs_client my_client;
 
 extern int use_ipaddr;
 
-extern struct state_paths etab;
-
+/*
 void
 auth_init(void)
 {
 	auth_reload();
 }
+*/
 
 /*
  * A client can match many different netgroups and it's tough to know
@@ -64,6 +64,10 @@ check_useipaddr(void)
 	int old_use_ipaddr = use_ipaddr;
 	unsigned int len = 0;
 
+	if (use_ipaddr > 1)
+		/* fixed - don't check */
+		return;
+
 	/* add length of m_hostname + 1 for the comma */
 	for (clp = clientlist[MCL_NETGROUP]; clp; clp = clp->m_next)
 		len += (strlen(clp->m_hostname) + 1);
@@ -74,7 +78,7 @@ check_useipaddr(void)
 		use_ipaddr = 0;
 
 	if (use_ipaddr != old_use_ipaddr)
-		cache_flush(1);
+		cache_flush();
 }
 
 unsigned int

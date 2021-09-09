@@ -337,12 +337,12 @@ static int nfs_verify_lock_option(struct mount_options *options)
 	return 1;
 }
 
-static int nfs_append_sloppy_option(struct mount_options *options)
+static int nfs_insert_sloppy_option(struct mount_options *options)
 {
 	if (!sloppy || linux_version_code() < MAKE_VERSION(2, 6, 27))
 		return 1;
 
-	if (po_append(options, "sloppy") == PO_FAILED)
+	if (po_insert(options, "sloppy") == PO_FAILED)
 		return 0;
 	return 1;
 }
@@ -425,7 +425,7 @@ static int nfs_validate_options(struct nfsmount_info *mi)
 	if (!nfs_set_version(mi))
 		return 0;
 
-	if (!nfs_append_sloppy_option(mi->options))
+	if (!nfs_insert_sloppy_option(mi->options))
 		return 0;
 
 	return 1;
@@ -756,12 +756,17 @@ static int nfs_do_mount_v4(struct nfsmount_info *mi,
 	if (po_contains(options, "mounthost") ||
 		po_contains(options, "mountaddr") ||
 		po_contains(options, "mountvers") ||
+		po_contains(options, "mountport") ||
 		po_contains(options, "mountproto")) {
 	/*
 	 * Since these mountd options are set assume version 3
 	 * is wanted so error out with EPROTONOSUPPORT so the
 	 * protocol negation starts with v3.
 	 */
+		if (verbose) {
+			printf(_("%s: Unsupported nfs4 mount option(s) passed '%s'\n"),
+				progname, *mi->extra_opts);
+		}
 		errno = EPROTONOSUPPORT;
 		goto out_fail;
 	}
@@ -1094,9 +1099,7 @@ static int nfsmount_fg(struct nfsmount_info *mi)
 		if (nfs_try_mount(mi))
 			return EX_SUCCESS;
 
-#pragma GCC diagnostic ignored "-Wdiscarded-qualifiers"
 		if (errno == EBUSY && is_mountpoint(mi->node)) {
-#pragma GCC diagnostic warning "-Wdiscarded-qualifiers"
 			/*
 			 * EBUSY can happen when mounting a filesystem that
 			 * is already mounted or when the context= are

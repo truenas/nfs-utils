@@ -15,6 +15,7 @@ Depends: ${shlibs:Depends}, ${misc:Depends}, nfs-common (= ${binary:Version}), u
 Provides: knfs, nfs-server
 Conflicts: knfs, nfs-server
 Replaces: knfs, nfs-server
+Recommends: python3-yaml
 Description: support for NFS kernel server
  The NFS kernel server is currently the recommended NFS server for use
  with Linux, featuring features such as NFSv3 and NFSv4, Kerberos

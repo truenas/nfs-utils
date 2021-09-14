@@ -16,6 +16,8 @@ ifneq (,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
     MAKEFLAGS += -j$(NUMJOBS)
 endif
 
+DEB_HOST_MULTIARCH := $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
+
 # Temporary root
 DEBTMP := $(CURDIR)/debian/tmp
 
@@ -28,6 +30,7 @@ build-stamp:
 	CFLAGS="$(CFLAGS)" dh_auto_configure -- \
 		--enable-libmount-mount \
 		--enable-svcgss \
+		--with-pluginpath=/usr/lib/$(DEB_HOST_MULTIARCH)/libnfsidmap \
 		--with-tcp-wrappers \
 		--with-systemd=/lib/systemd/system
 	$(MAKE) $(MAKEFLAGS)

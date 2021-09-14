@@ -1,4 +1,4 @@
-nfs-utils (1:2.5.4-1~exp5) UNRELEASED; urgency=medium
+nfs-utils (1:2.5.4-1~exp5) experimental; urgency=medium
 
   * Handle fade out-of /var/lib/nfs/xtab file
   * debian/rules: configure: remove explicit options which are enabled by
@@ -20,7 +20,7 @@ nfs-utils (1:2.5.4-1~exp5) UNRELEASED; urgency=medium
     /usr/lib/$(DEB_HOST_MULTIARCH)/libnfsidmap
   * nfs-kernel-server: Add Recommends on python3-yaml for the nfsdclnts tool
 
- -- Salvatore Bonaccorso <carnil@debian.org>  Tue, 14 Sep 2021 06:40:53 +0200
+ -- Salvatore Bonaccorso <carnil@debian.org>  Tue, 14 Sep 2021 09:48:58 +0200
 
 nfs-utils (1:2.5.4-1~exp4) experimental; urgency=medium
 

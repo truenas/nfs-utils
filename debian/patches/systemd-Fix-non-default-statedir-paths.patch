@@ -1,7 +1,7 @@
-From 364b7fefd6680d592fe14cb2ba838843b1124048 Mon Sep 17 00:00:00 2001
 From: James Hilliard <james.hilliard1@gmail.com>
 Date: Mon, 26 Jul 2021 12:03:09 -0400
-Subject: [PATCH 05/11] systemd: Fix non-default statedir paths.
+Subject: systemd: Fix non-default statedir paths.
+Origin: https://git.linux-nfs.org/?p=steved/nfs-utils.git;a=commit;h=364b7fefd6680d592fe14cb2ba838843b1124048
 
 Make the state directory configurable.
 
@@ -20,7 +20,7 @@ Signed-off-by: Steve Dickson <steved@redhat.com>
  create mode 100644 systemd/var-lib-nfs-rpc_pipefs.mount.in
 
 diff --git a/configure.ac b/configure.ac
-index 93520a80..bc2d0f02 100644
+index 93520a8052bc..bc2d0f02979c 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -688,9 +688,28 @@ AC_SUBST([ACLOCAL_AMFLAGS], ["-I $ac_macro_dir \$(ACLOCAL_FLAGS)"])
@@ -53,7 +53,7 @@ index 93520a80..bc2d0f02 100644
  	support/Makefile
  	support/export/Makefile
 diff --git a/systemd/Makefile.am b/systemd/Makefile.am
-index 650ad25c..8c7b676f 100644
+index 650ad25c11bc..8c7b676f472a 100644
 --- a/systemd/Makefile.am
 +++ b/systemd/Makefile.am
 @@ -12,7 +12,9 @@ unit_files =  \
@@ -74,7 +74,7 @@ index 650ad25c..8c7b676f 100644
 +	cp $(rpc_pipefs_mount_file) $(DESTDIR)/$(unitdir)/$(rpc_pipefsmount)
  endif
 diff --git a/systemd/rpc-pipefs-generator.c b/systemd/rpc-pipefs-generator.c
-index 8e218aa7..c24db567 100644
+index 8e218aa70645..c24db567a45d 100644
 --- a/systemd/rpc-pipefs-generator.c
 +++ b/systemd/rpc-pipefs-generator.c
 @@ -21,7 +21,7 @@
@@ -88,7 +88,7 @@ index 8e218aa7..c24db567 100644
  			       const char *dirname)
 diff --git a/systemd/rpc_pipefs.target.in b/systemd/rpc_pipefs.target.in
 new file mode 100644
-index 00000000..332f62b6
+index 000000000000..332f62b66fa5
 --- /dev/null
 +++ b/systemd/rpc_pipefs.target.in
 @@ -0,0 +1,3 @@
@@ -97,7 +97,7 @@ index 00000000..332f62b6
 +After=@_rpc_pipefsmount@
 diff --git a/systemd/var-lib-nfs-rpc_pipefs.mount.in b/systemd/var-lib-nfs-rpc_pipefs.mount.in
 new file mode 100644
-index 00000000..4c5d6ce4
+index 000000000000..4c5d6ce41b5e
 --- /dev/null
 +++ b/systemd/var-lib-nfs-rpc_pipefs.mount.in
 @@ -0,0 +1,10 @@
@@ -112,33 +112,33 @@ index 00000000..4c5d6ce4
 +Where=@_statedir@/rpc_pipefs
 +Type=rpc_pipefs
 diff --git a/utils/blkmapd/device-discovery.c b/utils/blkmapd/device-discovery.c
-index 77ebe736..2736ac89 100644
+index 77ebe73670fa..2736ac89fff5 100644
 --- a/utils/blkmapd/device-discovery.c
 +++ b/utils/blkmapd/device-discovery.c
 @@ -63,7 +63,7 @@
  #define EVENT_SIZE (sizeof(struct inotify_event))
  #define EVENT_BUFSIZE (1024 * EVENT_SIZE)
  
--#define RPCPIPE_DIR	"/run/rpc_pipefs"
+-#define RPCPIPE_DIR	"/var/lib/nfs/rpc_pipefs"
 +#define RPCPIPE_DIR	NFS_STATEDIR "/rpc_pipefs"
  #define PID_FILE	"/run/blkmapd.pid"
  
  #define CONF_SAVE(w, f) do {			\
 diff --git a/utils/gssd/gssd.h b/utils/gssd/gssd.h
-index c52c5b48..519dc431 100644
+index c52c5b48a826..519dc431b956 100644
 --- a/utils/gssd/gssd.h
 +++ b/utils/gssd/gssd.h
 @@ -39,7 +39,7 @@
  #include <pthread.h>
  
  #ifndef GSSD_PIPEFS_DIR
--#define GSSD_PIPEFS_DIR		"/run/rpc_pipefs"
+-#define GSSD_PIPEFS_DIR		"/var/lib/nfs/rpc_pipefs"
 +#define GSSD_PIPEFS_DIR		NFS_STATEDIR "/rpc_pipefs"
  #endif
  #define DNOTIFY_SIGNAL		(SIGRTMIN + 3)
  
 diff --git a/utils/idmapd/idmapd.c b/utils/idmapd/idmapd.c
-index 51c71fbb..e2c160e8 100644
+index 51c71fbbc643..e2c160e8a4fd 100644
 --- a/utils/idmapd/idmapd.c
 +++ b/utils/idmapd/idmapd.c
 @@ -73,7 +73,7 @@
@@ -151,5 +151,5 @@ index 51c71fbb..e2c160e8 100644
  
  #ifndef NFSD_DIR
 -- 
-2.33.0
+2.30.2
 

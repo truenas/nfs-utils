@@ -14,6 +14,7 @@ nfs-utils (1:2.5.4-1~exp6) UNRELEASED; urgency=medium
   * d/control: Add debhelper-generated Pre-Depends to nfs-common
   * d/control: Use my debian.org email in Uploaders field
   * tests: Skip test if /dev/log is missing
+  * d/salsa-ci.yml: Add CI configuration for salsa.debian.org
 
  -- Ben Hutchings <benh@debian.org>  Wed, 19 Jan 2022 22:41:22 +0100
 

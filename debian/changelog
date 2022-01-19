@@ -1,6 +1,8 @@
 nfs-utils (1:2.5.4-1~exp6) UNRELEASED; urgency=medium
 
-  * 
+  [ Romain Perier ]
+  * debian/rules: Modernize the packaging rules
+  * debian/control: No longer depends on dh-autoreconf
 
  -- Ben Hutchings <benh@debian.org>  Wed, 19 Jan 2022 22:41:22 +0100
 

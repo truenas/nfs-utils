@@ -1,0 +1,57 @@
+From: Ben Hutchings <benh@debian.org>
+Date: Wed, 19 Jan 2022 21:33:15 +0100
+Subject: nfs-utils: Fix man page syntax errors
+
+In idmapd.conf.5, there is a line of what should be literal text
+beginning with ".", which makes it an (invalid) command.  It can be
+escaped, but then there will be a space before it.  Instead, Move it
+to the previous line and use the .BR macro so there's no space.
+
+In idmapd.man, the .I (italic) macro is used.  However, this manual
+page uses the mdoc macro package that does not include it.  Use the
+.Em (emphasis) macro instead.
+
+In nfsmount.conf.man, the first line should be a comment but it is
+actually an invalid command.  Fix it to be a comment.
+
+Signed-off-by: Ben Hutchings <benh@debian.org>
+---
+--- a/support/nfsidmap/idmapd.conf.5
++++ b/support/nfsidmap/idmapd.conf.5
+@@ -198,8 +198,8 @@ With this group names of a central direc
+ .TP
+ .B Group-Name-No-Prefix-Regex
+ Case-insensitive regular expression to exclude groups from adding and removing the prefix set by
+-.B Group-Name-Prefix
+-. The regular expression must match both the remote and local group names. Multiple expressions may be concatenated with '|'.
++.BR Group-Name-Prefix .
++The regular expression must match both the remote and local group names. Multiple expressions may be concatenated with '|'.
+ (Default: none)
+ .\"
+ .\" -------------------------------------------------------------------
+--- a/utils/idmapd/idmapd.man
++++ b/utils/idmapd/idmapd.man
+@@ -24,13 +24,13 @@ the NFSv4 kernel client and server, to w
+ upcalls, by translating user and group IDs to names, and vice versa.
+ .Pp
+ The system derives the
+-.I user
++.Em user
+ part of the string by performing a password or group lookup.
+ The lookup mechanism is configured in
+ .Pa /etc/idmapd.conf
+ .Pp
+ By default, the
+-.I domain
++.Em domain
+ part of the string is the system's DNS domain name.
+ It can also be specified in
+ .Pa /etc/idmapd.conf
+--- a/utils/mount/nfsmount.conf.man
++++ b/utils/mount/nfsmount.conf.man
+@@ -1,4 +1,4 @@
+-."@(#)nfsmount.conf.5"
++.\" @(#)nfsmount.conf.5"
+ .TH NFSMOUNT.CONF 5 "16 December 2020"
+ .SH NAME
+ nfsmount.conf - Configuration file for NFS mounts

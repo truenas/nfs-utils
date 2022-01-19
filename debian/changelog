@@ -4,6 +4,9 @@ nfs-utils (1:2.5.4-1~exp6) UNRELEASED; urgency=medium
   * debian/rules: Modernize the packaging rules
   * debian/control: No longer depends on dh-autoreconf
 
+  [ Ben Hutchings ]
+  * lintian: Refresh lintian-overrides
+
  -- Ben Hutchings <benh@debian.org>  Wed, 19 Jan 2022 22:41:22 +0100
 
 nfs-utils (1:2.5.4-1~exp5) experimental; urgency=medium

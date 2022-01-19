@@ -55,7 +55,6 @@ Description: header files and docs for libnfsidmap
  of the form user@domain) and local uid's and gid's.
 
 Package: libnfsidmap1
-Priority: standard
 Section: libs
 Architecture: any
 Multi-Arch: same

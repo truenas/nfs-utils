@@ -10,6 +10,7 @@ nfs-utils (1:2.5.4-1~exp6) UNRELEASED; urgency=medium
     lintian wants
   * d/control: Reduce priority of libnfsidmap1 to optional as well
   * Fix man page syntax errors
+  * d/control: Add debhelper-generated Pre-Depends to nfs-common
 
  -- Ben Hutchings <benh@debian.org>  Wed, 19 Jan 2022 22:41:22 +0100
 

@@ -6,6 +6,8 @@ nfs-utils (1:2.5.4-1~exp6) UNRELEASED; urgency=medium
 
   [ Ben Hutchings ]
   * lintian: Refresh lintian-overrides
+  * d/control: Make nfs-kernel-server directly Recommend python3, as
+    lintian wants
 
  -- Ben Hutchings <benh@debian.org>  Wed, 19 Jan 2022 22:41:22 +0100
 

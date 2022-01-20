@@ -16,6 +16,10 @@ nfs-utils (1:2.5.4-1~exp6) UNRELEASED; urgency=medium
   * tests: Skip test if /dev/log is missing
   * d/salsa-ci.yml: Add CI configuration for salsa.debian.org
 
+  [ Salvatore Bonaccorso ]
+  * debian/control: Use the debhelper-compat notation and drop debian/compat
+    file
+
  -- Ben Hutchings <benh@debian.org>  Wed, 19 Jan 2022 22:41:22 +0100
 
 nfs-utils (1:2.5.4-1~exp5) experimental; urgency=medium

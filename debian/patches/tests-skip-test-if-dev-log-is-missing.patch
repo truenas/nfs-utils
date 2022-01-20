@@ -1,0 +1,43 @@
+From: Ben Hutchings <benh@debian.org>
+Date: Thu, 20 Jan 2022 03:01:22 +0100
+Subject: tests: Skip test if /dev/log is missing
+
+Some build environments don't have a /dev/log, without which
+the daemons will fail to run.
+
+* Add a check_dev_log function to skip a test if it's missing
+* Call it in t0001-statd-basic-mon-unmon.sh
+
+Signed-off-by: Ben Hutchings <benh@debian.org>
+---
+--- a/tests/t0001-statd-basic-mon-unmon.sh
++++ b/tests/t0001-statd-basic-mon-unmon.sh
+@@ -21,8 +21,9 @@
+ 
+ . ./test-lib.sh
+ 
+-# This test needs root privileges
++# This test needs root privileges and /dev/log
+ check_root
++check_dev_log
+ 
+ start_statd
+ if [ $? -ne 0 ]; then
+--- a/tests/test-lib.sh
++++ b/tests/test-lib.sh
+@@ -37,6 +37,15 @@ check_root() {
+ 	fi
+ }
+ 
++# Most tests require /dev/log. Skip the test if it doesn't exist in this
++# environment.
++check_dev_log() {
++	if ! [ -e /dev/log ]; then
++		echo "*** Skipping this tests as it requires /dev/log ***"
++		exit 77
++	fi
++}
++
+ # is lockd registered as a service?
+ lockd_registered() {
+ 	rpcinfo -p | grep -q nlockmgr

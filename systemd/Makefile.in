@@ -136,7 +136,8 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 DIST_COMMON = $(srcdir)/Makefile.am $(am__DIST_COMMON)
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/support/include/config.h
-CONFIG_CLEAN_FILES = rpc-gssd.service
+CONFIG_CLEAN_FILES = rpc-gssd.service rpc_pipefs.target \
+	var-lib-nfs-rpc_pipefs.mount
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(genexecdir)" "$(DESTDIR)$(man5dir)" \
 	"$(DESTDIR)$(man7dir)"
@@ -253,6 +254,8 @@ am__define_uniq_tagged_files = \
 ETAGS = etags
 CTAGS = ctags
 am__DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/rpc-gssd.service.in \
+	$(srcdir)/rpc_pipefs.target.in \
+	$(srcdir)/var-lib-nfs-rpc_pipefs.mount.in \
 	$(top_srcdir)/depcomp README
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 ACLOCAL = @ACLOCAL@
@@ -374,6 +377,8 @@ TIRPC_LIBS = @TIRPC_LIBS@
 VERSION = @VERSION@
 XML2_CFLAGS = @XML2_CFLAGS@
 XML2_LIBS = @XML2_LIBS@
+_rpc_pipefsmount = @_rpc_pipefsmount@
+_statedir = @_statedir@
 _sysconfdir = @_sysconfdir@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
@@ -429,6 +434,8 @@ pdfdir = @pdfdir@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
 psdir = @psdir@
+rpc_pipefsmount = @rpc_pipefsmount@
+runstatedir = @runstatedir@
 sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@
@@ -445,15 +452,16 @@ unitdir = @unitdir@
 MAINTAINERCLEANFILES = Makefile.in
 unit_files = nfs-client.target rpc_pipefs.target nfs-mountd.service \
 	nfs-server.service nfs-utils.service rpc-statd-notify.service \
-	rpc-statd.service proc-fs-nfsd.mount \
-	var-lib-nfs-rpc_pipefs.mount $(am__append_1) $(am__append_2) \
-	$(am__append_3) $(am__append_4) $(am__append_5) \
-	$(am__append_6)
+	rpc-statd.service proc-fs-nfsd.mount $(am__append_1) \
+	$(am__append_2) $(am__append_3) $(am__append_4) \
+	$(am__append_5) $(am__append_6)
+rpc_pipefs_mount_file = \
+    var-lib-nfs-rpc_pipefs.mount
+
 man5_MANS = nfs.conf.man
 man7_MANS = nfs.systemd.man
 EXTRA_DIST = $(unit_files) $(man5_MANS) $(man7_MANS)
-unit_dir = /usr/lib/systemd/system
-generator_dir = /usr/lib/systemd/system-generators
+generator_dir = $(unitdir)/../system-generators
 genexecdir = $(generator_dir)
 COMMON_SRCS = systemd.c systemd.h
 nfs_server_generator_SOURCES = $(COMMON_SRCS) nfs-server-generator.c
@@ -498,6 +506,10 @@ $(ACLOCAL_M4): @MAINTAINER_MODE_TRUE@ $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(am__aclocal_m4_deps):
 rpc-gssd.service: $(top_builddir)/config.status $(srcdir)/rpc-gssd.service.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+rpc_pipefs.target: $(top_builddir)/config.status $(srcdir)/rpc_pipefs.target.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+var-lib-nfs-rpc_pipefs.mount: $(top_builddir)/config.status $(srcdir)/var-lib-nfs-rpc_pipefs.mount.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 install-genexecPROGRAMS: $(genexec_PROGRAMS)
 	@$(NORMAL_INSTALL)
@@ -908,6 +920,7 @@ uninstall-man: uninstall-man5 uninstall-man7
 @INSTALL_SYSTEMD_TRUE@install-data-hook: $(unit_files)
 @INSTALL_SYSTEMD_TRUE@	mkdir -p $(DESTDIR)/$(unitdir)
 @INSTALL_SYSTEMD_TRUE@	cp $(unit_files) $(DESTDIR)/$(unitdir)
+@INSTALL_SYSTEMD_TRUE@	cp $(rpc_pipefs_mount_file) $(DESTDIR)/$(unitdir)/$(rpc_pipefsmount)
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

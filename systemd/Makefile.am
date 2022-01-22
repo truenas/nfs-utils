@@ -12,7 +12,9 @@ unit_files =  \
     rpc-statd-notify.service \
     rpc-statd.service \
     \
-    proc-fs-nfsd.mount \
+    proc-fs-nfsd.mount
+
+rpc_pipefs_mount_file = \
     var-lib-nfs-rpc_pipefs.mount
 
 if CONFIG_NFSV4
@@ -51,8 +53,7 @@ man5_MANS	= nfs.conf.man
 man7_MANS	= nfs.systemd.man
 EXTRA_DIST = $(unit_files) $(man5_MANS) $(man7_MANS)
 
-unit_dir = /usr/lib/systemd/system
-generator_dir = /usr/lib/systemd/system-generators
+generator_dir = $(unitdir)/../system-generators
 
 EXTRA_PROGRAMS	= nfs-server-generator rpc-pipefs-generator
 genexecdir = $(generator_dir)
@@ -75,4 +76,5 @@ genexec_PROGRAMS = nfs-server-generator rpc-pipefs-generator
 install-data-hook: $(unit_files)
 	mkdir -p $(DESTDIR)/$(unitdir)
 	cp $(unit_files) $(DESTDIR)/$(unitdir)
+	cp $(rpc_pipefs_mount_file) $(DESTDIR)/$(unitdir)/$(rpc_pipefsmount)
 endif

@@ -368,6 +368,8 @@ TIRPC_LIBS = @TIRPC_LIBS@
 VERSION = @VERSION@
 XML2_CFLAGS = @XML2_CFLAGS@
 XML2_LIBS = @XML2_LIBS@
+_rpc_pipefsmount = @_rpc_pipefsmount@
+_statedir = @_statedir@
 _sysconfdir = @_sysconfdir@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
@@ -423,10 +425,9 @@ pdfdir = @pdfdir@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
 psdir = @psdir@
-
-# These binaries go in /sbin (not /usr/sbin), and that cannot be
-# overridden at config time.
-sbindir = /sbin
+rpc_pipefsmount = @rpc_pipefsmount@
+runstatedir = @runstatedir@
+sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@
 startstatd = @startstatd@
@@ -439,6 +440,12 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 unitdir = @unitdir@
+
+# These binaries go in /sbin (not /usr/sbin), unless CONFIG_SBIN_OVERRIDE
+# is disabled as may be appropriate when /sbin is a symlink.
+# Note that we don't use "if CONFIG_SBIN_OVERRIDE" as that
+# causes autotools to notice the override and disable it.
+@CONFIG_SBIN_OVERRIDE_TRUE@sbindir = /sbin
 man8_MANS = mount.nfs.man umount.nfs.man
 man5_MANS = nfs.man $(am__append_2)
 EXTRA_DIST = nfsmount.conf $(man8_MANS) $(man5_MANS) $(am__append_3)

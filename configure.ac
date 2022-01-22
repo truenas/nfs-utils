@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 dnl
-AC_INIT([linux nfs-utils],[2.5.4],[linux-nfs@vger.kernel.org],[nfs-utils])
+AC_INIT([linux nfs-utils],[2.6.1],[linux-nfs@vger.kernel.org],[nfs-utils])
 AC_CANONICAL_BUILD([])
 AC_CANONICAL_HOST([])
 AC_CONFIG_MACRO_DIR(aclocal)
@@ -187,6 +187,12 @@ else
 	enable_libmount=no
 fi
 
+AC_ARG_ENABLE(sbin-override,
+	[AC_HELP_STRING([--disable-sbin-override],
+		[Don't force nfsdcltrack and mount helpers into /sbin: always honour --sbindir])],
+	enable_sbin_override=$enableval,
+	enable_sbin_override=yes)
+	AM_CONDITIONAL(CONFIG_SBIN_OVERRIDE, [test "$enable_sbin_override" = "yes"])
 AC_ARG_ENABLE(junction,
 	[AC_HELP_STRING([--enable-junction],
 			[enable support for NFS junctions @<:@default=no@:>@])],
@@ -688,9 +694,28 @@ AC_SUBST([ACLOCAL_AMFLAGS], ["-I $ac_macro_dir \$(ACLOCAL_FLAGS)"])
 AC_SUBST([_sysconfdir])
 AC_CONFIG_COMMANDS_PRE([eval eval _sysconfdir=$sysconfdir])
 
+# make _statedir available for substituion in config files
+# 2 "evals" needed late to expand variable names.
+AC_SUBST([_statedir])
+AC_CONFIG_COMMANDS_PRE([eval eval _statedir=$statedir])
+
+if test "$statedir" = "/var/lib/nfs"; then
+	rpc_pipefsmount="var-lib-nfs-rpc_pipefs.mount"
+else
+	rpc_pipefsmount="$(systemd-escape -p "$statedir/rpc_pipefs").mount"
+fi
+AC_SUBST(rpc_pipefsmount)
+
+# make _rpc_pipefsmount available for substituion in config files
+# 2 "evals" needed late to expand variable names.
+AC_SUBST([_rpc_pipefsmount])
+AC_CONFIG_COMMANDS_PRE([eval eval _rpc_pipefsmount=$rpc_pipefsmount])
+
 AC_CONFIG_FILES([
 	Makefile
 	systemd/rpc-gssd.service
+	systemd/rpc_pipefs.target
+	systemd/var-lib-nfs-rpc_pipefs.mount
 	linux-nfs/Makefile
 	support/Makefile
 	support/export/Makefile

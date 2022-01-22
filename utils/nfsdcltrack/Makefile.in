@@ -340,6 +340,8 @@ TIRPC_LIBS = @TIRPC_LIBS@
 VERSION = @VERSION@
 XML2_CFLAGS = @XML2_CFLAGS@
 XML2_LIBS = @XML2_LIBS@
+_rpc_pipefsmount = @_rpc_pipefsmount@
+_statedir = @_statedir@
 _sysconfdir = @_sysconfdir@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
@@ -395,10 +397,9 @@ pdfdir = @pdfdir@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
 psdir = @psdir@
-
-# These binaries go in /sbin (not /usr/sbin), and that cannot be
-# overridden at config time. The kernel "knows" the /sbin name.
-sbindir = /sbin
+rpc_pipefsmount = @rpc_pipefsmount@
+runstatedir = @runstatedir@
+sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@
 startstatd = @startstatd@
@@ -411,6 +412,13 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 unitdir = @unitdir@
+
+# These binaries go in /sbin (not /usr/sbin) as the kernel "knows" the
+# /sbin name.  If /sbin is a symlink, CONFIG_SBIN_OVERRIDE can be
+# disabled to install in /usr/sbin anyway.
+# Note that we don't use "if CONFIG_SBIN_OVERRIDE" as that
+# causes autotools to notice the override and disable it.
+@CONFIG_SBIN_OVERRIDE_TRUE@sbindir = /sbin
 man8_MANS = nfsdcltrack.man
 EXTRA_DIST = $(man8_MANS)
 noinst_HEADERS = sqlite.h

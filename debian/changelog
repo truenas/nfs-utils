@@ -1,4 +1,4 @@
-nfs-utils (1:2.5.4-1~exp6) UNRELEASED; urgency=medium
+nfs-utils (1:2.6.1-1~exp1) UNRELEASED; urgency=medium
 
   [ Romain Perier ]
   * debian/rules: Modernize the packaging rules
@@ -19,6 +19,7 @@ nfs-utils (1:2.5.4-1~exp6) UNRELEASED; urgency=medium
   [ Salvatore Bonaccorso ]
   * debian/control: Use the debhelper-compat notation and drop debian/compat
     file
+  * New upstream version 2.6.1
 
  -- Ben Hutchings <benh@debian.org>  Wed, 19 Jan 2022 22:41:22 +0100
 

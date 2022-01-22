@@ -1,4 +1,4 @@
-nfs-utils (1:2.6.1-1~exp1) UNRELEASED; urgency=medium
+nfs-utils (1:2.6.1-1~exp1) experimental; urgency=medium
 
   [ Romain Perier ]
   * debian/rules: Modernize the packaging rules
@@ -21,7 +21,7 @@ nfs-utils (1:2.6.1-1~exp1) UNRELEASED; urgency=medium
     file
   * New upstream version 2.6.1
 
- -- Ben Hutchings <benh@debian.org>  Wed, 19 Jan 2022 22:41:22 +0100
+ -- Salvatore Bonaccorso <carnil@debian.org>  Sat, 22 Jan 2022 20:16:02 +0100
 
 nfs-utils (1:2.5.4-1~exp5) experimental; urgency=medium
 

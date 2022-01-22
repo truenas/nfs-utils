@@ -47,6 +47,8 @@ struct flav_info flav_map[] = {
 
 const int flav_map_size = sizeof(flav_map)/sizeof(flav_map[0]);
 
+int default_ttl = 30 * 60;
+
 static char	*efname = NULL;
 static XFILE	*efp = NULL;
 static int	first;
@@ -100,7 +102,7 @@ static void init_exportent (struct exportent *ee, int fromkernel)
 	ee->e_nsquids = 0;
 	ee->e_nsqgids = 0;
 	ee->e_uuid = NULL;
-	ee->e_ttl = DEFAULT_TTL;
+	ee->e_ttl = default_ttl;
 }
 
 struct exportent *
@@ -838,6 +840,7 @@ struct export_features *get_export_features(void)
 	close(fd);
 	if (c == -1)
 		goto err;
+	buf[c] = 0;
 	c = sscanf(buf, "%x %x", &ef.flags, &ef.secinfo_flags);
 	if (c != 2)
 		goto err;

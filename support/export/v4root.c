@@ -20,6 +20,7 @@
 
 #include <unistd.h>
 #include <errno.h>
+#include <uuid/uuid.h>
 
 #include "xlog.h"
 #include "exportfs.h"
@@ -34,9 +35,9 @@ static nfs_export pseudo_root = {
 	.m_export = {
 		.e_hostname = "*",
 		.e_path = "/",
-		.e_flags = NFSEXP_READONLY | NFSEXP_ROOTSQUASH
+		.e_flags = NFSEXP_READONLY
 				| NFSEXP_NOSUBTREECHECK | NFSEXP_FSID
-				| NFSEXP_V4ROOT,
+				| NFSEXP_V4ROOT | NFSEXP_INSECURE_PORT,
 		.e_anonuid = 65534,
 		.e_anongid = 65534,
 		.e_squids = NULL,
@@ -45,7 +46,7 @@ static nfs_export pseudo_root = {
 		.e_nsqgids = 0,
 		.e_fsid = 0,
 		.e_mountpoint = NULL,
-		.e_ttl = DEFAULT_TTL,
+		.e_ttl = 0,
 	},
 	.m_exported = 0,
 	.m_xtabent = 1,
@@ -55,15 +56,11 @@ static nfs_export pseudo_root = {
 };
 
 static void
-set_pseudofs_security(struct exportent *pseudo, int flags)
+set_pseudofs_security(struct exportent *pseudo)
 {
 	struct flav_info *flav;
 	int i;
 
-	if (flags & NFSEXP_INSECURE_PORT)
-		pseudo->e_flags |= NFSEXP_INSECURE_PORT;
-	if ((flags & NFSEXP_ROOTSQUASH) == 0)
-		pseudo->e_flags &= ~NFSEXP_ROOTSQUASH;
 	for (flav = flav_map; flav < flav_map + flav_map_size; flav++) {
 		struct sec_entry *new;
 
@@ -73,8 +70,7 @@ set_pseudofs_security(struct exportent *pseudo, int flags)
 		i = secinfo_addflavor(flav, pseudo);
 		new = &pseudo->e_secinfo[i];
 
-		if (flags & NFSEXP_INSECURE_PORT)
-			new->flags |= NFSEXP_INSECURE_PORT;
+		new->flags |= NFSEXP_INSECURE_PORT;
 	}
 }
 
@@ -89,15 +85,36 @@ v4root_create(char *path, nfs_export *export)
 	struct exportent *curexp = &export->m_export;
 
 	dupexportent(&eep, &pseudo_root.m_export);
+	eep.e_ttl = default_ttl;
 	eep.e_hostname = curexp->e_hostname;
 	strncpy(eep.e_path, path, sizeof(eep.e_path)-1);
 	if (strcmp(path, "/") != 0)
 		eep.e_flags &= ~NFSEXP_FSID;
-	set_pseudofs_security(&eep, curexp->e_flags);
+
+	if (strcmp(path, "/") != 0 &&
+	    !export_test(&eep, 0)) {
+		/* Need a uuid - base it on path using a fixed seed that
+		 * was generated randomly.
+		 */
+		const char seed_s[] = "39c6b5c1-3f24-4f4e-977c-7fe6546b8a25";
+		uuid_t seed, uuid;
+		char uuid_s[UUID_STR_LEN];
+		unsigned int i, j;
+
+		uuid_parse(seed_s, seed);
+		uuid_generate_sha1(uuid, seed, path, strlen(path));
+		uuid_unparse_upper(uuid, uuid_s);
+		/* strip hyhens */
+		for (i = j = 0; uuid_s[i]; i++)
+			if (uuid_s[i] != '-')
+				uuid_s[j++] = uuid_s[i];
+		eep.e_uuid = uuid_s;
+	}
+	set_pseudofs_security(&eep);
 	exp = export_create(&eep, 0);
 	if (exp == NULL)
 		return NULL;
-	xlog(D_CALL, "v4root_create: path '%s' flags 0x%x", 
+	xlog(D_CALL, "v4root_create: path '%s' flags 0x%x",
 		exp->m_export.e_path, exp->m_export.e_flags);
 	return &exp->m_export;
 }
@@ -141,7 +158,7 @@ pseudofs_update(char *hostname, char *path, nfs_export *source)
 		return 0;
 	}
 	/* Update an existing V4ROOT export: */
-	set_pseudofs_security(&exp->m_export, source->m_export.e_flags);
+	set_pseudofs_security(&exp->m_export);
 	return 0;
 }
 

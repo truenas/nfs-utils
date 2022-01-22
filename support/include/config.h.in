@@ -65,8 +65,8 @@
 /* Define to 1 if you have the <et/com_err.h> header file. */
 #undef HAVE_ET_COM_ERR_H
 
-/* Define to 1 if you have the <event.h> header file. */
-#undef HAVE_EVENT_H
+/* Define to 1 if you have the <event2/event.h> header file. */
+#undef HAVE_EVENT2_EVENT_H
 
 /* Define to 1 if you have the <fcntl.h> header file. */
 #undef HAVE_FCNTL_H
@@ -251,6 +251,9 @@
 
 /* Bundled lib always has the `nfs4_set_debug' function. */
 #undef HAVE_NFS4_SET_DEBUG
+
+/* Define this if you want NFSv4 server only support compiled in */
+#undef HAVE_NFSV4SERVER_SUPPORT
 
 /* Define to 1 if you have the `pathconf' function. */
 #undef HAVE_PATHCONF

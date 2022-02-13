@@ -12,7 +12,6 @@ import subprocess
 import configparser
 
 CONF_NFS = '/etc/nfs.conf'
-CONF_IDMAP = '/etc/idmapd.conf'
 SYSCONF_NFS = '/etc/sysconfig/nfs'
 SYSCONF_BACKUP = ".rpmsave"
 CONF_TOOL = '/usr/sbin/nfsconf'
@@ -101,24 +100,6 @@ CONV_STATD = {'-o': (CONF_NFS, 'statd', 'outgoing-port', '$1'),
               '--nlm-udp-port': (CONF_NFS, 'lockd', 'udp-port', '$1'),
              }
 
-# options for sm-notify found in SMNOTIFYARGS
-OPTS_SMNOTIFY = 'dm:np:v:P:'
-CONV_SMNOTIFY = {'-d': (CONF_NFS, 'sm-notify', 'debug', 'all'),
-                 '-m': (CONF_NFS, 'sm-notify', 'retry-time', '$1'),
-                 '-n': (CONF_NFS, 'sm-notify', 'update-state', '1'),
-                 '-p': (CONF_NFS, 'sm-notify', 'outgoing-port', '$1'),
-                 '-v': (CONF_NFS, 'sm-notify', 'outgoing-addr', '$1'),
-                 '-P': (CONF_NFS, 'statd', 'state-directory-path', '$1'),
-                }
-
-# options for idmapd found in RPCIDMAPDARGS
-OPTS_IDMAPD = 'vp:CS'
-CONV_IDMAPD = {'-v': (CONF_IDMAP, 'general', 'verbosity', '+'),
-               '-p': (CONF_NFS, 'general', 'pipefs-directory', '$1'),
-               '-C': (CONF_IDMAP, 'general', 'client-only', '1'),
-               '-S': (CONF_IDMAP, 'general', 'server-only', '1'),
-              }
-
 # options for gssd found in RPCGSSDARGS
 OPTS_GSSD = 'Mnvrp:k:d:t:T:R:lD'
 CONV_GSSD = {'-M': (CONF_NFS, 'gssd', 'use-memcache', '1'),
@@ -135,19 +116,12 @@ CONV_GSSD = {'-M': (CONF_NFS, 'gssd', 'use-memcache', '1'),
              '-D': (CONF_NFS, 'gssd', 'avoid-dns', '0'),
             }
 
-# options for blkmapd found in BLKMAPDARGS
-OPTS_BLKMAPD = ''
-CONV_BLKMAPD = {}
-
 # meta list of all the getopt lists
 GETOPT_MAPS = [('RPCNFSDARGS', OPTS_NFSD, LONG_NFSD, CONV_NFSD),
                ('RPCMOUNTDOPTS', OPTS_MOUNTD, LONG_MOUNTD, CONV_MOUNTD),
                ('STATDARG', OPTS_STATD, LONG_STATD, CONV_STATD),
                ('STATDARGS', OPTS_STATD, LONG_STATD, CONV_STATD),
-               ('SMNOTIFYARGS', OPTS_SMNOTIFY, [], CONV_SMNOTIFY),
-               ('RPCIDMAPDARGS', OPTS_IDMAPD, [], CONV_IDMAPD),
                ('RPCGSSDARGS', OPTS_GSSD, [], CONV_GSSD),
-               ('BLKMAPDARGS', OPTS_BLKMAPD, [], CONV_BLKMAPD),
               ]
 
 # map for all of the single option values

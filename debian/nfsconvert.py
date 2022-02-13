@@ -9,7 +9,7 @@ import sys
 import getopt
 import subprocess
 
-CONF_NFS = '/etc/nfs.conf'
+CONF_NFS = '/etc/nfs.conf.d/local.conf'
 CONF_TOOL = '/usr/sbin/nfsconf'
 
 # options for nfsd found in RPCNFSDOPTS

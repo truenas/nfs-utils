@@ -112,11 +112,21 @@ CONV_GSSD = {'-M': (CONF_NFS, 'gssd', 'use-memcache', '1'),
              '-D': (CONF_NFS, 'gssd', 'avoid-dns', '0'),
             }
 
+# options for svcgssd found in RPCSVCGSSDOPTS
+OPTS_SVCGSSD = 'ivrnp:'
+CONV_SVCGSSD = {'-i': (CONF_NFS, 'svcgssd', 'idmap-verbosity', '+'),
+                '-v': (CONF_NFS, 'svcgssd', 'verbosity', '+'),
+                '-r': (CONF_NFS, 'svcgssd', 'rpc-verbosity', '+'),
+                '-n': (CONF_NFS, 'svcgssd', 'principal', 'system'),
+                '-p': (CONF_NFS, 'svcgssd', 'principal', '$1'),
+               }
+
 # meta list of all the getopt lists
 GETOPT_MAPS = [('RPCNFSDOPTS', OPTS_NFSD, LONG_NFSD, CONV_NFSD),
                ('RPCMOUNTDOPTS', OPTS_MOUNTD, LONG_MOUNTD, CONV_MOUNTD),
                ('STATDOPTS', OPTS_STATD, LONG_STATD, CONV_STATD),
                ('RPCGSSDOPTS', OPTS_GSSD, [], CONV_GSSD),
+               ('RPCSVCGSSDOPTS', OPTS_SVCGSSD, [], CONV_SVCGSSD),
               ]
 
 # map for all of the single option values

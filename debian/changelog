@@ -2,6 +2,7 @@ nfs-utils (1:2.6.1-1~exp2) UNRELEASED; urgency=medium
 
   * Delete obsolete README.Debian.nfsv4
   * nfs-common: Remove obsolete upgrade logic from postinst
+  * nfs-common: Do not remove statoverride of mount.nfs on upgrade
 
  -- Ben Hutchings <benh@debian.org>  Sun, 13 Feb 2022 15:37:59 +0100
 

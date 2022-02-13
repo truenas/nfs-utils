@@ -284,4 +284,4 @@ try:
 except Exception as e:
     eprint(e)
     eprint("Conversion failed. Please correct the error and try again.")
-    exit(1)
+    sys.exit(1)

@@ -23,6 +23,18 @@ case "$1" in
         if [ -f /var/lib/nfs/state ]; then
             chown statd /var/lib/nfs/state
         fi
+
+	# Convert default files to /etc/nfs.conf.d/local.conf if they
+	# have been modified
+	if dpkg --compare-versions "$2" lt 1:2.6.1-1~exp2 &&
+	   ! md5sum --status --ignore-missing -c <<EOF
+ddcb1fbb90a14ff9850f22eed0127a10  /etc/default/nfs-common
+fa4e0530df26499ca3940353fbfbf241  /etc/default/nfs-kernel-server
+EOF
+	then
+	    mkdir -p /etc/nfs.conf.d
+	    /usr/share/nfs-common/nfsconvert.py
+	fi
     ;;
 esac
 

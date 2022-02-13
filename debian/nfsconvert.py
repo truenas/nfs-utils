@@ -1,22 +1,19 @@
 #!/usr/bin/env python3
 """
-Read in the deprecated /etc/sysconfig/nfs file and
+Read in the /etc/default/nfs-{common,kernel-server} files and
 set the corresponding values in nfs.conf
 """
 
 from __future__ import print_function
-import os
 import sys
 import getopt
 import subprocess
 import configparser
 
 CONF_NFS = '/etc/nfs.conf'
-SYSCONF_NFS = '/etc/sysconfig/nfs'
-SYSCONF_BACKUP = ".rpmsave"
 CONF_TOOL = '/usr/sbin/nfsconf'
 
-# options for nfsd found in RPCNFSDARGS
+# options for nfsd found in RPCNFSDOPTS
 OPTS_NFSD = 'dH:p:rR:N:V:stTuUG:L:'
 LONG_NFSD = ['debug', 'host=', 'port=', 'rdma=', 'nfs-version=', 'no-nfs-version=',
              'tcp', 'no-tcp', 'udp', 'no-udp', 'grace-time=', 'lease-time=']
@@ -80,7 +77,7 @@ CONV_MOUNTD = {'-g': (CONF_NFS, 'mountd', 'manage-gids', '1'),
                '--no-udp': (CONF_NFS, 'nfsd', 'udp', '0'),
               }
 
-# options for statd found in STATDARG
+# options for statd found in STATDOPTS
 OPTS_STATD = 'o:p:T:U:n:P:H:'
 LONG_STATD = ['outgoing-port=', 'port=', 'name=', 'state-directory-path=',
               'ha-callout=', 'nlm-port=', 'nlm-udp-port=']
@@ -100,7 +97,7 @@ CONV_STATD = {'-o': (CONF_NFS, 'statd', 'outgoing-port', '$1'),
               '--nlm-udp-port': (CONF_NFS, 'lockd', 'udp-port', '$1'),
              }
 
-# options for gssd found in RPCGSSDARGS
+# options for gssd found in RPCGSSDOPTS
 OPTS_GSSD = 'Mnvrp:k:d:t:T:R:lD'
 CONV_GSSD = {'-M': (CONF_NFS, 'gssd', 'use-memcache', '1'),
              '-n': (CONF_NFS, 'gssd', 'root_uses_machine_creds', '0'),
@@ -117,24 +114,14 @@ CONV_GSSD = {'-M': (CONF_NFS, 'gssd', 'use-memcache', '1'),
             }
 
 # meta list of all the getopt lists
-GETOPT_MAPS = [('RPCNFSDARGS', OPTS_NFSD, LONG_NFSD, CONV_NFSD),
+GETOPT_MAPS = [('RPCNFSDOPTS', OPTS_NFSD, LONG_NFSD, CONV_NFSD),
                ('RPCMOUNTDOPTS', OPTS_MOUNTD, LONG_MOUNTD, CONV_MOUNTD),
-               ('STATDARG', OPTS_STATD, LONG_STATD, CONV_STATD),
-               ('STATDARGS', OPTS_STATD, LONG_STATD, CONV_STATD),
-               ('RPCGSSDARGS', OPTS_GSSD, [], CONV_GSSD),
+               ('STATDOPTS', OPTS_STATD, LONG_STATD, CONV_STATD),
+               ('RPCGSSDOPTS', OPTS_GSSD, [], CONV_GSSD),
               ]
 
 # map for all of the single option values
-VALUE_MAPS = {'LOCKD_TCPPORT': (CONF_NFS, 'lockd', 'port', '$1'),
-              'LOCKD_UDPPORT': (CONF_NFS, 'lockd', 'udp-port', '$1'),
-              'RPCNFSDCOUNT': (CONF_NFS, 'nfsd', 'threads', '$1'),
-              'NFSD_V4_GRACE': (CONF_NFS, 'nfsd', 'grace-time', '$1'),
-              'NFSD_V4_LEASE': (CONF_NFS, 'nfsd', 'lease-time', '$1'),
-              'MOUNTD_PORT': (CONF_NFS, 'mountd', 'port', '$1'),
-              'STATD_PORT': (CONF_NFS, 'statd', 'port', '$1'),
-              'STATD_OUTGOING_PORT': (CONF_NFS, 'statd', 'outgoing-port', '$1'),
-              'STATD_HA_CALLOUT': (CONF_NFS, 'statd', 'ha-callout', '$1'),
-              'GSS_USE_PROXY': (CONF_NFS, 'gssd', 'use-gss-proxy', '$1')
+VALUE_MAPS = {'RPCNFSDCOUNT': (CONF_NFS, 'nfsd', 'threads', '$1'),
              }
 
 def eprint(*args, **kwargs):
@@ -239,8 +226,14 @@ def map_values():
     mapcount = 0
 
     # Lets load the old config
-    with open(SYSCONF_NFS) as cfile:
-        file_content = '[sysconf]\n' + cfile.read()
+    file_content = '[sysconf]\n'
+    for file_name in ['/etc/default/nfs-common',
+                      '/etc/default/nfs-kernel-server']:
+        try:
+            with open(file_name) as cfile:
+                file_content += cfile.read()
+        except (FileNotFoundError, PermissionError):
+            pass
     sysconfig = configparser.RawConfigParser()
     sysconfig.read_string(file_content)
 
@@ -263,17 +256,6 @@ def map_values():
                 mapcount += 1
             except Exception:
                 raise
-
-    # All went well, move aside the old file
-    # but dont bother if there were no changes and
-    # an old config file already exists
-    backupfile = SYSCONF_NFS + SYSCONF_BACKUP
-    if mapcount > 0 or not os.path.exists(backupfile):
-        try:
-            os.replace(SYSCONF_NFS, backupfile)
-        except OSError as err:
-            eprint("Error moving old config %s: %s" % (SYSCONF_NFS, err))
-            raise
 
 # Main routine
 try:

@@ -1,6 +1,7 @@
 From: Ben Hutchings <benh@debian.org>
-Date: Wed, 19 Jan 2022 21:33:15 +0100
-Subject: nfs-utils: Fix man page syntax errors
+Date: Mon, 31 Jan 2022 11:47:23 -0500
+Subject: Manpages: Fix man page syntax errors
+Origin: https://git.linux-nfs.org/?p=steved/nfs-utils.git;a=commit;h=f083d3baf27896e895c6936cd0290d363458e501
 
 In idmapd.conf.5, there is a line of what should be literal text
 beginning with ".", which makes it an (invalid) command.  It can be
@@ -15,10 +16,19 @@ In nfsmount.conf.man, the first line should be a comment but it is
 actually an invalid command.  Fix it to be a comment.
 
 Signed-off-by: Ben Hutchings <benh@debian.org>
+Signed-off-by: Salvatore Bonaccorso <carnil@debian.org>
+Signed-off-by: Steve Dickson <steved@redhat.com>
 ---
+ support/nfsidmap/idmapd.conf.5 | 4 ++--
+ utils/idmapd/idmapd.man        | 4 ++--
+ utils/mount/nfsmount.conf.man  | 2 +-
+ 3 files changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/support/nfsidmap/idmapd.conf.5 b/support/nfsidmap/idmapd.conf.5
+index f5b18167..87e39bb4 100644
 --- a/support/nfsidmap/idmapd.conf.5
 +++ b/support/nfsidmap/idmapd.conf.5
-@@ -198,8 +198,8 @@ With this group names of a central direc
+@@ -198,8 +198,8 @@ With this group names of a central directory can be shortened for an isolated or
  .TP
  .B Group-Name-No-Prefix-Regex
  Case-insensitive regular expression to exclude groups from adding and removing the prefix set by
@@ -29,9 +39,11 @@ Signed-off-by: Ben Hutchings <benh@debian.org>
  (Default: none)
  .\"
  .\" -------------------------------------------------------------------
+diff --git a/utils/idmapd/idmapd.man b/utils/idmapd/idmapd.man
+index 5f34d2bf..8215d259 100644
 --- a/utils/idmapd/idmapd.man
 +++ b/utils/idmapd/idmapd.man
-@@ -24,13 +24,13 @@ the NFSv4 kernel client and server, to w
+@@ -24,13 +24,13 @@ the NFSv4 kernel client and server, to which it communicates via
  upcalls, by translating user and group IDs to names, and vice versa.
  .Pp
  The system derives the
@@ -47,6 +59,8 @@ Signed-off-by: Ben Hutchings <benh@debian.org>
  part of the string is the system's DNS domain name.
  It can also be specified in
  .Pa /etc/idmapd.conf
+diff --git a/utils/mount/nfsmount.conf.man b/utils/mount/nfsmount.conf.man
+index 73c3e118..34879c8d 100644
 --- a/utils/mount/nfsmount.conf.man
 +++ b/utils/mount/nfsmount.conf.man
 @@ -1,4 +1,4 @@

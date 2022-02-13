@@ -1,6 +1,7 @@
 From: Ben Hutchings <benh@debian.org>
-Date: Thu, 20 Jan 2022 03:01:22 +0100
-Subject: tests: Skip test if /dev/log is missing
+Date: Mon, 31 Jan 2022 11:49:30 -0500
+Subject: nfs-utils: tests: Skip test if /dev/log is missing
+Origin: https://git.linux-nfs.org/?p=steved/nfs-utils.git;a=commit;h=c9c6369451ba032ba7b4044ac0625a77a4e03c17
 
 Some build environments don't have a /dev/log, without which
 the daemons will fail to run.
@@ -9,7 +10,15 @@ the daemons will fail to run.
 * Call it in t0001-statd-basic-mon-unmon.sh
 
 Signed-off-by: Ben Hutchings <benh@debian.org>
+Signed-off-by: Salvatore Bonaccorso <carnil@debian.org>
+Signed-off-by: Steve Dickson <steved@redhat.com>
 ---
+ tests/t0001-statd-basic-mon-unmon.sh | 3 ++-
+ tests/test-lib.sh                    | 9 +++++++++
+ 2 files changed, 11 insertions(+), 1 deletion(-)
+
+diff --git a/tests/t0001-statd-basic-mon-unmon.sh b/tests/t0001-statd-basic-mon-unmon.sh
+index 92517a14..e1065e76 100755
 --- a/tests/t0001-statd-basic-mon-unmon.sh
 +++ b/tests/t0001-statd-basic-mon-unmon.sh
 @@ -21,8 +21,9 @@
@@ -23,6 +32,8 @@ Signed-off-by: Ben Hutchings <benh@debian.org>
  
  start_statd
  if [ $? -ne 0 ]; then
+diff --git a/tests/test-lib.sh b/tests/test-lib.sh
+index e47ad135..b62ac2a6 100644
 --- a/tests/test-lib.sh
 +++ b/tests/test-lib.sh
 @@ -37,6 +37,15 @@ check_root() {

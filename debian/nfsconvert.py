@@ -8,7 +8,6 @@ from __future__ import print_function
 import sys
 import getopt
 import subprocess
-import configparser
 
 CONF_NFS = '/etc/nfs.conf'
 CONF_TOOL = '/usr/sbin/nfsconf'
@@ -221,27 +220,39 @@ def convert_getopt(optname, options, optstring, longopts, conversions):
 
     return optcount
 
+def load_old_config():
+    """ Load the old configuration
+
+        Since "default" files were always meant to be parsed by a
+        shell, run a shell script to read them and dump the values.
+    """
+    names = ([name for (name, _, _, _) in GETOPT_MAPS]
+             + list(VALUE_MAPS.keys()))
+    script = ''.join(
+        [f'{name}=\n' for name in names]
+        + [f'[ -r {file_name} ] && . {file_name} >/dev/null\n'
+           for file_name in ['/etc/default/nfs-common',
+                             '/etc/default/nfs-kernel-server']]
+        + [f'printf \'{name}=%s\\n\' "${name}"\n' for name in names])
+    config = {}
+    with subprocess.Popen(script, shell=True,
+                          stdout=subprocess.PIPE, text=True) as proc:
+        for line in proc.stdout:
+            name, value = line.rstrip('\n').split('=', 1)
+            config[name] = value
+    return config
+
 def map_values():
     """ Main function """
     mapcount = 0
 
-    # Lets load the old config
-    file_content = '[sysconf]\n'
-    for file_name in ['/etc/default/nfs-common',
-                      '/etc/default/nfs-kernel-server']:
-        try:
-            with open(file_name) as cfile:
-                file_content += cfile.read()
-        except (FileNotFoundError, PermissionError):
-            pass
-    sysconfig = configparser.RawConfigParser()
-    sysconfig.read_string(file_content)
+    config = load_old_config()
 
     # Map all the getopt option lists
     for (name, opts, lopts, conv) in GETOPT_MAPS:
-        if name in sysconfig['sysconf']:
+        if name in config:
             try:
-                mapcount += convert_getopt(name, sysconfig['sysconf'][name], opts,
+                mapcount += convert_getopt(name, config[name], opts,
                                            lopts, conv)
             except Exception:
                 eprint("Error whilst converting %s to nfsconf options." % (name))
@@ -249,9 +260,9 @@ def map_values():
 
     # Map the single value options
     for name, opts in VALUE_MAPS.items():
-        if name in sysconfig['sysconf']:
+        if name in config:
             try:
-                value = sysconfig['sysconf'][name]
+                value = config[name]
                 set_value(value.strip('\"'), opts)
                 mapcount += 1
             except Exception:

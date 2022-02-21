@@ -1,10 +1,22 @@
 nfs-utils (1:2.6.1-1~exp2) UNRELEASED; urgency=medium
 
+  [ Ben Hutchings ]
   * Delete obsolete README.Debian.nfsv4
   * nfs-common: Remove obsolete upgrade logic from postinst
   * nfs-common: Do not remove statoverride of mount.nfs on upgrade
   * nfs-common: Convert /etc/default/nfs-* into /etc/nfs.conf.d/local.conf on
     upgrade
+
+  [ Debian Janitor ]
+  * Remove constraints unnecessary since buster:
+    + Build-Depends: Drop versioned constraint on libtirpc-dev.
+    + nfs-kernel-server: Drop versioned constraint on lsb-base in Depends.
+    + nfs-common: Drop versioned constraint on lsb-base in Depends.
+    + nfs-common: Drop versioned constraint on mount and nfs-kernel-server in
+      Replaces.
+    + nfs-common: Drop versioned constraint on nfs-kernel-server in Breaks.
+    + libnfsidmap1: Drop versioned constraint on nfs-common in Replaces.
+    + libnfsidmap1: Drop versioned constraint on nfs-common in Breaks.
 
  -- Ben Hutchings <benh@debian.org>  Sun, 13 Feb 2022 15:37:59 +0100
 

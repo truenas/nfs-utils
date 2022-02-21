@@ -28,3 +28,4 @@ debian/tmp/lib/systemd/system/nfs-idmapd.service
 debian/tmp/lib/systemd/system/nfs-client.target
 debian/tmp/lib/systemd/system/nfs-utils.service
 debian/tmp/usr/sbin/nfsconf
+debian/nfsconvert.py usr/share/nfs-common/

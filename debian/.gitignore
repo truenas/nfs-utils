@@ -1,0 +1,11 @@
+/*.debhelper*
+/*.substvars
+/.debhelper/
+/autoreconf.*
+/debhelper-build-stamp
+/files
+/libnfsidmap-dev/
+/libnfsidmap1/
+/nfs-common/
+/nfs-kernel-server/
+/tmp/

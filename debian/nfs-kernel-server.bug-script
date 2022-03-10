@@ -7,6 +7,16 @@ echo '-- rpcinfo --' >&3
 echo '-- /etc/default/nfs-kernel-server --' >&3
 cat /etc/default/nfs-kernel-server|grep -v -e '\#' -e '^$' >&3
 
+echo '-- /etc/nfs.conf --' >&3
+cat /etc/nfs.conf|grep -v -e '^\#' -e '^$' >&3
+
+if [ -d /etc/nfs.conf.d ]; then
+    for f in /etc/nfs.conf.d/*.conf; do
+        echo "-- $f --" >&3
+        cat "$f" | grep -v -e '^\#' -e '^$' >&3
+    done
+fi
+
 echo '-- /etc/exports --' >&3
 cat /etc/exports|grep -v -e '^\#' -e '^$' >&3
 

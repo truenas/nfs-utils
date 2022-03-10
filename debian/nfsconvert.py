@@ -45,7 +45,7 @@ CONV_NFSD = {'-d': (CONF_NFS, 'nfsd', 'debug', 'all'),
             }
 
 # options for mountd found in RPCMOUNTDOPTS
-OPTS_MOUNTD = 'go:d:H:p:N:nrs:t:V:'
+OPTS_MOUNTD = 'go:d:H:p:N:nrus:t:V:'
 LONG_MOUNTD = ['descriptors=', 'debug=', 'nfs-version=', 'no-nfs-version=',
                'port=', 'no-tcp', 'ha-callout=', 'state-directory-path=',
                'num-threads=', 'reverse-lookup', 'manage-gids', 'no-udp']

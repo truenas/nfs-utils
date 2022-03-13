@@ -3,3 +3,4 @@
 multiarch-kerberos-paths.patch
 nfs-utils-fix-man-page-syntax-errors.patch
 tests-skip-test-if-dev-log-is-missing.patch
+nfsidmap.man-fix-section-number.patch

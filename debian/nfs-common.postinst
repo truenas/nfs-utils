@@ -35,6 +35,11 @@ EOF
 	    mkdir -p /etc/nfs.conf.d
 	    /usr/share/nfs-common/nfsconvert.py
 	fi
+
+	# Remove obsolete symlinks for sysvinit runlevels 2-5
+	if dpkg --compare-versions "$2" lt 1:2.6.1-2~; then
+	    update-rc.d -f nfs-common remove
+	fi
     ;;
 esac
 

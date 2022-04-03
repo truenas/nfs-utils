@@ -75,6 +75,10 @@ CONV_MOUNTD = {'-g': (CONF_NFS, 'mountd', 'manage-gids', '1'),
                '--reverse-lookup': (CONF_NFS, 'mountd', 'reverse-lookup', '1'),
                '--no-udp': (CONF_NFS, 'nfsd', 'udp', '0'),
               }
+# We enable manage-gids by default.  But if /etc/default/nfs-common
+# was modified then we need to set manage-gids = 0 unless we see
+# --manage-gids.
+INIT_MOUNTD = [(CONF_NFS, 'mountd', 'manage-gids', '0')]
 
 # options for statd found in STATDOPTS
 OPTS_STATD = 'o:p:T:U:n:P:H:'
@@ -122,11 +126,11 @@ CONV_SVCGSSD = {'-i': (CONF_NFS, 'svcgssd', 'idmap-verbosity', '+'),
                }
 
 # meta list of all the getopt lists
-GETOPT_MAPS = [('RPCNFSDOPTS', OPTS_NFSD, LONG_NFSD, CONV_NFSD),
-               ('RPCMOUNTDOPTS', OPTS_MOUNTD, LONG_MOUNTD, CONV_MOUNTD),
-               ('STATDOPTS', OPTS_STATD, LONG_STATD, CONV_STATD),
-               ('RPCGSSDOPTS', OPTS_GSSD, [], CONV_GSSD),
-               ('RPCSVCGSSDOPTS', OPTS_SVCGSSD, [], CONV_SVCGSSD),
+GETOPT_MAPS = [('RPCNFSDOPTS', OPTS_NFSD, LONG_NFSD, CONV_NFSD, []),
+               ('RPCMOUNTDOPTS', OPTS_MOUNTD, LONG_MOUNTD, CONV_MOUNTD, INIT_MOUNTD),
+               ('STATDOPTS', OPTS_STATD, LONG_STATD, CONV_STATD, []),
+               ('RPCGSSDOPTS', OPTS_GSSD, [], CONV_GSSD, []),
+               ('RPCSVCGSSDOPTS', OPTS_SVCGSSD, [], CONV_SVCGSSD, []),
               ]
 
 # map for all of the single option values
@@ -160,7 +164,7 @@ def set_value(value, entry):
         print("Args: %s\n" % args)
         raise Exception
 
-def convert_getopt(optname, options, optstring, longopts, conversions):
+def convert_getopt(optname, options, optstring, longopts, conversions, init):
     """ Parse option string into seperate config items
 
         Take a getopt string and a table of conversions
@@ -178,6 +182,9 @@ def convert_getopt(optname, options, optstring, longopts, conversions):
     except getopt.GetoptError as err:
         eprint(err)
         raise Exception
+
+    for c in init:
+        set_value('', c)
 
     setlist = {}
     for (k, v) in optlist:
@@ -236,7 +243,7 @@ def load_old_config():
         Since "default" files were always meant to be parsed by a
         shell, run a shell script to read them and dump the values.
     """
-    names = ([name for (name, _, _, _) in GETOPT_MAPS]
+    names = ([name for (name, _, _, _, _) in GETOPT_MAPS]
              + list(VALUE_MAPS.keys()))
     script = ''.join(
         [f'{name}=\n' for name in names]
@@ -259,11 +266,11 @@ def map_values():
     config = load_old_config()
 
     # Map all the getopt option lists
-    for (name, opts, lopts, conv) in GETOPT_MAPS:
+    for (name, opts, lopts, conv, init) in GETOPT_MAPS:
         if name in config:
             try:
                 mapcount += convert_getopt(name, config[name], opts,
-                                           lopts, conv)
+                                           lopts, conv, init)
             except Exception:
                 eprint("Error whilst converting %s to nfsconf options." % (name))
                 raise

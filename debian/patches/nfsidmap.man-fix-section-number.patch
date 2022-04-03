@@ -1,0 +1,23 @@
+From: Ben Hutchings <benh@debian.org>
+Date: Mon, 14 Mar 2022 00:19:33 +0100
+Subject: nfsidmap.man: Fix section number
+Bug-Debian: https://bugs.debian.org/947202
+
+The nfsidmap manual page is supposed to be in section 8, but calls the
+.TH macro with a section argument of 5.  This results in an incorrect
+header and causes debhelper to install it in the section 5 directory.
+Fix that.
+
+Signed-off-by: Ben Hutchings <benh@debian.org>
+---
+--- a/utils/nfsidmap/nfsidmap.man
++++ b/utils/nfsidmap/nfsidmap.man
+@@ -2,7 +2,7 @@
+ .\"@(#)nfsidmap(8) - The NFS idmapper upcall program
+ .\"
+ .\" Copyright (C) 2010 Bryan Schumaker <bjschuma@netapp.com>
+-.TH nfsidmap 5 "1 October 2010"
++.TH nfsidmap 8 "1 October 2010"
+ .SH NAME
+ nfsidmap \- The NFS idmapper upcall program
+ .SH SYNOPSIS

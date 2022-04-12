@@ -2,6 +2,7 @@ From: Ben Hutchings <benh@debian.org>
 Date: Mon, 14 Mar 2022 00:19:33 +0100
 Subject: nfsidmap.man: Fix section number
 Bug-Debian: https://bugs.debian.org/947202
+Forwarded: https://lore.kernel.org/linux-nfs/20220412070016.720489-1-carnil@debian.org/
 
 The nfsidmap manual page is supposed to be in section 8, but calls the
 .TH macro with a section argument of 5.  This results in an incorrect

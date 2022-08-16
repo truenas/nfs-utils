@@ -4,6 +4,7 @@ nfs-utils (1:2.6.2-1~exp1) UNRELEASED; urgency=medium
   * nfs-common: Install new rpcctl tool
   * nfs-common: Install nfsrahead to configure the readahead for NFS mounts
   * debian/rules: Build with DEB_BUILD_MAINT_OPTIONS = hardening=+all
+  * Declare compliance with Debian policy 4.6.1
 
  -- Salvatore Bonaccorso <carnil@debian.org>  Tue, 16 Aug 2022 11:29:33 +0200
 

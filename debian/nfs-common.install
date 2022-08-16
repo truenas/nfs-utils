@@ -30,3 +30,5 @@ debian/tmp/lib/systemd/system/nfs-client.target
 debian/tmp/lib/systemd/system/nfs-utils.service
 debian/tmp/usr/sbin/nfsconf
 debian/nfsconvert.py usr/share/nfs-common/
+debian/tmp/usr/lib/udev/rules.d/99-nfs.rules
+debian/tmp/usr/libexec/nfsrahead

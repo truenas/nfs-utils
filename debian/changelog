@@ -1,4 +1,4 @@
-nfs-utils (1:2.6.2-1~exp1) UNRELEASED; urgency=medium
+nfs-utils (1:2.6.2-1~exp1) experimental; urgency=medium
 
   [ Salvatore Bonaccorso ]
   * New upstream version 2.6.2
@@ -15,7 +15,7 @@ nfs-utils (1:2.6.2-1~exp1) UNRELEASED; urgency=medium
   * nfs-common.postrm: also purge /etc/nfs.conf.d/local.conf
   * nfs-common.dirs: we also own /etc/nfs.conf.d
 
- -- Salvatore Bonaccorso <carnil@debian.org>  Tue, 16 Aug 2022 11:29:33 +0200
+ -- Salvatore Bonaccorso <carnil@debian.org>  Sun, 21 Aug 2022 22:41:04 +0200
 
 nfs-utils (1:2.6.1-2) unstable; urgency=medium
 

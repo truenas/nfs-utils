@@ -1,4 +1,5 @@
 etc/init.d
+etc/nfs.conf.d
 sbin
 usr/sbin
 var/lib/nfs

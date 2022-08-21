@@ -16,6 +16,7 @@ case "$1" in
 		ucf --purge $FILE
 	    fi
 	done
+	rm -f /etc/nfs.conf.d/local.conf
 
 	rm -f /var/lib/nfs/state    \
 	      /var/lib/nfs/sm/*     \

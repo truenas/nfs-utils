@@ -1,5 +1,6 @@
 nfs-utils (1:2.6.2-1~exp1) UNRELEASED; urgency=medium
 
+  [ Salvatore Bonaccorso ]
   * New upstream version 2.6.2
   * nfs-common: Install new rpcctl tool
   * nfs-common: Install nfsrahead to configure the readahead for NFS mounts
@@ -9,6 +10,10 @@ nfs-utils (1:2.6.2-1~exp1) UNRELEASED; urgency=medium
     - Apply all sysctl settings when NFS-related modules are loaded.
     - Configure modprobe.d directory to /lib/modprobe.d
   * debian/control: nfs-kernel-server: Add Suggests on procps
+
+  [ Andreas Hasenack ]
+  * nfs-common.postrm: also purge /etc/nfs.conf.d/local.conf
+  * nfs-common.dirs: we also own /etc/nfs.conf.d
 
  -- Salvatore Bonaccorso <carnil@debian.org>  Tue, 16 Aug 2022 11:29:33 +0200
 

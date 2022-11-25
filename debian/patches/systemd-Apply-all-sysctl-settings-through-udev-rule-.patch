@@ -1,0 +1,97 @@
+From 9466df03394a48cc08aa4bcdcfda3fe6cd074468 Mon Sep 17 00:00:00 2001
+From: Salvatore Bonaccorso <carnil@debian.org>
+Date: Mon, 5 Dec 2022 15:51:34 -0500
+Subject: [PATCH 4/4] systemd: Apply all sysctl settings through udev rule when
+ NFS-related modules are loaded
+
+sysctl settings (e.g.  /etc/sysctl.conf and others) are normally loaded
+once at boot.  If the module that implements some settings is no yet
+loaded, those settings don't get applied.
+
+Various NFS modules support various sysctl settings.  If they are loaded
+after boot, they miss out.
+
+Add a new udev rule configuration to udev/rules.d/60-nfs.rules to apply
+the relevant settings when the modules are loaded.
+
+Placing it in the systemd directory similarly as the choice for the
+original commit afc7132dfb21 ("systemd: Apply all sysctl settings when
+NFS-related modules are loaded").
+
+Link: https://lore.kernel.org/linux-nfs/Y1KoKwu88PulcokW@eldamar.lan/
+Link: https://bugs.debian.org/1022172
+Link: https://bugs.debian.org/1024082
+Suggested-by: Marco d'Itri <md@linux.it>
+Signed-off-by: Salvatore Bonaccorso <carnil@debian.org>
+Signed-off-by: Steve Dickson <steved@redhat.com>
+---
+ systemd/60-nfs.rules | 21 +++++++++++++++++++++
+ systemd/Makefile.am  |  9 +++++++--
+ 2 files changed, 28 insertions(+), 2 deletions(-)
+ create mode 100644 systemd/60-nfs.rules
+
+diff --git a/systemd/60-nfs.rules b/systemd/60-nfs.rules
+new file mode 100644
+index 000000000000..188423c1d2e3
+--- /dev/null
++++ b/systemd/60-nfs.rules
+@@ -0,0 +1,21 @@
++# Ensure all NFS systctl settings get applied when modules load
++
++# sunrpc module supports "sunrpc.*" sysctls
++ACTION=="add", SUBSYSTEM=="module", KERNEL=="sunrpc", \
++  RUN+="/sbin/sysctl -q --pattern ^sunrpc --system"
++
++# rpcrdma module supports sunrpc.svc_rdma.*
++ACTION=="add", SUBSYSTEM=="module", KERNEL=="rpcrdma", \
++  RUN+="/sbin/sysctl -q --pattern ^sunrpc.svc_rdma --system"
++
++# lockd module supports "fs.nfs.nlm*" and "fs.nfs.nsm*" sysctls
++ACTION=="add", SUBSYSTEM=="module", KERNEL=="lockd", \
++  RUN+="/sbin/sysctl -q --pattern ^fs.nfs.n[sl]m --system"
++
++# nfsv4 module supports "fs.nfs.*" sysctls (nfs_callback_tcpport and idmap_cache_timeout)
++ACTION=="add", SUBSYSTEM=="module", KERNEL=="nfsv4", \
++  RUN+="/sbin/sysctl -q --pattern ^fs.nfs.(nfs_callback_tcpport|idmap_cache_timeout) --system"
++
++# nfs module supports "fs.nfs.*" sysctls
++ACTION=="add", SUBSYSTEM=="module", KERNEL=="nfs", \
++  RUN+="/sbin/sysctl -q --pattern ^fs.nfs --system"
+diff --git a/systemd/Makefile.am b/systemd/Makefile.am
+index e7f5d818a913..577c6a2286c0 100644
+--- a/systemd/Makefile.am
++++ b/systemd/Makefile.am
+@@ -2,6 +2,9 @@
+ 
+ MAINTAINERCLEANFILES = Makefile.in
+ 
++udev_rulesdir = /usr/lib/udev/rules.d/
++udev_files = 60-nfs.rules
++
+ unit_files =  \
+     nfs-client.target \
+     rpc_pipefs.target \
+@@ -51,7 +54,7 @@ endif
+ 
+ man5_MANS	= nfs.conf.man
+ man7_MANS	= nfs.systemd.man
+-EXTRA_DIST = $(unit_files) $(man5_MANS) $(man7_MANS)
++EXTRA_DIST = $(unit_files) $(udev_files) $(man5_MANS) $(man7_MANS)
+ 
+ generator_dir = $(unitdir)/../system-generators
+ 
+@@ -73,8 +76,10 @@ rpc_pipefs_generator_LDADD = ../support/nfs/libnfs.la
+ 
+ if INSTALL_SYSTEMD
+ genexec_PROGRAMS = nfs-server-generator rpc-pipefs-generator
+-install-data-hook: $(unit_files)
++install-data-hook: $(unit_files) $(udev_files)
+ 	mkdir -p $(DESTDIR)/$(unitdir)
+ 	cp $(unit_files) $(DESTDIR)/$(unitdir)
+ 	cp $(rpc_pipefs_mount_file) $(DESTDIR)/$(unitdir)/$(rpc_pipefsmount)
++	mkdir -p $(DESTDIR)/$(udev_rulesdir)
++	cp $(udev_files) $(DESTDIR)/$(udev_rulesdir)
+ endif
+-- 
+2.38.1
+

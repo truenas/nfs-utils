@@ -5,6 +5,8 @@ nfs-utils (1:2.6.2-3) UNRELEASED; urgency=medium
   * Revert "modprobe: protect against sysctl errors"
   * Revert "systemd: Apply all sysctl settings when NFS-related modules are
     loaded"
+  * systemd: Apply all sysctl settings through udev rule when NFS-related
+    modules are loaded (Closes: #1024082)
 
  -- Salvatore Bonaccorso <carnil@debian.org>  Fri, 25 Nov 2022 11:32:18 +0100
 

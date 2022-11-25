@@ -2,6 +2,7 @@ nfs-utils (1:2.6.2-3) UNRELEASED; urgency=medium
 
   * Revert "Install upstream modprobe configuration file"
   * Revert "configure: make modprobe.d directory configurable."
+  * Revert "modprobe: protect against sysctl errors"
 
  -- Salvatore Bonaccorso <carnil@debian.org>  Fri, 25 Nov 2022 11:32:18 +0100
 

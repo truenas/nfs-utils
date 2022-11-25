@@ -3,3 +3,4 @@
 multiarch-kerberos-paths.patch
 blkmapd-fix-coredump-in-bl_add_disk.patch
 Revert-configure-make-modprobe.d-directory-configura.patch
+Revert-modprobe-protect-against-sysctl-errors.patch

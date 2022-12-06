@@ -14,4 +14,4 @@ debian/tmp/lib/systemd/system/nfs-mountd.service
 debian/tmp/lib/systemd/system/nfs-server.service
 debian/tmp/lib/systemd/system/nfsdcld.service
 debian/tmp/lib/systemd/system-generators/nfs-server-generator
-debian/tmp/lib/modprobe.d/50-nfs.conf
+debian/tmp/usr/lib/udev/rules.d/60-nfs.rules

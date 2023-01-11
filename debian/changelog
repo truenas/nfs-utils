@@ -6,6 +6,7 @@ nfs-utils (1:2.6.2-4) UNRELEASED; urgency=medium
   [ Salvatore Bonaccorso ]
   * systemd: Don't degrade system state for nfs-clients when krb5 keytab
     present but not containing the nfs/<FQDN> principal (Closes: #985002)
+  * Declare compliance with Debian policy 4.6.2
 
  -- Salvatore Bonaccorso <carnil@debian.org>  Sat, 10 Dec 2022 13:54:54 +0100
 

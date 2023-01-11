@@ -7,3 +7,4 @@ Revert-modprobe-protect-against-sysctl-errors.patch
 Revert-systemd-Apply-all-sysctl-settings-when-NFS-re.patch
 systemd-Apply-all-sysctl-settings-through-udev-rule-.patch
 auth-rpcgss-module.service-Don-t-fail-inside-linux-c.patch
+systemd-Don-t-degrade-system-state-for-nfs-clients-w.patch

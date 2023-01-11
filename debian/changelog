@@ -1,4 +1,4 @@
-nfs-utils (1:2.6.2-4) UNRELEASED; urgency=medium
+nfs-utils (1:2.6.2-4) unstable; urgency=medium
 
   [ Guillem Jover ]
   * Fix LSB init script output (Closes: #939153)
@@ -8,7 +8,7 @@ nfs-utils (1:2.6.2-4) UNRELEASED; urgency=medium
     present but not containing the nfs/<FQDN> principal (Closes: #985002)
   * Declare compliance with Debian policy 4.6.2
 
- -- Salvatore Bonaccorso <carnil@debian.org>  Sat, 10 Dec 2022 13:54:54 +0100
+ -- Salvatore Bonaccorso <carnil@debian.org>  Wed, 11 Jan 2023 21:41:40 +0100
 
 nfs-utils (1:2.6.2-3) unstable; urgency=medium
 

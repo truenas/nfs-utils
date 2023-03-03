@@ -11,7 +11,7 @@ Vcs-Browser: https://salsa.debian.org/kernel-team/nfs-utils
 
 Package: nfs-kernel-server
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, nfs-common (= ${binary:Version}), ucf, netbase, lsb-base, keyutils
+Depends: ${shlibs:Depends}, ${misc:Depends}, nfs-common (= ${binary:Version}), ucf, netbase, keyutils
 Provides: knfs, nfs-server
 Conflicts: knfs, nfs-server
 Replaces: knfs, nfs-server
@@ -33,7 +33,7 @@ Description: support for NFS kernel server
 Package: nfs-common
 Architecture: any
 Pre-Depends: ${misc:Pre-Depends}
-Depends: ${shlibs:Depends}, ${misc:Depends}, libnfsidmap1 (= ${binary:Version}), rpcbind, adduser, ucf, lsb-base, keyutils, python3
+Depends: ${shlibs:Depends}, ${misc:Depends}, libnfsidmap1 (= ${binary:Version}), rpcbind, adduser, ucf, keyutils, python3
 Suggests: open-iscsi, watchdog
 Provides: nfs-client
 Conflicts: nfs-client

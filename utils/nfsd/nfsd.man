@@ -38,7 +38,7 @@ request on all known network addresses.  This may change in future
 releases of the Linux Kernel. This option can be used multiple times
 to listen to more than one interface.
 .TP
-.B \S " or " \-\-scope scope
+.B \-S " or " \-\-scope scope
 NFSv4.1 and later require the server to report a "scope" which is used
 by the clients to detect if two connections are to the same server.
 By default Linux NFSD uses the host name as the scope.

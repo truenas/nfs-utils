@@ -123,10 +123,12 @@ am__v_AR_0 = @echo "  AR      " $@;
 am__v_AR_1 = 
 libexport_a_AR = $(AR) $(ARFLAGS)
 libexport_a_LIBADD =
-am_libexport_a_OBJECTS = client.$(OBJEXT) export.$(OBJEXT) \
-	hostname.$(OBJEXT) xtab.$(OBJEXT) mount_clnt.$(OBJEXT) \
-	mount_xdr.$(OBJEXT) cache.$(OBJEXT) auth.$(OBJEXT) \
-	v4root.$(OBJEXT) fsloc.$(OBJEXT) v4clients.$(OBJEXT)
+am_libexport_a_OBJECTS = libexport_a-client.$(OBJEXT) \
+	libexport_a-export.$(OBJEXT) libexport_a-hostname.$(OBJEXT) \
+	libexport_a-xtab.$(OBJEXT) libexport_a-mount_clnt.$(OBJEXT) \
+	libexport_a-mount_xdr.$(OBJEXT) libexport_a-cache.$(OBJEXT) \
+	libexport_a-auth.$(OBJEXT) libexport_a-v4root.$(OBJEXT) \
+	libexport_a-fsloc.$(OBJEXT) libexport_a-v4clients.$(OBJEXT)
 libexport_a_OBJECTS = $(am_libexport_a_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -143,19 +145,24 @@ am__v_at_1 =
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/support/include
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__maybe_remake_depfiles = depfiles
-am__depfiles_remade = ./$(DEPDIR)/auth.Po ./$(DEPDIR)/cache.Po \
-	./$(DEPDIR)/client.Po ./$(DEPDIR)/export.Po \
-	./$(DEPDIR)/fsloc.Po ./$(DEPDIR)/hostname.Po \
-	./$(DEPDIR)/mount_clnt.Po ./$(DEPDIR)/mount_xdr.Po \
-	./$(DEPDIR)/v4clients.Po ./$(DEPDIR)/v4root.Po \
-	./$(DEPDIR)/xtab.Po
+am__depfiles_remade = ./$(DEPDIR)/libexport_a-auth.Po \
+	./$(DEPDIR)/libexport_a-cache.Po \
+	./$(DEPDIR)/libexport_a-client.Po \
+	./$(DEPDIR)/libexport_a-export.Po \
+	./$(DEPDIR)/libexport_a-fsloc.Po \
+	./$(DEPDIR)/libexport_a-hostname.Po \
+	./$(DEPDIR)/libexport_a-mount_clnt.Po \
+	./$(DEPDIR)/libexport_a-mount_xdr.Po \
+	./$(DEPDIR)/libexport_a-v4clients.Po \
+	./$(DEPDIR)/libexport_a-v4root.Po \
+	./$(DEPDIR)/libexport_a-xtab.Po
 am__mv = mv -f
-COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
-	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
 am__v_lt_1 = 
+COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
+	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 LTCOMPILE = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) \
 	$(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) \
@@ -271,6 +278,8 @@ LIBCRYPT = @LIBCRYPT@
 LIBEVENT = @LIBEVENT@
 LIBKEYUTILS = @LIBKEYUTILS@
 LIBMOUNT = @LIBMOUNT@
+LIBMOUNT_CFLAGS = @LIBMOUNT_CFLAGS@
+LIBMOUNT_LIBS = @LIBMOUNT_LIBS@
 LIBNSL = @LIBNSL@
 LIBOBJS = @LIBOBJS@
 LIBPTHREAD = @LIBPTHREAD@
@@ -372,7 +381,6 @@ localedir = @localedir@
 localstatedir = @localstatedir@
 mandir = @mandir@
 mkdir_p = @mkdir_p@
-modprobedir = @modprobedir@
 mountfile = @mountfile@
 nfsconfig = @nfsconfig@
 oldincludedir = @oldincludedir@
@@ -406,6 +414,7 @@ libexport_a_SOURCES = client.c export.c hostname.c \
 		      cache.c auth.c v4root.c fsloc.c \
 		      v4clients.c
 
+libexport_a_CPPFLAGS = $(AM_CPPFLAGS) $(CPPFLAGS) -I$(top_srcdir)/support/reexport
 BUILT_SOURCES = $(GENFILES)
 noinst_HEADERS = mount.h
 @CONFIG_RPCGEN_FALSE@RPCGEN = @RPCGEN_PATH@
@@ -461,17 +470,17 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/auth.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cache.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/client.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/export.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fsloc.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hostname.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mount_clnt.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mount_xdr.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/v4clients.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/v4root.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xtab.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libexport_a-auth.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libexport_a-cache.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libexport_a-client.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libexport_a-export.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libexport_a-fsloc.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libexport_a-hostname.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libexport_a-mount_clnt.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libexport_a-mount_xdr.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libexport_a-v4clients.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libexport_a-v4root.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libexport_a-xtab.Po@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
 	@$(MKDIR_P) $(@D)
@@ -499,6 +508,160 @@ am--depfiles: $(am__depfiles_remade)
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LTCOMPILE) -c -o $@ $<
+
+libexport_a-client.o: client.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libexport_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libexport_a-client.o -MD -MP -MF $(DEPDIR)/libexport_a-client.Tpo -c -o libexport_a-client.o `test -f 'client.c' || echo '$(srcdir)/'`client.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libexport_a-client.Tpo $(DEPDIR)/libexport_a-client.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='client.c' object='libexport_a-client.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libexport_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libexport_a-client.o `test -f 'client.c' || echo '$(srcdir)/'`client.c
+
+libexport_a-client.obj: client.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libexport_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libexport_a-client.obj -MD -MP -MF $(DEPDIR)/libexport_a-client.Tpo -c -o libexport_a-client.obj `if test -f 'client.c'; then $(CYGPATH_W) 'client.c'; else $(CYGPATH_W) '$(srcdir)/client.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libexport_a-client.Tpo $(DEPDIR)/libexport_a-client.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='client.c' object='libexport_a-client.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libexport_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libexport_a-client.obj `if test -f 'client.c'; then $(CYGPATH_W) 'client.c'; else $(CYGPATH_W) '$(srcdir)/client.c'; fi`
+
+libexport_a-export.o: export.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libexport_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libexport_a-export.o -MD -MP -MF $(DEPDIR)/libexport_a-export.Tpo -c -o libexport_a-export.o `test -f 'export.c' || echo '$(srcdir)/'`export.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libexport_a-export.Tpo $(DEPDIR)/libexport_a-export.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='export.c' object='libexport_a-export.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libexport_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libexport_a-export.o `test -f 'export.c' || echo '$(srcdir)/'`export.c
+
+libexport_a-export.obj: export.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libexport_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libexport_a-export.obj -MD -MP -MF $(DEPDIR)/libexport_a-export.Tpo -c -o libexport_a-export.obj `if test -f 'export.c'; then $(CYGPATH_W) 'export.c'; else $(CYGPATH_W) '$(srcdir)/export.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libexport_a-export.Tpo $(DEPDIR)/libexport_a-export.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='export.c' object='libexport_a-export.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libexport_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libexport_a-export.obj `if test -f 'export.c'; then $(CYGPATH_W) 'export.c'; else $(CYGPATH_W) '$(srcdir)/export.c'; fi`
+
+libexport_a-hostname.o: hostname.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libexport_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libexport_a-hostname.o -MD -MP -MF $(DEPDIR)/libexport_a-hostname.Tpo -c -o libexport_a-hostname.o `test -f 'hostname.c' || echo '$(srcdir)/'`hostname.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libexport_a-hostname.Tpo $(DEPDIR)/libexport_a-hostname.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='hostname.c' object='libexport_a-hostname.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libexport_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libexport_a-hostname.o `test -f 'hostname.c' || echo '$(srcdir)/'`hostname.c
+
+libexport_a-hostname.obj: hostname.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libexport_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libexport_a-hostname.obj -MD -MP -MF $(DEPDIR)/libexport_a-hostname.Tpo -c -o libexport_a-hostname.obj `if test -f 'hostname.c'; then $(CYGPATH_W) 'hostname.c'; else $(CYGPATH_W) '$(srcdir)/hostname.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libexport_a-hostname.Tpo $(DEPDIR)/libexport_a-hostname.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='hostname.c' object='libexport_a-hostname.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libexport_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libexport_a-hostname.obj `if test -f 'hostname.c'; then $(CYGPATH_W) 'hostname.c'; else $(CYGPATH_W) '$(srcdir)/hostname.c'; fi`
+
+libexport_a-xtab.o: xtab.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libexport_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libexport_a-xtab.o -MD -MP -MF $(DEPDIR)/libexport_a-xtab.Tpo -c -o libexport_a-xtab.o `test -f 'xtab.c' || echo '$(srcdir)/'`xtab.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libexport_a-xtab.Tpo $(DEPDIR)/libexport_a-xtab.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='xtab.c' object='libexport_a-xtab.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libexport_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libexport_a-xtab.o `test -f 'xtab.c' || echo '$(srcdir)/'`xtab.c
+
+libexport_a-xtab.obj: xtab.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libexport_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libexport_a-xtab.obj -MD -MP -MF $(DEPDIR)/libexport_a-xtab.Tpo -c -o libexport_a-xtab.obj `if test -f 'xtab.c'; then $(CYGPATH_W) 'xtab.c'; else $(CYGPATH_W) '$(srcdir)/xtab.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libexport_a-xtab.Tpo $(DEPDIR)/libexport_a-xtab.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='xtab.c' object='libexport_a-xtab.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libexport_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libexport_a-xtab.obj `if test -f 'xtab.c'; then $(CYGPATH_W) 'xtab.c'; else $(CYGPATH_W) '$(srcdir)/xtab.c'; fi`
+
+libexport_a-mount_clnt.o: mount_clnt.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libexport_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libexport_a-mount_clnt.o -MD -MP -MF $(DEPDIR)/libexport_a-mount_clnt.Tpo -c -o libexport_a-mount_clnt.o `test -f 'mount_clnt.c' || echo '$(srcdir)/'`mount_clnt.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libexport_a-mount_clnt.Tpo $(DEPDIR)/libexport_a-mount_clnt.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='mount_clnt.c' object='libexport_a-mount_clnt.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libexport_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libexport_a-mount_clnt.o `test -f 'mount_clnt.c' || echo '$(srcdir)/'`mount_clnt.c
+
+libexport_a-mount_clnt.obj: mount_clnt.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libexport_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libexport_a-mount_clnt.obj -MD -MP -MF $(DEPDIR)/libexport_a-mount_clnt.Tpo -c -o libexport_a-mount_clnt.obj `if test -f 'mount_clnt.c'; then $(CYGPATH_W) 'mount_clnt.c'; else $(CYGPATH_W) '$(srcdir)/mount_clnt.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libexport_a-mount_clnt.Tpo $(DEPDIR)/libexport_a-mount_clnt.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='mount_clnt.c' object='libexport_a-mount_clnt.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libexport_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libexport_a-mount_clnt.obj `if test -f 'mount_clnt.c'; then $(CYGPATH_W) 'mount_clnt.c'; else $(CYGPATH_W) '$(srcdir)/mount_clnt.c'; fi`
+
+libexport_a-mount_xdr.o: mount_xdr.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libexport_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libexport_a-mount_xdr.o -MD -MP -MF $(DEPDIR)/libexport_a-mount_xdr.Tpo -c -o libexport_a-mount_xdr.o `test -f 'mount_xdr.c' || echo '$(srcdir)/'`mount_xdr.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libexport_a-mount_xdr.Tpo $(DEPDIR)/libexport_a-mount_xdr.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='mount_xdr.c' object='libexport_a-mount_xdr.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libexport_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libexport_a-mount_xdr.o `test -f 'mount_xdr.c' || echo '$(srcdir)/'`mount_xdr.c
+
+libexport_a-mount_xdr.obj: mount_xdr.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libexport_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libexport_a-mount_xdr.obj -MD -MP -MF $(DEPDIR)/libexport_a-mount_xdr.Tpo -c -o libexport_a-mount_xdr.obj `if test -f 'mount_xdr.c'; then $(CYGPATH_W) 'mount_xdr.c'; else $(CYGPATH_W) '$(srcdir)/mount_xdr.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libexport_a-mount_xdr.Tpo $(DEPDIR)/libexport_a-mount_xdr.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='mount_xdr.c' object='libexport_a-mount_xdr.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libexport_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libexport_a-mount_xdr.obj `if test -f 'mount_xdr.c'; then $(CYGPATH_W) 'mount_xdr.c'; else $(CYGPATH_W) '$(srcdir)/mount_xdr.c'; fi`
+
+libexport_a-cache.o: cache.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libexport_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libexport_a-cache.o -MD -MP -MF $(DEPDIR)/libexport_a-cache.Tpo -c -o libexport_a-cache.o `test -f 'cache.c' || echo '$(srcdir)/'`cache.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libexport_a-cache.Tpo $(DEPDIR)/libexport_a-cache.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='cache.c' object='libexport_a-cache.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libexport_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libexport_a-cache.o `test -f 'cache.c' || echo '$(srcdir)/'`cache.c
+
+libexport_a-cache.obj: cache.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libexport_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libexport_a-cache.obj -MD -MP -MF $(DEPDIR)/libexport_a-cache.Tpo -c -o libexport_a-cache.obj `if test -f 'cache.c'; then $(CYGPATH_W) 'cache.c'; else $(CYGPATH_W) '$(srcdir)/cache.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libexport_a-cache.Tpo $(DEPDIR)/libexport_a-cache.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='cache.c' object='libexport_a-cache.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libexport_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libexport_a-cache.obj `if test -f 'cache.c'; then $(CYGPATH_W) 'cache.c'; else $(CYGPATH_W) '$(srcdir)/cache.c'; fi`
+
+libexport_a-auth.o: auth.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libexport_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libexport_a-auth.o -MD -MP -MF $(DEPDIR)/libexport_a-auth.Tpo -c -o libexport_a-auth.o `test -f 'auth.c' || echo '$(srcdir)/'`auth.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libexport_a-auth.Tpo $(DEPDIR)/libexport_a-auth.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='auth.c' object='libexport_a-auth.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libexport_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libexport_a-auth.o `test -f 'auth.c' || echo '$(srcdir)/'`auth.c
+
+libexport_a-auth.obj: auth.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libexport_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libexport_a-auth.obj -MD -MP -MF $(DEPDIR)/libexport_a-auth.Tpo -c -o libexport_a-auth.obj `if test -f 'auth.c'; then $(CYGPATH_W) 'auth.c'; else $(CYGPATH_W) '$(srcdir)/auth.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libexport_a-auth.Tpo $(DEPDIR)/libexport_a-auth.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='auth.c' object='libexport_a-auth.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libexport_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libexport_a-auth.obj `if test -f 'auth.c'; then $(CYGPATH_W) 'auth.c'; else $(CYGPATH_W) '$(srcdir)/auth.c'; fi`
+
+libexport_a-v4root.o: v4root.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libexport_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libexport_a-v4root.o -MD -MP -MF $(DEPDIR)/libexport_a-v4root.Tpo -c -o libexport_a-v4root.o `test -f 'v4root.c' || echo '$(srcdir)/'`v4root.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libexport_a-v4root.Tpo $(DEPDIR)/libexport_a-v4root.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='v4root.c' object='libexport_a-v4root.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libexport_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libexport_a-v4root.o `test -f 'v4root.c' || echo '$(srcdir)/'`v4root.c
+
+libexport_a-v4root.obj: v4root.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libexport_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libexport_a-v4root.obj -MD -MP -MF $(DEPDIR)/libexport_a-v4root.Tpo -c -o libexport_a-v4root.obj `if test -f 'v4root.c'; then $(CYGPATH_W) 'v4root.c'; else $(CYGPATH_W) '$(srcdir)/v4root.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libexport_a-v4root.Tpo $(DEPDIR)/libexport_a-v4root.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='v4root.c' object='libexport_a-v4root.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libexport_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libexport_a-v4root.obj `if test -f 'v4root.c'; then $(CYGPATH_W) 'v4root.c'; else $(CYGPATH_W) '$(srcdir)/v4root.c'; fi`
+
+libexport_a-fsloc.o: fsloc.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libexport_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libexport_a-fsloc.o -MD -MP -MF $(DEPDIR)/libexport_a-fsloc.Tpo -c -o libexport_a-fsloc.o `test -f 'fsloc.c' || echo '$(srcdir)/'`fsloc.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libexport_a-fsloc.Tpo $(DEPDIR)/libexport_a-fsloc.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='fsloc.c' object='libexport_a-fsloc.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libexport_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libexport_a-fsloc.o `test -f 'fsloc.c' || echo '$(srcdir)/'`fsloc.c
+
+libexport_a-fsloc.obj: fsloc.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libexport_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libexport_a-fsloc.obj -MD -MP -MF $(DEPDIR)/libexport_a-fsloc.Tpo -c -o libexport_a-fsloc.obj `if test -f 'fsloc.c'; then $(CYGPATH_W) 'fsloc.c'; else $(CYGPATH_W) '$(srcdir)/fsloc.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libexport_a-fsloc.Tpo $(DEPDIR)/libexport_a-fsloc.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='fsloc.c' object='libexport_a-fsloc.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libexport_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libexport_a-fsloc.obj `if test -f 'fsloc.c'; then $(CYGPATH_W) 'fsloc.c'; else $(CYGPATH_W) '$(srcdir)/fsloc.c'; fi`
+
+libexport_a-v4clients.o: v4clients.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libexport_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libexport_a-v4clients.o -MD -MP -MF $(DEPDIR)/libexport_a-v4clients.Tpo -c -o libexport_a-v4clients.o `test -f 'v4clients.c' || echo '$(srcdir)/'`v4clients.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libexport_a-v4clients.Tpo $(DEPDIR)/libexport_a-v4clients.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='v4clients.c' object='libexport_a-v4clients.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libexport_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libexport_a-v4clients.o `test -f 'v4clients.c' || echo '$(srcdir)/'`v4clients.c
+
+libexport_a-v4clients.obj: v4clients.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libexport_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libexport_a-v4clients.obj -MD -MP -MF $(DEPDIR)/libexport_a-v4clients.Tpo -c -o libexport_a-v4clients.obj `if test -f 'v4clients.c'; then $(CYGPATH_W) 'v4clients.c'; else $(CYGPATH_W) '$(srcdir)/v4clients.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libexport_a-v4clients.Tpo $(DEPDIR)/libexport_a-v4clients.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='v4clients.c' object='libexport_a-v4clients.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libexport_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libexport_a-v4clients.obj `if test -f 'v4clients.c'; then $(CYGPATH_W) 'v4clients.c'; else $(CYGPATH_W) '$(srcdir)/v4clients.c'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo
@@ -639,17 +802,17 @@ clean-am: clean-generic clean-libtool clean-noinstLIBRARIES \
 	mostlyclean-am
 
 distclean: distclean-am
-		-rm -f ./$(DEPDIR)/auth.Po
-	-rm -f ./$(DEPDIR)/cache.Po
-	-rm -f ./$(DEPDIR)/client.Po
-	-rm -f ./$(DEPDIR)/export.Po
-	-rm -f ./$(DEPDIR)/fsloc.Po
-	-rm -f ./$(DEPDIR)/hostname.Po
-	-rm -f ./$(DEPDIR)/mount_clnt.Po
-	-rm -f ./$(DEPDIR)/mount_xdr.Po
-	-rm -f ./$(DEPDIR)/v4clients.Po
-	-rm -f ./$(DEPDIR)/v4root.Po
-	-rm -f ./$(DEPDIR)/xtab.Po
+		-rm -f ./$(DEPDIR)/libexport_a-auth.Po
+	-rm -f ./$(DEPDIR)/libexport_a-cache.Po
+	-rm -f ./$(DEPDIR)/libexport_a-client.Po
+	-rm -f ./$(DEPDIR)/libexport_a-export.Po
+	-rm -f ./$(DEPDIR)/libexport_a-fsloc.Po
+	-rm -f ./$(DEPDIR)/libexport_a-hostname.Po
+	-rm -f ./$(DEPDIR)/libexport_a-mount_clnt.Po
+	-rm -f ./$(DEPDIR)/libexport_a-mount_xdr.Po
+	-rm -f ./$(DEPDIR)/libexport_a-v4clients.Po
+	-rm -f ./$(DEPDIR)/libexport_a-v4root.Po
+	-rm -f ./$(DEPDIR)/libexport_a-xtab.Po
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -695,17 +858,17 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-am
-		-rm -f ./$(DEPDIR)/auth.Po
-	-rm -f ./$(DEPDIR)/cache.Po
-	-rm -f ./$(DEPDIR)/client.Po
-	-rm -f ./$(DEPDIR)/export.Po
-	-rm -f ./$(DEPDIR)/fsloc.Po
-	-rm -f ./$(DEPDIR)/hostname.Po
-	-rm -f ./$(DEPDIR)/mount_clnt.Po
-	-rm -f ./$(DEPDIR)/mount_xdr.Po
-	-rm -f ./$(DEPDIR)/v4clients.Po
-	-rm -f ./$(DEPDIR)/v4root.Po
-	-rm -f ./$(DEPDIR)/xtab.Po
+		-rm -f ./$(DEPDIR)/libexport_a-auth.Po
+	-rm -f ./$(DEPDIR)/libexport_a-cache.Po
+	-rm -f ./$(DEPDIR)/libexport_a-client.Po
+	-rm -f ./$(DEPDIR)/libexport_a-export.Po
+	-rm -f ./$(DEPDIR)/libexport_a-fsloc.Po
+	-rm -f ./$(DEPDIR)/libexport_a-hostname.Po
+	-rm -f ./$(DEPDIR)/libexport_a-mount_clnt.Po
+	-rm -f ./$(DEPDIR)/libexport_a-mount_xdr.Po
+	-rm -f ./$(DEPDIR)/libexport_a-v4clients.Po
+	-rm -f ./$(DEPDIR)/libexport_a-v4root.Po
+	-rm -f ./$(DEPDIR)/libexport_a-xtab.Po
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 

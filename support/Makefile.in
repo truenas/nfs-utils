@@ -166,7 +166,7 @@ am__define_uniq_tagged_files = \
   unique=`for i in $$list; do \
     if test -f "$$i"; then echo $$i; else echo $(srcdir)/$$i; fi; \
   done | $(am__uniquify_input)`
-DIST_SUBDIRS = export include misc nfs nsm nfsidmap junction
+DIST_SUBDIRS = export include misc nfs nsm reexport nfsidmap junction
 am__DIST_COMMON = $(srcdir)/Makefile.in
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 am__relativize = \
@@ -266,6 +266,8 @@ LIBCRYPT = @LIBCRYPT@
 LIBEVENT = @LIBEVENT@
 LIBKEYUTILS = @LIBKEYUTILS@
 LIBMOUNT = @LIBMOUNT@
+LIBMOUNT_CFLAGS = @LIBMOUNT_CFLAGS@
+LIBMOUNT_LIBS = @LIBMOUNT_LIBS@
 LIBNSL = @LIBNSL@
 LIBOBJS = @LIBOBJS@
 LIBPTHREAD = @LIBPTHREAD@
@@ -367,7 +369,6 @@ localedir = @localedir@
 localstatedir = @localstatedir@
 mandir = @mandir@
 mkdir_p = @mkdir_p@
-modprobedir = @modprobedir@
 mountfile = @mountfile@
 nfsconfig = @nfsconfig@
 oldincludedir = @oldincludedir@
@@ -391,7 +392,7 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 unitdir = @unitdir@
 OPTDIRS = $(am__append_1) $(am__append_2)
-SUBDIRS = export include misc nfs nsm $(OPTDIRS)
+SUBDIRS = export include misc nfs nsm reexport $(OPTDIRS)
 MAINTAINERCLEANFILES = Makefile.in
 all: all-recursive
 

@@ -117,10 +117,15 @@ CONFIG_CLEAN_VPATH_FILES =
 LIBRARIES = $(noinst_LIBRARIES)
 LTLIBRARIES = $(noinst_LTLIBRARIES)
 libnfs_la_DEPENDENCIES = libnfsconf.la
-am_libnfs_la_OBJECTS = exports.lo rmtab.lo xio.lo rpcmisc.lo \
-	rpcdispatch.lo xcommon.lo wildmat.lo mydaemon.lo rpc_socket.lo \
-	getport.lo svc_socket.lo cacheio.lo closeall.lo nfs_mntent.lo \
-	svc_create.lo atomicio.lo strlcat.lo strlcpy.lo
+am_libnfs_la_OBJECTS = libnfs_la-exports.lo libnfs_la-rmtab.lo \
+	libnfs_la-xio.lo libnfs_la-rpcmisc.lo libnfs_la-rpcdispatch.lo \
+	libnfs_la-xcommon.lo libnfs_la-wildmat.lo \
+	libnfs_la-mydaemon.lo libnfs_la-rpc_socket.lo \
+	libnfs_la-getport.lo libnfs_la-svc_socket.lo \
+	libnfs_la-cacheio.lo libnfs_la-closeall.lo \
+	libnfs_la-nfs_mntent.lo libnfs_la-svc_create.lo \
+	libnfs_la-atomicio.lo libnfs_la-strlcat.lo \
+	libnfs_la-strlcpy.lo
 libnfs_la_OBJECTS = $(am_libnfs_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -144,16 +149,25 @@ am__v_at_1 =
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/support/include
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__maybe_remake_depfiles = depfiles
-am__depfiles_remade = ./$(DEPDIR)/atomicio.Plo ./$(DEPDIR)/cacheio.Plo \
-	./$(DEPDIR)/closeall.Plo ./$(DEPDIR)/conffile.Plo \
-	./$(DEPDIR)/exports.Plo ./$(DEPDIR)/getport.Plo \
-	./$(DEPDIR)/mydaemon.Plo ./$(DEPDIR)/nfs_mntent.Plo \
-	./$(DEPDIR)/rmtab.Plo ./$(DEPDIR)/rpc_socket.Plo \
-	./$(DEPDIR)/rpcdispatch.Plo ./$(DEPDIR)/rpcmisc.Plo \
-	./$(DEPDIR)/strlcat.Plo ./$(DEPDIR)/strlcpy.Plo \
-	./$(DEPDIR)/svc_create.Plo ./$(DEPDIR)/svc_socket.Plo \
-	./$(DEPDIR)/wildmat.Plo ./$(DEPDIR)/xcommon.Plo \
-	./$(DEPDIR)/xio.Plo ./$(DEPDIR)/xlog.Plo
+am__depfiles_remade = ./$(DEPDIR)/conffile.Plo \
+	./$(DEPDIR)/libnfs_la-atomicio.Plo \
+	./$(DEPDIR)/libnfs_la-cacheio.Plo \
+	./$(DEPDIR)/libnfs_la-closeall.Plo \
+	./$(DEPDIR)/libnfs_la-exports.Plo \
+	./$(DEPDIR)/libnfs_la-getport.Plo \
+	./$(DEPDIR)/libnfs_la-mydaemon.Plo \
+	./$(DEPDIR)/libnfs_la-nfs_mntent.Plo \
+	./$(DEPDIR)/libnfs_la-rmtab.Plo \
+	./$(DEPDIR)/libnfs_la-rpc_socket.Plo \
+	./$(DEPDIR)/libnfs_la-rpcdispatch.Plo \
+	./$(DEPDIR)/libnfs_la-rpcmisc.Plo \
+	./$(DEPDIR)/libnfs_la-strlcat.Plo \
+	./$(DEPDIR)/libnfs_la-strlcpy.Plo \
+	./$(DEPDIR)/libnfs_la-svc_create.Plo \
+	./$(DEPDIR)/libnfs_la-svc_socket.Plo \
+	./$(DEPDIR)/libnfs_la-wildmat.Plo \
+	./$(DEPDIR)/libnfs_la-xcommon.Plo \
+	./$(DEPDIR)/libnfs_la-xio.Plo ./$(DEPDIR)/xlog.Plo
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -271,6 +285,8 @@ LIBCRYPT = @LIBCRYPT@
 LIBEVENT = @LIBEVENT@
 LIBKEYUTILS = @LIBKEYUTILS@
 LIBMOUNT = @LIBMOUNT@
+LIBMOUNT_CFLAGS = @LIBMOUNT_CFLAGS@
+LIBMOUNT_LIBS = @LIBMOUNT_LIBS@
 LIBNSL = @LIBNSL@
 LIBOBJS = @LIBOBJS@
 LIBPTHREAD = @LIBPTHREAD@
@@ -372,7 +388,6 @@ localedir = @localedir@
 localstatedir = @localstatedir@
 mandir = @mandir@
 mkdir_p = @mkdir_p@
-modprobedir = @modprobedir@
 mountfile = @mountfile@
 nfsconfig = @nfsconfig@
 oldincludedir = @oldincludedir@
@@ -404,6 +419,7 @@ libnfs_la_SOURCES = exports.c rmtab.c xio.c rpcmisc.c rpcdispatch.c \
 		   svc_create.c atomicio.c strlcat.c strlcpy.c
 
 libnfs_la_LIBADD = libnfsconf.la
+libnfs_la_CPPFLAGS = $(AM_CPPFLAGS) $(CPPFLAGS) -I$(top_srcdir)/support/reexport
 libnfsconf_la_SOURCES = conffile.c xlog.c
 MAINTAINERCLEANFILES = Makefile.in
 all: all-am
@@ -466,25 +482,25 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/atomicio.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cacheio.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/closeall.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/conffile.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/exports.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/getport.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mydaemon.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nfs_mntent.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rmtab.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rpc_socket.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rpcdispatch.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rpcmisc.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/strlcat.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/strlcpy.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/svc_create.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/svc_socket.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/wildmat.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xcommon.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xio.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libnfs_la-atomicio.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libnfs_la-cacheio.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libnfs_la-closeall.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libnfs_la-exports.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libnfs_la-getport.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libnfs_la-mydaemon.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libnfs_la-nfs_mntent.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libnfs_la-rmtab.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libnfs_la-rpc_socket.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libnfs_la-rpcdispatch.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libnfs_la-rpcmisc.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libnfs_la-strlcat.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libnfs_la-strlcpy.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libnfs_la-svc_create.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libnfs_la-svc_socket.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libnfs_la-wildmat.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libnfs_la-xcommon.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libnfs_la-xio.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xlog.Plo@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
@@ -513,6 +529,132 @@ am--depfiles: $(am__depfiles_remade)
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LTCOMPILE) -c -o $@ $<
+
+libnfs_la-exports.lo: exports.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libnfs_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libnfs_la-exports.lo -MD -MP -MF $(DEPDIR)/libnfs_la-exports.Tpo -c -o libnfs_la-exports.lo `test -f 'exports.c' || echo '$(srcdir)/'`exports.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libnfs_la-exports.Tpo $(DEPDIR)/libnfs_la-exports.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='exports.c' object='libnfs_la-exports.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libnfs_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libnfs_la-exports.lo `test -f 'exports.c' || echo '$(srcdir)/'`exports.c
+
+libnfs_la-rmtab.lo: rmtab.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libnfs_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libnfs_la-rmtab.lo -MD -MP -MF $(DEPDIR)/libnfs_la-rmtab.Tpo -c -o libnfs_la-rmtab.lo `test -f 'rmtab.c' || echo '$(srcdir)/'`rmtab.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libnfs_la-rmtab.Tpo $(DEPDIR)/libnfs_la-rmtab.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='rmtab.c' object='libnfs_la-rmtab.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libnfs_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libnfs_la-rmtab.lo `test -f 'rmtab.c' || echo '$(srcdir)/'`rmtab.c
+
+libnfs_la-xio.lo: xio.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libnfs_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libnfs_la-xio.lo -MD -MP -MF $(DEPDIR)/libnfs_la-xio.Tpo -c -o libnfs_la-xio.lo `test -f 'xio.c' || echo '$(srcdir)/'`xio.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libnfs_la-xio.Tpo $(DEPDIR)/libnfs_la-xio.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='xio.c' object='libnfs_la-xio.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libnfs_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libnfs_la-xio.lo `test -f 'xio.c' || echo '$(srcdir)/'`xio.c
+
+libnfs_la-rpcmisc.lo: rpcmisc.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libnfs_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libnfs_la-rpcmisc.lo -MD -MP -MF $(DEPDIR)/libnfs_la-rpcmisc.Tpo -c -o libnfs_la-rpcmisc.lo `test -f 'rpcmisc.c' || echo '$(srcdir)/'`rpcmisc.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libnfs_la-rpcmisc.Tpo $(DEPDIR)/libnfs_la-rpcmisc.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='rpcmisc.c' object='libnfs_la-rpcmisc.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libnfs_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libnfs_la-rpcmisc.lo `test -f 'rpcmisc.c' || echo '$(srcdir)/'`rpcmisc.c
+
+libnfs_la-rpcdispatch.lo: rpcdispatch.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libnfs_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libnfs_la-rpcdispatch.lo -MD -MP -MF $(DEPDIR)/libnfs_la-rpcdispatch.Tpo -c -o libnfs_la-rpcdispatch.lo `test -f 'rpcdispatch.c' || echo '$(srcdir)/'`rpcdispatch.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libnfs_la-rpcdispatch.Tpo $(DEPDIR)/libnfs_la-rpcdispatch.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='rpcdispatch.c' object='libnfs_la-rpcdispatch.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libnfs_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libnfs_la-rpcdispatch.lo `test -f 'rpcdispatch.c' || echo '$(srcdir)/'`rpcdispatch.c
+
+libnfs_la-xcommon.lo: xcommon.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libnfs_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libnfs_la-xcommon.lo -MD -MP -MF $(DEPDIR)/libnfs_la-xcommon.Tpo -c -o libnfs_la-xcommon.lo `test -f 'xcommon.c' || echo '$(srcdir)/'`xcommon.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libnfs_la-xcommon.Tpo $(DEPDIR)/libnfs_la-xcommon.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='xcommon.c' object='libnfs_la-xcommon.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libnfs_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libnfs_la-xcommon.lo `test -f 'xcommon.c' || echo '$(srcdir)/'`xcommon.c
+
+libnfs_la-wildmat.lo: wildmat.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libnfs_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libnfs_la-wildmat.lo -MD -MP -MF $(DEPDIR)/libnfs_la-wildmat.Tpo -c -o libnfs_la-wildmat.lo `test -f 'wildmat.c' || echo '$(srcdir)/'`wildmat.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libnfs_la-wildmat.Tpo $(DEPDIR)/libnfs_la-wildmat.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='wildmat.c' object='libnfs_la-wildmat.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libnfs_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libnfs_la-wildmat.lo `test -f 'wildmat.c' || echo '$(srcdir)/'`wildmat.c
+
+libnfs_la-mydaemon.lo: mydaemon.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libnfs_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libnfs_la-mydaemon.lo -MD -MP -MF $(DEPDIR)/libnfs_la-mydaemon.Tpo -c -o libnfs_la-mydaemon.lo `test -f 'mydaemon.c' || echo '$(srcdir)/'`mydaemon.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libnfs_la-mydaemon.Tpo $(DEPDIR)/libnfs_la-mydaemon.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='mydaemon.c' object='libnfs_la-mydaemon.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libnfs_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libnfs_la-mydaemon.lo `test -f 'mydaemon.c' || echo '$(srcdir)/'`mydaemon.c
+
+libnfs_la-rpc_socket.lo: rpc_socket.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libnfs_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libnfs_la-rpc_socket.lo -MD -MP -MF $(DEPDIR)/libnfs_la-rpc_socket.Tpo -c -o libnfs_la-rpc_socket.lo `test -f 'rpc_socket.c' || echo '$(srcdir)/'`rpc_socket.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libnfs_la-rpc_socket.Tpo $(DEPDIR)/libnfs_la-rpc_socket.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='rpc_socket.c' object='libnfs_la-rpc_socket.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libnfs_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libnfs_la-rpc_socket.lo `test -f 'rpc_socket.c' || echo '$(srcdir)/'`rpc_socket.c
+
+libnfs_la-getport.lo: getport.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libnfs_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libnfs_la-getport.lo -MD -MP -MF $(DEPDIR)/libnfs_la-getport.Tpo -c -o libnfs_la-getport.lo `test -f 'getport.c' || echo '$(srcdir)/'`getport.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libnfs_la-getport.Tpo $(DEPDIR)/libnfs_la-getport.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='getport.c' object='libnfs_la-getport.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libnfs_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libnfs_la-getport.lo `test -f 'getport.c' || echo '$(srcdir)/'`getport.c
+
+libnfs_la-svc_socket.lo: svc_socket.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libnfs_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libnfs_la-svc_socket.lo -MD -MP -MF $(DEPDIR)/libnfs_la-svc_socket.Tpo -c -o libnfs_la-svc_socket.lo `test -f 'svc_socket.c' || echo '$(srcdir)/'`svc_socket.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libnfs_la-svc_socket.Tpo $(DEPDIR)/libnfs_la-svc_socket.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='svc_socket.c' object='libnfs_la-svc_socket.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libnfs_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libnfs_la-svc_socket.lo `test -f 'svc_socket.c' || echo '$(srcdir)/'`svc_socket.c
+
+libnfs_la-cacheio.lo: cacheio.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libnfs_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libnfs_la-cacheio.lo -MD -MP -MF $(DEPDIR)/libnfs_la-cacheio.Tpo -c -o libnfs_la-cacheio.lo `test -f 'cacheio.c' || echo '$(srcdir)/'`cacheio.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libnfs_la-cacheio.Tpo $(DEPDIR)/libnfs_la-cacheio.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='cacheio.c' object='libnfs_la-cacheio.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libnfs_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libnfs_la-cacheio.lo `test -f 'cacheio.c' || echo '$(srcdir)/'`cacheio.c
+
+libnfs_la-closeall.lo: closeall.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libnfs_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libnfs_la-closeall.lo -MD -MP -MF $(DEPDIR)/libnfs_la-closeall.Tpo -c -o libnfs_la-closeall.lo `test -f 'closeall.c' || echo '$(srcdir)/'`closeall.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libnfs_la-closeall.Tpo $(DEPDIR)/libnfs_la-closeall.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='closeall.c' object='libnfs_la-closeall.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libnfs_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libnfs_la-closeall.lo `test -f 'closeall.c' || echo '$(srcdir)/'`closeall.c
+
+libnfs_la-nfs_mntent.lo: nfs_mntent.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libnfs_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libnfs_la-nfs_mntent.lo -MD -MP -MF $(DEPDIR)/libnfs_la-nfs_mntent.Tpo -c -o libnfs_la-nfs_mntent.lo `test -f 'nfs_mntent.c' || echo '$(srcdir)/'`nfs_mntent.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libnfs_la-nfs_mntent.Tpo $(DEPDIR)/libnfs_la-nfs_mntent.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='nfs_mntent.c' object='libnfs_la-nfs_mntent.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libnfs_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libnfs_la-nfs_mntent.lo `test -f 'nfs_mntent.c' || echo '$(srcdir)/'`nfs_mntent.c
+
+libnfs_la-svc_create.lo: svc_create.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libnfs_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libnfs_la-svc_create.lo -MD -MP -MF $(DEPDIR)/libnfs_la-svc_create.Tpo -c -o libnfs_la-svc_create.lo `test -f 'svc_create.c' || echo '$(srcdir)/'`svc_create.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libnfs_la-svc_create.Tpo $(DEPDIR)/libnfs_la-svc_create.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='svc_create.c' object='libnfs_la-svc_create.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libnfs_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libnfs_la-svc_create.lo `test -f 'svc_create.c' || echo '$(srcdir)/'`svc_create.c
+
+libnfs_la-atomicio.lo: atomicio.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libnfs_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libnfs_la-atomicio.lo -MD -MP -MF $(DEPDIR)/libnfs_la-atomicio.Tpo -c -o libnfs_la-atomicio.lo `test -f 'atomicio.c' || echo '$(srcdir)/'`atomicio.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libnfs_la-atomicio.Tpo $(DEPDIR)/libnfs_la-atomicio.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='atomicio.c' object='libnfs_la-atomicio.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libnfs_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libnfs_la-atomicio.lo `test -f 'atomicio.c' || echo '$(srcdir)/'`atomicio.c
+
+libnfs_la-strlcat.lo: strlcat.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libnfs_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libnfs_la-strlcat.lo -MD -MP -MF $(DEPDIR)/libnfs_la-strlcat.Tpo -c -o libnfs_la-strlcat.lo `test -f 'strlcat.c' || echo '$(srcdir)/'`strlcat.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libnfs_la-strlcat.Tpo $(DEPDIR)/libnfs_la-strlcat.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='strlcat.c' object='libnfs_la-strlcat.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libnfs_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libnfs_la-strlcat.lo `test -f 'strlcat.c' || echo '$(srcdir)/'`strlcat.c
+
+libnfs_la-strlcpy.lo: strlcpy.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libnfs_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libnfs_la-strlcpy.lo -MD -MP -MF $(DEPDIR)/libnfs_la-strlcpy.Tpo -c -o libnfs_la-strlcpy.lo `test -f 'strlcpy.c' || echo '$(srcdir)/'`strlcpy.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libnfs_la-strlcpy.Tpo $(DEPDIR)/libnfs_la-strlcpy.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='strlcpy.c' object='libnfs_la-strlcpy.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libnfs_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libnfs_la-strlcpy.lo `test -f 'strlcpy.c' || echo '$(srcdir)/'`strlcpy.c
 
 mostlyclean-libtool:
 	-rm -f *.lo
@@ -645,25 +787,25 @@ clean-am: clean-generic clean-libtool clean-noinstLIBRARIES \
 	clean-noinstLTLIBRARIES mostlyclean-am
 
 distclean: distclean-am
-		-rm -f ./$(DEPDIR)/atomicio.Plo
-	-rm -f ./$(DEPDIR)/cacheio.Plo
-	-rm -f ./$(DEPDIR)/closeall.Plo
-	-rm -f ./$(DEPDIR)/conffile.Plo
-	-rm -f ./$(DEPDIR)/exports.Plo
-	-rm -f ./$(DEPDIR)/getport.Plo
-	-rm -f ./$(DEPDIR)/mydaemon.Plo
-	-rm -f ./$(DEPDIR)/nfs_mntent.Plo
-	-rm -f ./$(DEPDIR)/rmtab.Plo
-	-rm -f ./$(DEPDIR)/rpc_socket.Plo
-	-rm -f ./$(DEPDIR)/rpcdispatch.Plo
-	-rm -f ./$(DEPDIR)/rpcmisc.Plo
-	-rm -f ./$(DEPDIR)/strlcat.Plo
-	-rm -f ./$(DEPDIR)/strlcpy.Plo
-	-rm -f ./$(DEPDIR)/svc_create.Plo
-	-rm -f ./$(DEPDIR)/svc_socket.Plo
-	-rm -f ./$(DEPDIR)/wildmat.Plo
-	-rm -f ./$(DEPDIR)/xcommon.Plo
-	-rm -f ./$(DEPDIR)/xio.Plo
+		-rm -f ./$(DEPDIR)/conffile.Plo
+	-rm -f ./$(DEPDIR)/libnfs_la-atomicio.Plo
+	-rm -f ./$(DEPDIR)/libnfs_la-cacheio.Plo
+	-rm -f ./$(DEPDIR)/libnfs_la-closeall.Plo
+	-rm -f ./$(DEPDIR)/libnfs_la-exports.Plo
+	-rm -f ./$(DEPDIR)/libnfs_la-getport.Plo
+	-rm -f ./$(DEPDIR)/libnfs_la-mydaemon.Plo
+	-rm -f ./$(DEPDIR)/libnfs_la-nfs_mntent.Plo
+	-rm -f ./$(DEPDIR)/libnfs_la-rmtab.Plo
+	-rm -f ./$(DEPDIR)/libnfs_la-rpc_socket.Plo
+	-rm -f ./$(DEPDIR)/libnfs_la-rpcdispatch.Plo
+	-rm -f ./$(DEPDIR)/libnfs_la-rpcmisc.Plo
+	-rm -f ./$(DEPDIR)/libnfs_la-strlcat.Plo
+	-rm -f ./$(DEPDIR)/libnfs_la-strlcpy.Plo
+	-rm -f ./$(DEPDIR)/libnfs_la-svc_create.Plo
+	-rm -f ./$(DEPDIR)/libnfs_la-svc_socket.Plo
+	-rm -f ./$(DEPDIR)/libnfs_la-wildmat.Plo
+	-rm -f ./$(DEPDIR)/libnfs_la-xcommon.Plo
+	-rm -f ./$(DEPDIR)/libnfs_la-xio.Plo
 	-rm -f ./$(DEPDIR)/xlog.Plo
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
@@ -710,25 +852,25 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-am
-		-rm -f ./$(DEPDIR)/atomicio.Plo
-	-rm -f ./$(DEPDIR)/cacheio.Plo
-	-rm -f ./$(DEPDIR)/closeall.Plo
-	-rm -f ./$(DEPDIR)/conffile.Plo
-	-rm -f ./$(DEPDIR)/exports.Plo
-	-rm -f ./$(DEPDIR)/getport.Plo
-	-rm -f ./$(DEPDIR)/mydaemon.Plo
-	-rm -f ./$(DEPDIR)/nfs_mntent.Plo
-	-rm -f ./$(DEPDIR)/rmtab.Plo
-	-rm -f ./$(DEPDIR)/rpc_socket.Plo
-	-rm -f ./$(DEPDIR)/rpcdispatch.Plo
-	-rm -f ./$(DEPDIR)/rpcmisc.Plo
-	-rm -f ./$(DEPDIR)/strlcat.Plo
-	-rm -f ./$(DEPDIR)/strlcpy.Plo
-	-rm -f ./$(DEPDIR)/svc_create.Plo
-	-rm -f ./$(DEPDIR)/svc_socket.Plo
-	-rm -f ./$(DEPDIR)/wildmat.Plo
-	-rm -f ./$(DEPDIR)/xcommon.Plo
-	-rm -f ./$(DEPDIR)/xio.Plo
+		-rm -f ./$(DEPDIR)/conffile.Plo
+	-rm -f ./$(DEPDIR)/libnfs_la-atomicio.Plo
+	-rm -f ./$(DEPDIR)/libnfs_la-cacheio.Plo
+	-rm -f ./$(DEPDIR)/libnfs_la-closeall.Plo
+	-rm -f ./$(DEPDIR)/libnfs_la-exports.Plo
+	-rm -f ./$(DEPDIR)/libnfs_la-getport.Plo
+	-rm -f ./$(DEPDIR)/libnfs_la-mydaemon.Plo
+	-rm -f ./$(DEPDIR)/libnfs_la-nfs_mntent.Plo
+	-rm -f ./$(DEPDIR)/libnfs_la-rmtab.Plo
+	-rm -f ./$(DEPDIR)/libnfs_la-rpc_socket.Plo
+	-rm -f ./$(DEPDIR)/libnfs_la-rpcdispatch.Plo
+	-rm -f ./$(DEPDIR)/libnfs_la-rpcmisc.Plo
+	-rm -f ./$(DEPDIR)/libnfs_la-strlcat.Plo
+	-rm -f ./$(DEPDIR)/libnfs_la-strlcpy.Plo
+	-rm -f ./$(DEPDIR)/libnfs_la-svc_create.Plo
+	-rm -f ./$(DEPDIR)/libnfs_la-svc_socket.Plo
+	-rm -f ./$(DEPDIR)/libnfs_la-wildmat.Plo
+	-rm -f ./$(DEPDIR)/libnfs_la-xcommon.Plo
+	-rm -f ./$(DEPDIR)/libnfs_la-xio.Plo
 	-rm -f ./$(DEPDIR)/xlog.Plo
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic

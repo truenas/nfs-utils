@@ -149,7 +149,7 @@ nfs_server_generator_OBJECTS = $(am_nfs_server_generator_OBJECTS)
 am__DEPENDENCIES_1 =
 nfs_server_generator_DEPENDENCIES = ../support/export/libexport.a \
 	../support/nfs/libnfs.la ../support/misc/libmisc.a \
-	$(am__DEPENDENCIES_1)
+	../support/reexport/libreexport.a $(am__DEPENDENCIES_1)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
@@ -328,6 +328,8 @@ LIBCRYPT = @LIBCRYPT@
 LIBEVENT = @LIBEVENT@
 LIBKEYUTILS = @LIBKEYUTILS@
 LIBMOUNT = @LIBMOUNT@
+LIBMOUNT_CFLAGS = @LIBMOUNT_CFLAGS@
+LIBMOUNT_LIBS = @LIBMOUNT_LIBS@
 LIBNSL = @LIBNSL@
 LIBOBJS = @LIBOBJS@
 LIBPTHREAD = @LIBPTHREAD@
@@ -429,7 +431,6 @@ localedir = @localedir@
 localstatedir = @localstatedir@
 mandir = @mandir@
 mkdir_p = @mkdir_p@
-modprobedir = @modprobedir@
 mountfile = @mountfile@
 nfsconfig = @nfsconfig@
 oldincludedir = @oldincludedir@
@@ -453,18 +454,19 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 unitdir = @unitdir@
 MAINTAINERCLEANFILES = Makefile.in
-modprobe_files = 50-nfs.conf
+udev_rulesdir = /usr/lib/udev/rules.d/
+udev_files = 60-nfs.rules
 unit_files = nfs-client.target rpc_pipefs.target nfs-mountd.service \
 	nfs-server.service nfs-utils.service rpc-statd-notify.service \
-	rpc-statd.service proc-fs-nfsd.mount $(am__append_1) \
-	$(am__append_2) $(am__append_3) $(am__append_4) \
-	$(am__append_5) $(am__append_6)
+	rpc-statd.service proc-fs-nfsd.mount fsidd.service \
+	$(am__append_1) $(am__append_2) $(am__append_3) \
+	$(am__append_4) $(am__append_5) $(am__append_6)
 rpc_pipefs_mount_file = \
     var-lib-nfs-rpc_pipefs.mount
 
 man5_MANS = nfs.conf.man
 man7_MANS = nfs.systemd.man
-EXTRA_DIST = $(unit_files) $(modprobe_files) $(man5_MANS) $(man7_MANS)
+EXTRA_DIST = $(unit_files) $(udev_files) $(man5_MANS) $(man7_MANS)
 generator_dir = $(unitdir)/../system-generators
 genexecdir = $(generator_dir)
 COMMON_SRCS = systemd.c systemd.h
@@ -473,6 +475,7 @@ rpc_pipefs_generator_SOURCES = $(COMMON_SRCS) rpc-pipefs-generator.c
 nfs_server_generator_LDADD = ../support/export/libexport.a \
 			     ../support/nfs/libnfs.la \
 			     ../support/misc/libmisc.a \
+			     ../support/reexport/libreexport.a \
 			     $(LIBPTHREAD)
 
 rpc_pipefs_generator_LDADD = ../support/nfs/libnfs.la
@@ -820,6 +823,7 @@ maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
 	@echo "it deletes files that may require special tools to rebuild."
 	-test -z "$(MAINTAINERCLEANFILES)" || rm -f $(MAINTAINERCLEANFILES)
+@INSTALL_SYSTEMD_FALSE@install-data-hook:
 clean: clean-am
 
 clean-am: clean-generic clean-genexecPROGRAMS clean-libtool \
@@ -919,13 +923,12 @@ uninstall-man: uninstall-man5 uninstall-man7
 
 .PRECIOUS: Makefile
 
-@INSTALL_SYSTEMD_TRUE@install-data-hook: $(unit_files) $(modprobe_files)
+@INSTALL_SYSTEMD_TRUE@install-data-hook: $(unit_files) $(udev_files)
 @INSTALL_SYSTEMD_TRUE@	mkdir -p $(DESTDIR)/$(unitdir)
 @INSTALL_SYSTEMD_TRUE@	cp $(unit_files) $(DESTDIR)/$(unitdir)
 @INSTALL_SYSTEMD_TRUE@	cp $(rpc_pipefs_mount_file) $(DESTDIR)/$(unitdir)/$(rpc_pipefsmount)
-@INSTALL_SYSTEMD_FALSE@install-data-hook: $(modprobe_files)
-@INSTALL_MODPROBEDIR_TRUE@	mkdir -p $(DESTDIR)$(modprobedir)
-@INSTALL_MODPROBEDIR_TRUE@	cp $(modprobe_files) $(DESTDIR)$(modprobedir)
+@INSTALL_SYSTEMD_TRUE@	mkdir -p $(DESTDIR)/$(udev_rulesdir)
+@INSTALL_SYSTEMD_TRUE@	cp $(udev_files) $(DESTDIR)/$(udev_rulesdir)
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

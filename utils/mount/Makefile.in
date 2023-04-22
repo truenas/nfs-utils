@@ -143,7 +143,9 @@ mount_nfs_OBJECTS = $(am_mount_nfs_OBJECTS)
 am__DEPENDENCIES_1 =
 @CONFIG_LIBMOUNT_TRUE@am__DEPENDENCIES_2 = $(am__DEPENDENCIES_1)
 mount_nfs_DEPENDENCIES = ../../support/nfs/libnfs.la \
-	../../support/export/libexport.a ../../support/misc/libmisc.a \
+	../../support/export/libexport.a \
+	../../support/reexport/libreexport.a \
+	../../support/misc/libmisc.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_2)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -319,6 +321,8 @@ LIBCRYPT = @LIBCRYPT@
 LIBEVENT = @LIBEVENT@
 LIBKEYUTILS = @LIBKEYUTILS@
 LIBMOUNT = @LIBMOUNT@
+LIBMOUNT_CFLAGS = @LIBMOUNT_CFLAGS@
+LIBMOUNT_LIBS = @LIBMOUNT_LIBS@
 LIBNSL = @LIBNSL@
 LIBOBJS = @LIBOBJS@
 LIBPTHREAD = @LIBPTHREAD@
@@ -420,7 +424,6 @@ localedir = @localedir@
 localstatedir = @localstatedir@
 mandir = @mandir@
 mkdir_p = @mkdir_p@
-modprobedir = @modprobedir@
 mountfile = @mountfile@
 nfsconfig = @nfsconfig@
 oldincludedir = @oldincludedir@
@@ -458,8 +461,10 @@ mount_common = error.c network.c token.c parse_opt.c parse_dev.c \
 	stropts.h version.h mount_config.h utils.c utils.h nfs_mount.h \
 	$(am__append_1)
 mount_nfs_LDADD = ../../support/nfs/libnfs.la \
-	../../support/export/libexport.a ../../support/misc/libmisc.a \
-	$(LIBTIRPC) $(am__append_5)
+	../../support/export/libexport.a \
+	../../support/reexport/libreexport.a \
+	../../support/misc/libmisc.a $(LIBTIRPC) $(LIBPTHREAD) \
+	$(am__append_5)
 mount_nfs_SOURCES = $(mount_common) $(am__append_4) $(am__append_6)
 MAINTAINERCLEANFILES = Makefile.in
 all: all-am

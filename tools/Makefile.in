@@ -89,6 +89,7 @@ build_triplet = @build@
 host_triplet = @host@
 @CONFIG_RPCGEN_TRUE@am__append_1 = rpcgen
 @CONFIG_NFSDCLD_TRUE@am__append_2 = nfsdclddb
+@CONFIG_NFSRAHEAD_TRUE@am__append_3 = nfsrahead
 subdir = tools
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/aclocal/ax_gcc_func_attribute.m4 \
@@ -167,7 +168,7 @@ am__define_uniq_tagged_files = \
     if test -f "$$i"; then echo $$i; else echo $(srcdir)/$$i; fi; \
   done | $(am__uniquify_input)`
 DIST_SUBDIRS = locktest rpcdebug nlmtest mountstats nfs-iostat rpcctl \
-	nfsdclnts nfsrahead rpcgen nfsconf nfsdclddb
+	nfsdclnts rpcgen nfsconf nfsdclddb nfsrahead
 am__DIST_COMMON = $(srcdir)/Makefile.in
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 am__relativize = \
@@ -267,6 +268,8 @@ LIBCRYPT = @LIBCRYPT@
 LIBEVENT = @LIBEVENT@
 LIBKEYUTILS = @LIBKEYUTILS@
 LIBMOUNT = @LIBMOUNT@
+LIBMOUNT_CFLAGS = @LIBMOUNT_CFLAGS@
+LIBMOUNT_LIBS = @LIBMOUNT_LIBS@
 LIBNSL = @LIBNSL@
 LIBOBJS = @LIBOBJS@
 LIBPTHREAD = @LIBPTHREAD@
@@ -368,7 +371,6 @@ localedir = @localedir@
 localstatedir = @localstatedir@
 mandir = @mandir@
 mkdir_p = @mkdir_p@
-modprobedir = @modprobedir@
 mountfile = @mountfile@
 nfsconfig = @nfsconfig@
 oldincludedir = @oldincludedir@
@@ -391,8 +393,8 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 unitdir = @unitdir@
-OPTDIRS = $(am__append_1) nfsconf $(am__append_2)
-SUBDIRS = locktest rpcdebug nlmtest mountstats nfs-iostat rpcctl nfsdclnts nfsrahead $(OPTDIRS)
+OPTDIRS = $(am__append_1) nfsconf $(am__append_2) $(am__append_3)
+SUBDIRS = locktest rpcdebug nlmtest mountstats nfs-iostat rpcctl nfsdclnts $(OPTDIRS)
 MAINTAINERCLEANFILES = Makefile.in
 all: all-recursive
 

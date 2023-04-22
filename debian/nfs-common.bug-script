@@ -9,20 +9,20 @@ echo '-- rpcinfo --' >&3
 /usr/sbin/rpcinfo -p >&3
 
 echo '-- /etc/default/nfs-common --' >&3
-cat /etc/default/nfs-common|grep_no_match_ok -v -e '^\#' -e '^$' >&3
+cat /etc/default/nfs-common|grep_no_match_ok -v -e '^#' -e '^$' >&3
 
 echo '-- /etc/nfs.conf --' >&3
-cat /etc/nfs.conf|grep_no_match_ok -v -e '^\#' -e '^$' >&3
+cat /etc/nfs.conf|grep_no_match_ok -v -e '^#' -e '^$' >&3
 
 if [ -d /etc/nfs.conf.d ]; then
     for f in /etc/nfs.conf.d/*.conf; do
         echo "-- $f --" >&3
-        cat "$f" | grep_no_match_ok -v -e '^\#' -e '^$' >&3
+        cat "$f" | grep_no_match_ok -v -e '^#' -e '^$' >&3
     done
 fi
 
 echo '-- /etc/idmapd.conf --' >&3
-cat /etc/idmapd.conf|grep_no_match_ok -v -e '^\#' -e '^$' >&3
+cat /etc/idmapd.conf|grep_no_match_ok -v -e '^#' -e '^$' >&3
 
 echo '-- /etc/fstab --' >&3
 cat /etc/fstab|grep_no_match_ok nfs >&3

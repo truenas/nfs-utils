@@ -6,6 +6,10 @@ nfs-utils (1:2.6.3-1~exp1) UNRELEASED; urgency=medium
   [ Salvatore Bonaccorso ]
   * New upstream version 2.6.3
 
+  [ наб ]
+  * d/nfs-common.bug-script: fix stray \ warnings
+  * d/nfs-kernel-server.bug-script: fix stray \ warnings
+
  -- Ben Hutchings <benh@debian.org>  Fri, 03 Mar 2023 15:04:15 +0100
 
 nfs-utils (1:2.6.2-4) unstable; urgency=medium

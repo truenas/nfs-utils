@@ -47,6 +47,7 @@ Package: libnfsidmap-dev
 Section: libdevel
 Architecture: any
 Depends: libnfsidmap1 (= ${binary:Version}), ${misc:Depends}
+Multi-Arch: same
 Description: header files and docs for libnfsidmap
  Contains the header files and documentation for libnfsidmap
  for use in developing applications that use the libnfsidmap library.

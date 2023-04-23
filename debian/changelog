@@ -5,6 +5,7 @@ nfs-utils (1:2.6.3-1~exp1) UNRELEASED; urgency=medium
 
   [ Salvatore Bonaccorso ]
   * New upstream version 2.6.3
+  * nfs-kernel-server: export: Add fsidd
 
   [ наб ]
   * d/nfs-common.bug-script: fix stray \ warnings

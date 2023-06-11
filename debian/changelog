@@ -8,6 +8,7 @@ nfs-utils (1:2.6.3-1~exp2) UNRELEASED; urgency=medium
 
   [ Ben Hutchings ]
   * Remove obsolete postinst upgrade logic and nfsconvert.py
+  * init: Remove support for setting command-line options in /etc/default
 
  -- Salvatore Bonaccorso <carnil@debian.org>  Wed, 14 Jun 2023 06:47:45 +0200
 

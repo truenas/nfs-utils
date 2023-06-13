@@ -29,6 +29,11 @@ override_dh_fixperms:
 	dh_fixperms
 	chmod u+s debian/nfs-common/sbin/mount.nfs
 
+override_dh_install:
+	# we will let the generator produce these units, see LP: #1971935
+	# and https://bugs.debian.org/1014429
+	dh_install -Xvar-lib-nfs-rpc_pipefs.mount -Xrpc_pipefs.target
+
 override_dh_installinit:
 	dh_installinit -pnfs-common -R
 	install -m 0755 debian/nfs-kernel-server.init debian/nfs-kernel-server/etc/init.d/nfs-kernel-server

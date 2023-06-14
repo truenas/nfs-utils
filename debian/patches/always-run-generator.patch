@@ -3,7 +3,7 @@ Description: Always run the generator
 Author: Andreas Hasenack <andreas@canonical.com>
 Bug-Ubuntu: https://bugs.launchpad.net/bugs/1971935
 Bug-Debian: https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=1014429
-Forwarded: https://marc.info/?l=linux-nfs&m=165754514206399&w=4
+Forwarded: https://lore.kernel.org/linux-nfs/EE39279C-4E40-48C8-ABC9-707EB1AD6D79@redhat.com/
 Last-Update: 2022-07-12
 ---
 This patch header follows DEP-3: http://dep.debian.net/deps/dep3/

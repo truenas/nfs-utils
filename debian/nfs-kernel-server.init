@@ -25,11 +25,8 @@ PREFIX=/usr
 
 # Read config
 DEFAULTFILE=/etc/default/nfs-kernel-server
-RPCNFSDCOUNT=8
 RPCNFSDPRIORITY=0
-RPCMOUNTDOPTS=
 NEED_SVCGSSD=no
-RPCSVCGSSDOPTS=
 PROCNFSD_MOUNTPOINT=/proc/fs/nfsd
 if [ -f $DEFAULTFILE ]; then
     . $DEFAULTFILE
@@ -100,7 +97,7 @@ case "$1" in
 
 		start-stop-daemon --start --oknodo --quiet \
 		    --nicelevel $RPCNFSDPRIORITY \
-		    --exec $PREFIX/sbin/rpc.nfsd -- $RPCNFSDCOUNT
+		    --exec $PREFIX/sbin/rpc.nfsd
 		RET=$?
 		if [ $RET != 0 ]; then
 			log_end_msg $RET
@@ -123,7 +120,7 @@ case "$1" in
 			do_modprobe rpcsec_gss_krb5
 			log_progress_msg "svcgssd"
 			start-stop-daemon --start --oknodo --quiet \
-			    --exec $PREFIX/sbin/rpc.svcgssd -- $RPCSVCGSSDOPTS
+			    --exec $PREFIX/sbin/rpc.svcgssd
 			RET=$?
 			if [ $RET != 0 ]; then
 				log_end_msg $RET
@@ -133,7 +130,7 @@ case "$1" in
 
 		log_progress_msg "mountd"
 		start-stop-daemon --start --oknodo --quiet \
-		    --exec $PREFIX/sbin/rpc.mountd -- $RPCMOUNTDOPTS
+		    --exec $PREFIX/sbin/rpc.mountd
 		RET=$?
 		if [ $RET != 0 ]; then
 			log_end_msg $RET

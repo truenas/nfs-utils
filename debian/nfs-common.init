@@ -20,7 +20,6 @@ DEFAULTFILE=/etc/default/nfs-common
 NEED_STATD=
 NEED_GSSD=
 PIPEFS_MOUNTPOINT=/run/rpc_pipefs
-RPCGSSDOPTS=
 if [ -f $DEFAULTFILE ]; then
     . $DEFAULTFILE
 fi
@@ -134,7 +133,7 @@ case "$1" in
 	    fi
 	    start-stop-daemon --start --oknodo --quiet \
 		--pidfile /run/rpc.statd.pid \
-	        --exec /sbin/rpc.statd -- $STATDOPTS
+	        --exec /sbin/rpc.statd
 	    RET=$?
 	    if [ $RET != 0 ]; then
 	        log_end_msg $RET
@@ -184,7 +183,7 @@ case "$1" in
 		    fi
 
 		    start-stop-daemon --start --oknodo --quiet \
-			    --exec /usr/sbin/rpc.gssd -- $RPCGSSDOPTS
+			    --exec /usr/sbin/rpc.gssd
 		    RET=$?
 	            if [ $RET != 0 ]; then
         	        log_end_msg $RET

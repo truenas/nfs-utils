@@ -1,0 +1,41 @@
+From: Ben Hutchings <benh@debian.org>
+Date: Tue, 13 Jun 2023 03:56:03 +0200
+Subject: start-statd: Fix shellcheck warnings
+
+shellcheck currently complains:
+
+In utils/statd/start-statd line 14:
+       [ 1`cat /run/rpc.statd.pid` -gt 1 ] &&
+          ^----------------------^ SC2046 (warning): Quote this to prevent word splitting.
+          ^----------------------^ SC2006 (style): Use $(...) notation instead of legacy backticks `...`.
+
+Did you mean:
+       [ 1$(cat /run/rpc.statd.pid) -gt 1 ] &&
+
+
+In utils/statd/start-statd line 15:
+       kill -0 `cat /run/rpc.statd.pid` > /dev/null 2>&1
+               ^----------------------^ SC2046 (warning): Quote this to prevent word splitting.
+               ^----------------------^ SC2006 (style): Use $(...) notation instead of legacy backticks `...`.
+
+Did you mean:
+       kill -0 $(cat /run/rpc.statd.pid) > /dev/null 2>&1
+
+Use quotes and $() as recommended.
+
+Signed-off-by: Ben Hutchings <benh@debian.org>
+---
+
+--- a/utils/statd/start-statd
++++ b/utils/statd/start-statd
+@@ -11,8 +11,8 @@ exec 9> /run/rpc.statd.lock
+ flock -e 9
+ 
+ if [ -s /run/rpc.statd.pid ] &&
+-       [ 1`cat /run/rpc.statd.pid` -gt 1 ] &&
+-       kill -0 `cat /run/rpc.statd.pid` > /dev/null 2>&1
++       [ "1$(cat /run/rpc.statd.pid)" -gt 1 ] &&
++       kill -0 "$(cat /run/rpc.statd.pid)" > /dev/null 2>&1
+ then
+     # statd already running - must have been slow to respond.
+     exit 0

@@ -15,6 +15,13 @@ case "$1" in
 	done
 
 	update-rc.d nfs-kernel-server defaults 20 80 >/dev/null
+
+	# Remove leftover /fsid.sock file on upgrade (Cf. #1041147)
+	if dpkg --compare-versions "$2" lt 1:2.6.3-2~; then
+		if [ -S /fsid.sock ]; then
+			rm -f /fsid.sock
+		fi
+	fi
     ;;
 esac
 

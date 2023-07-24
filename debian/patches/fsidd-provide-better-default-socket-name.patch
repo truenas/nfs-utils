@@ -1,7 +1,7 @@
 From: NeilBrown <neilb@suse.de>
 Date: Thu, 11 May 2023 14:26:47 -0400
 Subject: fsidd: provide better default socket name.
-Origin: https://git.kernel.org/linus/e00ab3c0616fe6d83ab0710d9e7d989c299088f7
+Origin: http://git.linux-nfs.org/?p=steved/nfs-utils.git;a=commit;h=e00ab3c0616fe6d83ab0710d9e7d989c299088f7
 Bug-Debian: https://bugs.debian.org/1041147
 
 Having the default socket name be in the current directory is a poor

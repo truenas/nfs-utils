@@ -1,4 +1,4 @@
-nfs-utils (1:2.6.3-3) UNRELEASED; urgency=medium
+nfs-utils (1:2.6.3-3) unstable; urgency=medium
 
   * nfs-idmapd.service: add network-online.target to Wants= and After=
     (Closes: #1035840)
@@ -6,7 +6,7 @@ nfs-utils (1:2.6.3-3) UNRELEASED; urgency=medium
     lookup fails and always show the log message if the domain can't be
     determined
 
- -- Salvatore Bonaccorso <carnil@debian.org>  Tue, 01 Aug 2023 14:57:16 +0200
+ -- Salvatore Bonaccorso <carnil@debian.org>  Tue, 01 Aug 2023 15:10:41 +0200
 
 nfs-utils (1:2.6.3-2) unstable; urgency=medium
 

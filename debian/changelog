@@ -1,3 +1,9 @@
+nfs-utils (1:2.6.3-4) UNRELEASED; urgency=medium
+
+  * Remove extraneous words left behind by commit 522837f. (Closes: #1051088)
+
+ -- Salvatore Bonaccorso <carnil@debian.org>  Mon, 25 Sep 2023 21:19:04 +0200
+
 nfs-utils (1:2.6.3-3) unstable; urgency=medium
 
   * nfs-idmapd.service: add network-online.target to Wants= and After=

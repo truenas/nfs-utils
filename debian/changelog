@@ -12,6 +12,7 @@ nfs-utils (1:2.6.3-4) UNRELEASED; urgency=medium
     - debian/*.links: Create symlinks for systemd units from and to
       /usr/lib/systemd/system instead of /lib/systemd/system
   * debian/rules: Don't force nfsdcltrack and mount helpers into /sbin
+  * nfs-common: Install {u,}mount.nfs{,4} into /usr/sbin
 
  -- Salvatore Bonaccorso <carnil@debian.org>  Mon, 25 Sep 2023 21:19:04 +0200
 

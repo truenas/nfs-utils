@@ -1,6 +1,6 @@
 nfs-common: file-missing-in-md5sums var/lib/nfs/state [md5sums]
-nfs-common: elevated-privileges 4755 root/root [sbin/mount.nfs]
+nfs-common: elevated-privileges 4755 root/root [usr/sbin/mount.nfs]
 # The mount.nfs and umount.nfs manual pages also cover these, but
 # lintian doesn't notice that
-nfs-common: no-manual-page [sbin/mount.nfs4]
-nfs-common: no-manual-page [sbin/umount.nfs4]
+nfs-common: no-manual-page [usr/sbin/mount.nfs4]
+nfs-common: no-manual-page [usr/sbin/umount.nfs4]

@@ -1,5 +1,5 @@
 debian/tmp/usr/sbin/exportfs
-debian/tmp/sbin/nfsdcltrack
+debian/tmp/usr/sbin/nfsdcltrack
 debian/tmp/usr/sbin/fsidd
 debian/tmp/usr/sbin/nfsdcld
 debian/tmp/usr/sbin/nfsdclddb

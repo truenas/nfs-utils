@@ -27,7 +27,7 @@ fi
 . /lib/lsb/init-functions
 
 # Exit if required binaries are missing.
-[ -x /sbin/rpc.statd ] || exit 0
+[ -x /usr/sbin/rpc.statd ] || exit 0
 
 #
 # Parse the fstab file, and determine whether we need gssd. (The
@@ -133,7 +133,7 @@ case "$1" in
 	    fi
 	    start-stop-daemon --start --oknodo --quiet \
 		--pidfile /run/rpc.statd.pid \
-	        --exec /sbin/rpc.statd
+	        --exec /usr/sbin/rpc.statd
 	    RET=$?
 	    if [ $RET != 0 ]; then
 	        log_end_msg $RET

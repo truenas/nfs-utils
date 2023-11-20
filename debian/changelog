@@ -16,6 +16,11 @@ nfs-utils (1:2.6.3-4) UNRELEASED; urgency=medium
   * nfs-common: lintian-overides: Adjust paths after installation to /usr/sbin
   * nfs-kernel-server: Install nfsdcltrack to /usr/sbin
   * debian/rules: Update chmod call to fix permissions of /usr/sbin/mount.nfs
+  * Install rpc.statd, sm-notify and showmount into /usr/sbin
+    - Install binaries to default locations in /usr/sbin
+    - Drop now oboslete patches to reference sm-notify from /sbin
+    - Drop now obsolete patches to change ExecStart to start sm-notify and
+      rpc.statd from /sbin
 
  -- Salvatore Bonaccorso <carnil@debian.org>  Mon, 25 Sep 2023 21:19:04 +0200
 

@@ -18,7 +18,8 @@ override_dh_auto_configure:
 		--enable-svcgss \
 		--with-pluginpath=/usr/lib/$(DEB_HOST_MULTIARCH)/libnfsidmap \
 		--with-tcp-wrappers \
-		--with-systemd
+		--with-systemd \
+		--disable-sbin-override
 
 override_dh_bugfiles:
 	dh_bugfiles

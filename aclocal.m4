@@ -10594,6 +10594,7 @@ AC_SUBST([am__untar])
 
 m4_include([aclocal/ax_gcc_func_attribute.m4])
 m4_include([aclocal/bsdsignals.m4])
+m4_include([aclocal/getrandom.m4])
 m4_include([aclocal/ipv6.m4])
 m4_include([aclocal/kerberos5.m4])
 m4_include([aclocal/keyutils.m4])

@@ -1,8 +1,8 @@
-nfs-utils (1:2.6.4-1) UNRELEASED; urgency=medium
+nfs-utils (1:2.6.4-1~exp1) experimental; urgency=medium
 
   * New upstream version 2.6.4
 
- -- Salvatore Bonaccorso <carnil@debian.org>  Tue, 21 Nov 2023 14:45:59 +0100
+ -- Salvatore Bonaccorso <carnil@debian.org>  Tue, 21 Nov 2023 16:02:51 +0100
 
 nfs-utils (1:2.6.3-4~exp1) experimental; urgency=medium
 

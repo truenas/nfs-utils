@@ -107,6 +107,9 @@
 /* Define to 1 if you have the `getnameinfo' function. */
 #undef HAVE_GETNAMEINFO
 
+/* Define to 1 if you have the `getrandom' function. */
+#undef HAVE_GETRANDOM
+
 /* Define to 1 if you have the `getrpcbyname' function. */
 #undef HAVE_GETRPCBYNAME
 

@@ -93,6 +93,7 @@ subdir = utils/exportfs
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/aclocal/ax_gcc_func_attribute.m4 \
 	$(top_srcdir)/aclocal/bsdsignals.m4 \
+	$(top_srcdir)/aclocal/getrandom.m4 \
 	$(top_srcdir)/aclocal/ipv6.m4 \
 	$(top_srcdir)/aclocal/kerberos5.m4 \
 	$(top_srcdir)/aclocal/keyutils.m4 \
@@ -270,6 +271,7 @@ GSSGLUE_CFLAGS = @GSSGLUE_CFLAGS@
 GSSGLUE_LIBS = @GSSGLUE_LIBS@
 GSSKRB_CFLAGS = @GSSKRB_CFLAGS@
 GSSKRB_LIBS = @GSSKRB_LIBS@
+HAVE_GETRANDOM = @HAVE_GETRANDOM@
 HAVE_LIBWRAP = @HAVE_LIBWRAP@
 HAVE_TCP_WRAPPER = @HAVE_TCP_WRAPPER@
 IDMAPD = @IDMAPD@

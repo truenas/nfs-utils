@@ -3,7 +3,7 @@ Priority: optional
 Section: net
 Maintainer: Debian kernel team <debian-kernel@lists.debian.org>
 Uploaders: Anibal Monsalve Salazar <anibal@debian.org>, Ben Hutchings <benh@debian.org>, Steve Langasek <vorlon@debian.org>, Salvatore Bonaccorso <carnil@debian.org>
-Build-Depends: debhelper-compat (= 13), libwrap0-dev, libevent-dev, libkrb5-dev, libblkid-dev, libkeyutils-dev, pkg-config, libldap2-dev, libcap-dev, libtirpc-dev, libdevmapper-dev, libmount-dev, libsqlite3-dev
+Build-Depends: debhelper-compat (= 13), libwrap0-dev, libevent-dev, libkrb5-dev, libblkid-dev, libkeyutils-dev, pkg-config, libldap2-dev, libcap-dev, libtirpc-dev, libdevmapper-dev, libmount-dev, libsqlite3-dev, libxml2-dev
 Standards-Version: 4.6.2
 Homepage: https://linux-nfs.org/
 Vcs-Git: https://salsa.debian.org/kernel-team/nfs-utils.git

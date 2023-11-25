@@ -12,6 +12,7 @@ include /usr/share/dpkg/architecture.mk
 	dh $@
 
 override_dh_auto_configure:
+# Use --with-systemd=/lib/systemd/system if backporting to bookworm or earlier
 	dh_auto_configure -- \
 		--mandir='$${prefix}/share/man' \
 		--enable-libmount-mount \

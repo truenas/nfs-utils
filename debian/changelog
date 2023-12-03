@@ -1,3 +1,11 @@
+nfs-utils (1:2.6.4-3) UNRELEASED; urgency=medium
+
+  [ Salvatore Bonaccorso ]
+  * fsidd: call anonymous sockets by their name only, don't fill with NULs to
+    108 bytes (Closes: #1051132)
+
+ -- Salvatore Bonaccorso <carnil@debian.org>  Sun, 03 Dec 2023 14:52:01 +0100
+
 nfs-utils (1:2.6.4-2) unstable; urgency=medium
 
   * Built with enabled support for NFS junctions

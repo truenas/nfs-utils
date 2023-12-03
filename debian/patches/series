@@ -1,2 +1,3 @@
 multiarch-kerberos-paths.patch
 always-run-generator.patch
+fsidd-call-anonymous-sockets-by-their-name-only-don-.patch

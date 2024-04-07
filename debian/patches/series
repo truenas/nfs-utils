@@ -1,3 +1,4 @@
 multiarch-kerberos-paths.patch
 always-run-generator.patch
 fsidd-call-anonymous-sockets-by-their-name-only-don-.patch
+junction-export-cache-cast-to-a-type-with-a-known-si.patch

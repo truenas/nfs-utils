@@ -1,0 +1,53 @@
+From 774394df352c249775d51d5d6e3effa775096b4f Mon Sep 17 00:00:00 2001
+From: Salvatore Bonaccorso <carnil@debian.org>
+Date: Sat, 6 Apr 2024 20:48:43 +0200
+Subject: [PATCH] junction: export-cache: cast to a type with a known size to
+ ensure sprintf works
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+As reported in Debian, with the 64bit time_t transition for the armel
+and armhf architecture, it was found that nfs-utils fails to compile
+with:
+
+	libtool: compile:  gcc -DHAVE_CONFIG_H -I. -I../../support/include -I/usr/include/tirpc -I/usr/include/libxml2 -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -D_TIME_BITS=64 -Wdate-time -D_FORTIFY_SOURCE=2 -D_GNU_SOURCE -pipe -Wall -Wextra -Werror=strict-prototypes -Werror=missing-prototypes -Werror=missing-declarations -Werror=format=2 -Werror=undef -Werror=missing-include-dirs -Werror=strict-aliasing=2 -Werror=init-self -Werror=implicit-function-declaration -Werror=return-type -Werror=switch -Werror=overflow -Werror=parentheses -Werror=aggregate-return -Werror=unused-result -fno-strict-aliasing -Werror=format-overflow=2 -Werror=int-conversion -Werror=incompatible-pointer-types -Werror=misleading-indentation -Wno-cast-function-type -g -O2 -Werror=implicit-function-declaration -ffile-prefix-map=/<<PKGBUILDDIR>>=. -fstack-protector-strong -fstack-clash-protection -Wformat -Werror=format-security -c xml.c  -fPIC -DPIC -o .libs/xml.o
+	export-cache.c: In function ‘junction_flush_exports_cache’:
+	export-cache.c:110:51: error: format ‘%ld’ expects argument of type ‘long int’, but argument 4 has type ‘time_t’ {aka ‘long long int’} [-Werror=format=]
+	  110 |         snprintf(flushtime, sizeof(flushtime), "%ld\n", now);
+	      |                                                 ~~^     ~~~
+	      |                                                   |     |
+	      |                                                   |     time_t {aka long long int}
+	      |                                                   long int
+	      |                                                 %lld
+
+time_t is not guaranteed to be 64-bit, so it must be coerced into the expected
+type for printf. Cast it to long long.
+
+Reported-by: Vladimir Petko <vladimir.petko@canonical.com>
+Closes: https://bugzilla.kernel.org/show_bug.cgi?id=218540
+Link: https://bugs.debian.org/1067829
+Link: https://bugs.launchpad.net/ubuntu/+source/nfs-utils/+bug/2055349
+Fixes: 494d22396d3d ("Add LDAP-free version of libjunction to nfs-utils")
+Suggested-by: Vladimir Petko <vladimir.petko@canonical.com>
+Signed-off-by: Salvatore Bonaccorso <carnil@debian.org>
+---
+ support/junction/export-cache.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/support/junction/export-cache.c b/support/junction/export-cache.c
+index 4e578c9b37b1..00187c019d60 100644
+--- a/support/junction/export-cache.c
++++ b/support/junction/export-cache.c
+@@ -107,7 +107,7 @@ junction_flush_exports_cache(void)
+ 		xlog(D_GENERAL, "%s: time(3) failed", __func__);
+ 		return FEDFS_ERR_SVRFAULT;
+ 	}
+-	snprintf(flushtime, sizeof(flushtime), "%ld\n", now);
++	snprintf(flushtime, sizeof(flushtime), "%lld\n", (long long)now);
+ 
+ 	for (i = 0; junction_proc_files[i] != NULL; i++) {
+ 		retval = junction_write_time(junction_proc_files[i], flushtime);
+-- 
+2.43.0
+

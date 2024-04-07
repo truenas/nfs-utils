@@ -1,9 +1,9 @@
-nfs-utils (1:2.6.4-4) UNRELEASED; urgency=medium
+nfs-utils (1:2.6.4-4) unstable; urgency=medium
 
   * junction: export-cache: cast to a type with a known size to ensure sprintf
     works (Closes: #1067829)
 
- -- Salvatore Bonaccorso <carnil@debian.org>  Sat, 06 Apr 2024 21:22:54 +0200
+ -- Salvatore Bonaccorso <carnil@debian.org>  Sun, 07 Apr 2024 07:01:47 +0200
 
 nfs-utils (1:2.6.4-3) unstable; urgency=medium
 

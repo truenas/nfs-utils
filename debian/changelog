@@ -10,6 +10,7 @@ nfs-utils (1:2.6.4-6) UNRELEASED; urgency=medium
 
   [ Ben Hutchings ]
   * Stop shipping /var/lib/nfs/{etab,rmtab,state} (Closes: #1074359)
+  * Preserve /var/lib/nfs/{etab,rmtab,state} on upgrade from old version
 
  -- Salvatore Bonaccorso <carnil@debian.org>  Thu, 11 Jul 2024 12:45:46 +0200
 

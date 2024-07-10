@@ -1,0 +1,3 @@
+debian/tmp/var/lib/nfs/etab
+debian/tmp/var/lib/nfs/rmtab
+debian/tmp/var/lib/nfs/state

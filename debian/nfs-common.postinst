@@ -14,7 +14,8 @@ case "$1" in
 
         chown statd: /var/lib/nfs/sm \
             /var/lib/nfs/sm.bak
-        if [ -f /var/lib/nfs/state ]; then
+        if ! [ -e /var/lib/nfs/state ]; then
+	    touch /var/lib/nfs/state
             chown statd /var/lib/nfs/state
         fi
     ;;

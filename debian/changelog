@@ -1,3 +1,15 @@
+nfs-utils (1:2.6.4-6) UNRELEASED; urgency=medium
+
+  [ Andreas Hasenack ]
+  * d/t/{control,kerberos-mount,util}: test NFSv4 krb5p mounts
+  * d/t/{control, v3-mount}: specific NFSv3 mount test
+  * kerberos-mount: improve cleanup()
+  * v3-mount: improve cleanup()
+  * d/t/util: remove shebang
+  * d/t/util: remove unused die() function
+
+ -- Salvatore Bonaccorso <carnil@debian.org>  Thu, 11 Jul 2024 12:45:46 +0200
+
 nfs-utils (1:2.6.4-5) unstable; urgency=medium
 
   * Add missing #include <stddef.h> (Closes: #1073818)

@@ -8,6 +8,13 @@ nfs-utils (1:2.6.4-6) UNRELEASED; urgency=medium
   * d/t/util: remove shebang
   * d/t/util: remove unused die() function
 
+  [ Ben Hutchings ]
+  * Stop shipping /var/lib/nfs/{etab,rmtab,state} (Closes: #1074359)
+  * Preserve /var/lib/nfs/{etab,rmtab,state} on upgrade from old version
+  * nfs-kernel-server: Don't remove /var/lib/nfs/{etab,rmtab} in a failed
+    upgrade
+  * nfs-common: Remove /var/lib/nfs/{sm,sm.bak,state} in unusual removal cases
+
  -- Salvatore Bonaccorso <carnil@debian.org>  Thu, 11 Jul 2024 12:45:46 +0200
 
 nfs-utils (1:2.6.4-5) unstable; urgency=medium

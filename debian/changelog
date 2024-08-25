@@ -15,6 +15,9 @@ nfs-utils (1:2.6.4-6) UNRELEASED; urgency=medium
     upgrade
   * nfs-common: Remove /var/lib/nfs/{sm,sm.bak,state} in unusual removal cases
 
+  [ Salvatore Bonaccorso ]
+  * debian/control: Replace Build-Depends on pkg-config with pkgconf
+
  -- Salvatore Bonaccorso <carnil@debian.org>  Thu, 11 Jul 2024 12:45:46 +0200
 
 nfs-utils (1:2.6.4-5) unstable; urgency=medium

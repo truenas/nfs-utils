@@ -129,6 +129,7 @@
 #include "err_util.h"
 #include "gss_util.h"
 #include "krb5_util.h"
+#include "conffile.h"
 
 /*
  * List of principals from our keytab that we
@@ -155,6 +156,8 @@ static pthread_mutex_t ple_lock = PTHREAD_MUTEX_INITIALIZER;
 
 #ifdef HAVE_SET_ALLOWABLE_ENCTYPES
 int limit_to_legacy_enctypes = 0;
+krb5_enctype *allowed_enctypes = NULL;
+int num_allowed_enctypes = 0;
 #endif
 
 /*==========================*/
@@ -304,9 +307,9 @@ gssd_find_existing_krb5_ccache(uid_t uid, char *dirname,
 				score++;
 
 			printerr(3, "CC '%s'(%s@%s) passed all checks and"
-				    " has mtime of %u\n",
+				    " has mtime of %llu\n",
 				 buf, princname, realm, 
-				 tmp_stat.st_mtime);
+				 (long long unsigned)tmp_stat.st_mtime);
 			/*
 			 * if more than one match is found, return the most
 			 * recent (the one with the latest mtime), and
@@ -341,10 +344,10 @@ gssd_find_existing_krb5_ccache(uid_t uid, char *dirname,
 				}
 				printerr(3, "CC '%s:%s/%s' is our "
 					    "current best match "
-					    "with mtime of %u\n",
-					 cctype, dirname,
+					    "with mtime of %llu\n",
+					 *cctype, dirname,
 					 best_match_dir->d_name,
-					 best_match_stat.st_mtime);
+					 (long long unsigned)best_match_stat.st_mtime);
 			}
 			free(princname);
 			free(realm);
@@ -1596,6 +1599,68 @@ out_cred:
 }
 
 #ifdef HAVE_SET_ALLOWABLE_ENCTYPES
+int
+get_allowed_enctypes(void)
+{
+	struct conf_list *allowed_etypes = NULL;
+	struct conf_list_node *node;
+	char *buf = NULL, *old = NULL;
+	int len, ret = 0;
+
+	allowed_etypes = conf_get_list("gssd", "allowed-enctypes");
+	if (allowed_etypes) {
+		TAILQ_FOREACH(node, &(allowed_etypes->fields), link) {
+			allowed_enctypes = realloc(allowed_enctypes,
+						   (num_allowed_enctypes + 1) *
+						   sizeof(*allowed_enctypes));
+			if (allowed_enctypes == NULL) {
+				ret = ENOMEM;
+				goto out_err;
+			}
+			ret = krb5_string_to_enctype(node->field,
+						     &allowed_enctypes[num_allowed_enctypes]);
+			if (ret) {
+				printerr(0, "%s: invalid enctype %s",
+					 __func__, node->field);
+				goto out_err;
+			}
+			if (get_verbosity() > 1) {
+				if (buf == NULL) {
+					len = asprintf(&buf, "%s(%d)", node->field,
+						       allowed_enctypes[num_allowed_enctypes]);
+					if (len < 0) {
+						ret = ENOMEM;
+						goto out_err;
+					}
+				} else {
+					old = buf;
+					len = asprintf(&buf, "%s,%s(%d)", old, node->field,
+						       allowed_enctypes[num_allowed_enctypes]);
+					if (len < 0) {
+						ret = ENOMEM;
+						goto out_err;
+					}
+					free(old);
+					old = NULL;
+				}
+			}
+			num_allowed_enctypes++;
+		}
+		printerr(2, "%s: allowed_enctypes = %s", __func__, buf);
+	}
+	goto out;
+out_err:
+	num_allowed_enctypes = 0;
+	free(allowed_enctypes);
+out:
+	free(buf);
+	if (old != buf)
+		free(old);
+	if (allowed_etypes)
+		conf_free_list(allowed_etypes);
+	return ret;
+}
+
 /*
  * this routine obtains a credentials handle via gss_acquire_cred()
  * then calls gss_krb5_set_allowable_enctypes() to limit the encryption
@@ -1619,6 +1684,10 @@ limit_krb5_enctypes(struct rpc_gss_sec *sec)
 	int num_enctypes = sizeof(enctypes) / sizeof(enctypes[0]);
 	extern int num_krb5_enctypes;
 	extern krb5_enctype *krb5_enctypes;
+	extern int num_allowed_enctypes;
+	extern krb5_enctype *allowed_enctypes;
+	int num_set_enctypes;
+	krb5_enctype *set_enctypes;
 	int err = -1;
 
 	if (sec->cred == GSS_C_NO_CREDENTIAL) {
@@ -1631,12 +1700,26 @@ limit_krb5_enctypes(struct rpc_gss_sec *sec)
 	 * If we failed for any reason to produce global
 	 * list of supported enctypes, use local default here.
 	 */
-	if (krb5_enctypes == NULL || limit_to_legacy_enctypes)
-		maj_stat = gss_set_allowable_enctypes(&min_stat, sec->cred,
-					&krb5oid, num_enctypes, enctypes);
-	else
-		maj_stat = gss_set_allowable_enctypes(&min_stat, sec->cred,
-					&krb5oid, num_krb5_enctypes, krb5_enctypes);
+	if (krb5_enctypes == NULL || limit_to_legacy_enctypes ||
+			allowed_enctypes) {
+		if (allowed_enctypes) {
+			printerr(2, "%s: using allowed enctypes from config\n",
+				 __func__);
+			num_set_enctypes = num_allowed_enctypes;
+			set_enctypes = allowed_enctypes;
+		} else {
+			printerr(2, "%s: using legacy enctypes\n", __func__);
+			num_set_enctypes = num_enctypes;
+			set_enctypes = enctypes;
+		}
+	} else {
+		printerr(2, "%s: using enctypes from the kernel\n", __func__);
+		num_set_enctypes = num_krb5_enctypes;
+		set_enctypes = krb5_enctypes;
+	}
+
+	maj_stat = gss_set_allowable_enctypes(&min_stat, sec->cred,
+				&krb5oid, num_set_enctypes, set_enctypes);
 
 	if (maj_stat != GSS_S_COMPLETE) {
 		pgsserr("gss_set_allowable_enctypes",

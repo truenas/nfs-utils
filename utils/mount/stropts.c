@@ -780,6 +780,14 @@ static int nfs_do_mount_v4(struct nfsmount_info *mi,
 		goto out_fail;
 	}
 
+	if (po_contains(options, "namlen")) {
+		po_remove_all(options, "namlen");
+		if (verbose) {
+			printf(_("%s: Ignore unsupported nfs4 mount option 'namlen' in '%s'\n"),
+				progname, *mi->extra_opts);
+		}
+	}
+
 	if (mi->version.v_mode != V_SPECIFIC) {
 		char *fmt;
 		switch (mi->version.minor) {

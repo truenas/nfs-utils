@@ -394,6 +394,9 @@
 /* tcp-wrapper */
 #undef HAVE_TCP_WRAPPER
 
+/* Define to 1 if your tirpc library provides rpc_gss_seccreate */
+#undef HAVE_TIRPC_GSS_SECCREATE
+
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
 

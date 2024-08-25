@@ -1,5 +1,6 @@
 [Unit]
 Description=NFS server and services
+Documentation=man:rpc.nfsd(8) man:exportfs(8)
 DefaultDependencies=no
 Requires=network.target proc-fs-nfsd.mount
 Requires=nfs-mountd.service

@@ -346,6 +346,15 @@ flag.
 Equivalent to
 .BR -l .
 .TP
+.B allowed-enctypes
+Allows you to restrict
+.B rpc.gssd
+to using a subset of the encryption types permitted by the kernel and the krb5
+libraries.  This is useful if you need to interoperate with an NFS server that
+does not have support for the newer SHA2 and Camellia encryption types, for
+example.  This configuration file option does not have an equivalent
+command-line option.
+.TP
 .B context-timeout
 Equivalent to
 .BR -t .

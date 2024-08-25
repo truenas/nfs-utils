@@ -7,6 +7,8 @@
 #include <dlfcn.h>
 #endif
 #include <event2/event.h>
+#include <sys/un.h>
+#include <unistd.h>
 
 #include "conffile.h"
 #include "reexport_backend.h"
@@ -147,6 +149,7 @@ int main(void)
 {
 	struct event *srv_ev;
 	struct sockaddr_un addr;
+	socklen_t addr_len;
 	char *sock_file;
 	int srv;
 
@@ -161,10 +164,12 @@ int main(void)
 	memset(&addr, 0, sizeof(struct sockaddr_un));
 	addr.sun_family = AF_UNIX;
 	strncpy(addr.sun_path, sock_file, sizeof(addr.sun_path) - 1);
-	if (addr.sun_path[0] == '@')
+	addr_len = sizeof(struct sockaddr_un);
+	if (addr.sun_path[0] == '@') {
 		/* "abstract" socket namespace */
+		addr_len = offsetof(struct sockaddr_un, sun_path) + strlen(addr.sun_path);
 		addr.sun_path[0] = 0;
-	else
+	} else
 		unlink(sock_file);
 
 	srv = socket(AF_UNIX, SOCK_SEQPACKET | SOCK_NONBLOCK, 0);
@@ -173,7 +178,7 @@ int main(void)
 		return 1;
 	}
 
-	if (bind(srv, (const struct sockaddr *)&addr, sizeof(struct sockaddr_un)) == -1) {
+	if (bind(srv, (const struct sockaddr *)&addr, addr_len) == -1) {
 		xlog(L_WARNING, "Unable to bind %s: %m\n", sock_file);
 		return 1;
 	}

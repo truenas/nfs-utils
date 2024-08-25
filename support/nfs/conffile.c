@@ -658,7 +658,7 @@ conf_load_file(const char *conf_file)
 	return 0;
 }
 
-static void 
+static void
 conf_init_dir(const char *conf_file)
 {
 	struct dirent **namelist = NULL;
@@ -669,14 +669,14 @@ conf_init_dir(const char *conf_file)
 	dname = malloc(strlen(conf_file) + 3);
 	if (dname == NULL) {
 		xlog(L_WARNING, "conf_init_dir: malloc: %s", strerror(errno));
-		return;	
+		return;
 	}
 	sprintf(dname, "%s.d", conf_file);
 
 	n = scandir(dname, &namelist, NULL, versionsort);
 	if (n < 0) {
 		if (errno != ENOENT) {
-			xlog(L_WARNING, "conf_init_dir: scandir %s: %s", 
+			xlog(L_WARNING, "conf_init_dir: scandir %s: %s",
 				dname, strerror(errno));
 		}
 		free(dname);
@@ -691,7 +691,7 @@ conf_init_dir(const char *conf_file)
 	for (i = 0; i < n; i++ ) {
 		struct dirent *d = namelist[i];
 
-	 	switch (d->d_type) {
+		switch (d->d_type) {
 			case DT_UNKNOWN:
 			case DT_REG:
 			case DT_LNK:
@@ -701,13 +701,13 @@ conf_init_dir(const char *conf_file)
 		}
 		if (*d->d_name == '.')
 			continue;
-		
+
 		fname_len = strlen(d->d_name);
 		path_len = (fname_len + dname_len);
 		if (!fname_len || path_len > PATH_MAX) {
 			xlog(L_WARNING, "conf_init_dir: Too long file name: %s in %s", 
 				d->d_name, dname);
-			continue; 
+			continue;
 		}
 
 		/*
@@ -715,7 +715,7 @@ conf_init_dir(const char *conf_file)
 		 * that end with CONF_FILE_EXT
 		 */
 		if (fname_len <= CONF_FILE_EXT_LEN) {
-			xlog(D_GENERAL, "conf_init_dir: %s: name too short", 
+			xlog(D_GENERAL, "conf_init_dir: %s: name too short",
 				d->d_name);
 			continue;
 		}
@@ -746,41 +746,43 @@ conf_init_dir(const char *conf_file)
 		free(namelist[i]);
 	free(namelist);
 	free(dname);
-	
+
 	return;
 }
 
-int
+void
 conf_init_file(const char *conf_file)
 {
 	unsigned int i;
-	int ret;
+	int j;
 
 	for (i = 0; i < sizeof conf_bindings / sizeof conf_bindings[0]; i++)
 		LIST_INIT (&conf_bindings[i]);
 
 	TAILQ_INIT (&conf_trans_queue);
 
-	if (conf_file == NULL) 
-		conf_file=NFS_CONFFILE;
+	if (conf_file == NULL)
+		conf_file = NFS_CONFFILE;
 
-	/*
-	 * First parse the give config file 
-	 * then parse the config.conf.d directory 
-	 * (if it exists)
+	/* If the config file is in /etc (normal) then check
+	 * /usr/etc first.  Also check config.conf.d for files
+	 * names *.conf.
 	 *
+	 * Content or later files always over-rides earlier
+	 * files.
 	 */
-	ret = conf_load_file(conf_file);
+	if (strncmp(conf_file, "/etc/", 5) == 0) {
+		char *usrconf = NULL;
 
-	/*
-	 * When the same variable is set in both files
-	 * the conf.d file will override the config file.
-	 * This allows automated admin systems to
-	 * have the final say.
-	 */
+		j = asprintf(&usrconf, "/usr%s", conf_file);
+		if (usrconf && j > 0) {
+			conf_load_file(usrconf);
+			conf_init_dir(usrconf);
+			free(usrconf);
+		}
+	}
+	conf_load_file(conf_file);
 	conf_init_dir(conf_file);
-
-	return ret;
 }
 
 /*

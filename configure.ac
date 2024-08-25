@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 dnl
-AC_INIT([linux nfs-utils],[2.6.4],[linux-nfs@vger.kernel.org],[nfs-utils])
+AC_INIT([linux nfs-utils],[2.7.1],[linux-nfs@vger.kernel.org],[nfs-utils])
 AC_CANONICAL_BUILD([])
 AC_CANONICAL_HOST([])
 AC_CONFIG_MACRO_DIR(aclocal)
@@ -175,14 +175,14 @@ else
 fi
 
 AC_ARG_ENABLE(sbin-override,
-	[AS_HELP_STRING([--disable-sbin-override],[Don't force nfsdcltrack and mount helpers into /sbin: always honour --sbindir])],
+	[AS_HELP_STRING([--disable-sbin-override],[Do not force nfsdcltrack and mount helpers into /sbin: always honour --sbindir])],
 	enable_sbin_override=$enableval,
 	enable_sbin_override=yes)
 	AM_CONDITIONAL(CONFIG_SBIN_OVERRIDE, [test "$enable_sbin_override" = "yes"])
 AC_ARG_ENABLE(junction,
-	[AS_HELP_STRING([--enable-junction],[enable support for NFS junctions @<:@default=no@:>@])],
+	[AS_HELP_STRING([--enable-junction],[enable support for NFS junctions @<:@default=yes@:>@])],
 	enable_junction=$enableval,
-	enable_junction=no)
+	enable_junction=yes)
 	if test "$enable_junction" = yes; then
 		AC_DEFINE(HAVE_JUNCTION_SUPPORT, 1,
                           [Define this if you want junction support compiled in])

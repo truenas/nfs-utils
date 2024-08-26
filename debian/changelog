@@ -1,9 +1,9 @@
-nfs-utils (1:2.7.1-1) UNRELEASED; urgency=medium
+nfs-utils (1:2.7.1-1~exp1) experimental; urgency=medium
 
   * New upstream version 2.7.1 (Closes: #1077023)
   * debian/nfs.conf: Sync base version with upstream's nfs.conf
 
- -- Salvatore Bonaccorso <carnil@debian.org>  Sun, 25 Aug 2024 20:54:00 +0200
+ -- Salvatore Bonaccorso <carnil@debian.org>  Mon, 26 Aug 2024 22:12:44 +0200
 
 nfs-utils (1:2.6.4-6) unstable; urgency=medium
 

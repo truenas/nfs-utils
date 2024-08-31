@@ -1,3 +1,9 @@
+nfs-utils (1:2.7.1-1) unstable; urgency=medium
+
+  * Prepare for upload to unstable
+
+ -- Salvatore Bonaccorso <carnil@debian.org>  Sat, 31 Aug 2024 15:54:43 +0200
+
 nfs-utils (1:2.7.1-1~exp1) experimental; urgency=medium
 
   * New upstream version 2.7.1 (Closes: #1077023)

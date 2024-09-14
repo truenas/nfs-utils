@@ -1,8 +1,8 @@
-nfs-utils (1:2.7.1-2) UNRELEASED; urgency=medium
+nfs-utils (1:2.7.1-2) unstable; urgency=medium
 
   * d/control: nfs-common: Move python3 to Recommends (Closes: #1013868)
 
- -- Salvatore Bonaccorso <carnil@debian.org>  Thu, 12 Sep 2024 06:00:59 +0200
+ -- Salvatore Bonaccorso <carnil@debian.org>  Sat, 14 Sep 2024 10:13:35 +0200
 
 nfs-utils (1:2.7.1-1) unstable; urgency=medium
 

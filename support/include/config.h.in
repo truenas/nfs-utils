@@ -214,6 +214,9 @@
 /* Define to 1 if you have the <limits.h> header file. */
 #undef HAVE_LIMITS_H
 
+/* Define to 1 if you have the <linux/nfsd_netlink.h> header file. */
+#undef HAVE_LINUX_NFSD_NETLINK_H
+
 /* Define to 1 if `lstat' has the bug that it succeeds when given the
    zero-length file name argument. */
 #undef HAVE_LSTAT_EMPTY_STRING_BUG
@@ -618,6 +621,9 @@
 # undef _XOPEN_SOURCE
 #endif
 
+
+/* "Use system's linux/nfsd_netlink.h" */
+#undef USE_SYSTEM_NFSD_NETLINK_H
 
 /* Version number of package */
 #undef VERSION

@@ -1,3 +1,2 @@
 multiarch-kerberos-paths.patch
 always-run-generator.patch
-rpc.idmapd-nfsopen-failures-should-not-be-fatal.patch

@@ -57,6 +57,7 @@ utils/rquotad/rquota_xdr.c
 utils/showmount/showmount
 utils/nfsdcld/nfsdcld
 utils/nfsdcltrack/nfsdcltrack
+utils/nfsdctl/nfsdctl
 utils/statd/statd
 tools/locktest/testlk
 tools/getiversion/getiversion

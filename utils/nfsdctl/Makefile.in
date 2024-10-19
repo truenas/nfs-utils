@@ -14,6 +14,7 @@
 
 @SET_MAKE@
 
+
 VPATH = @srcdir@
 am__is_gnu_make = { \
   if test -z '$(MAKELEVEL)'; then \
@@ -88,8 +89,8 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-sbin_PROGRAMS = blkmapd$(EXEEXT)
-subdir = utils/blkmapd
+sbin_PROGRAMS = nfsdctl$(EXEEXT)
+subdir = utils/nfsdctl
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/aclocal/ax_gcc_func_attribute.m4 \
 	$(top_srcdir)/aclocal/bsdsignals.m4 \
@@ -110,21 +111,27 @@ am__aclocal_m4_deps = $(top_srcdir)/aclocal/ax_gcc_func_attribute.m4 \
 	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
-DIST_COMMON = $(srcdir)/Makefile.am $(am__DIST_COMMON)
+DIST_COMMON = $(srcdir)/Makefile.am $(noinst_HEADERS) \
+	$(am__DIST_COMMON)
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/support/include/config.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(sbindir)" "$(DESTDIR)$(man8dir)"
 PROGRAMS = $(sbin_PROGRAMS)
-am_blkmapd_OBJECTS = device-discovery.$(OBJEXT) device-inq.$(OBJEXT) \
-	device-process.$(OBJEXT) dm-device.$(OBJEXT)
-blkmapd_OBJECTS = $(am_blkmapd_OBJECTS)
-blkmapd_DEPENDENCIES = ../../support/nfs/libnfs.la
+am_nfsdctl_OBJECTS = nfsdctl-nfsdctl.$(OBJEXT)
+nfsdctl_OBJECTS = $(am_nfsdctl_OBJECTS)
+am__DEPENDENCIES_1 =
+nfsdctl_DEPENDENCIES = ../../support/nfs/libnfs.la \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
 am__v_lt_1 = 
+nfsdctl_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(nfsdctl_CFLAGS) \
+	$(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -140,9 +147,7 @@ am__v_at_1 =
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/support/include
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__maybe_remake_depfiles = depfiles
-am__depfiles_remade = ./$(DEPDIR)/device-discovery.Po \
-	./$(DEPDIR)/device-inq.Po ./$(DEPDIR)/device-process.Po \
-	./$(DEPDIR)/dm-device.Po
+am__depfiles_remade = ./$(DEPDIR)/nfsdctl-nfsdctl.Po
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -162,8 +167,8 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
-SOURCES = $(blkmapd_SOURCES)
-DIST_SOURCES = $(blkmapd_SOURCES)
+SOURCES = $(nfsdctl_SOURCES)
+DIST_SOURCES = $(nfsdctl_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -199,6 +204,7 @@ am__uninstall_files_from_dir = { \
 man8dir = $(mandir)/man8
 NROFF = nroff
 MANS = $(man8_MANS)
+HEADERS = $(noinst_HEADERS)
 am__tagged_files = $(HEADERS) $(SOURCES) $(TAGS_FILES) $(LISP)
 # Read a list of newline-separated strings from the standard input,
 # and print each of them once, without duplicates.  Input order is
@@ -222,7 +228,7 @@ ACLOCAL = @ACLOCAL@
 ACLOCAL_AMFLAGS = @ACLOCAL_AMFLAGS@
 ALLOCA = @ALLOCA@
 AMTAR = @AMTAR@
-AM_CFLAGS = @AM_CFLAGS@ -D_LARGEFILE64_SOURCE
+AM_CFLAGS = @AM_CFLAGS@
 AM_CPPFLAGS = @AM_CPPFLAGS@
 AM_DEFAULT_VERBOSITY = @AM_DEFAULT_VERBOSITY@
 AR = @AR@
@@ -422,16 +428,12 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 unitdir = @unitdir@
-man8_MANS = blkmapd.man
+man8_MANS = nfsdctl.8
 EXTRA_DIST = $(man8_MANS)
-blkmapd_SOURCES = \
-	device-discovery.c \
-	device-inq.c \
-	device-process.c \
-	dm-device.c \
-	device-discovery.h
-
-blkmapd_LDADD = -ldevmapper ../../support/nfs/libnfs.la
+noinst_HEADERS = nfsdctl.h
+nfsdctl_SOURCES = nfsdctl.c
+nfsdctl_CFLAGS = $(LIBNL3_CFLAGS) $(LIBNLGENL3_CFLAGS) $(LIBREADLINE_CFLAGS)
+nfsdctl_LDADD = ../../support/nfs/libnfs.la $(LIBNL3_LIBS) $(LIBNLGENL3_LIBS) $(LIBREADLINE_LIBS)
 MAINTAINERCLEANFILES = Makefile.in
 all: all-am
 
@@ -446,9 +448,9 @@ $(srcdir)/Makefile.in: @MAINTAINER_MODE_TRUE@ $(srcdir)/Makefile.am  $(am__confi
 	      exit 1;; \
 	  esac; \
 	done; \
-	echo ' cd $(top_srcdir) && $(AUTOMAKE) --gnu utils/blkmapd/Makefile'; \
+	echo ' cd $(top_srcdir) && $(AUTOMAKE) --gnu utils/nfsdctl/Makefile'; \
 	$(am__cd) $(top_srcdir) && \
-	  $(AUTOMAKE) --gnu utils/blkmapd/Makefile
+	  $(AUTOMAKE) --gnu utils/nfsdctl/Makefile
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	@case '$?' in \
 	  *config.status*) \
@@ -516,9 +518,9 @@ clean-sbinPROGRAMS:
 	echo " rm -f" $$list; \
 	rm -f $$list
 
-blkmapd$(EXEEXT): $(blkmapd_OBJECTS) $(blkmapd_DEPENDENCIES) $(EXTRA_blkmapd_DEPENDENCIES) 
-	@rm -f blkmapd$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(blkmapd_OBJECTS) $(blkmapd_LDADD) $(LIBS)
+nfsdctl$(EXEEXT): $(nfsdctl_OBJECTS) $(nfsdctl_DEPENDENCIES) $(EXTRA_nfsdctl_DEPENDENCIES) 
+	@rm -f nfsdctl$(EXEEXT)
+	$(AM_V_CCLD)$(nfsdctl_LINK) $(nfsdctl_OBJECTS) $(nfsdctl_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -526,10 +528,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/device-discovery.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/device-inq.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/device-process.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dm-device.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nfsdctl-nfsdctl.Po@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
 	@$(MKDIR_P) $(@D)
@@ -557,6 +556,20 @@ am--depfiles: $(am__depfiles_remade)
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LTCOMPILE) -c -o $@ $<
+
+nfsdctl-nfsdctl.o: nfsdctl.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(nfsdctl_CFLAGS) $(CFLAGS) -MT nfsdctl-nfsdctl.o -MD -MP -MF $(DEPDIR)/nfsdctl-nfsdctl.Tpo -c -o nfsdctl-nfsdctl.o `test -f 'nfsdctl.c' || echo '$(srcdir)/'`nfsdctl.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/nfsdctl-nfsdctl.Tpo $(DEPDIR)/nfsdctl-nfsdctl.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='nfsdctl.c' object='nfsdctl-nfsdctl.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(nfsdctl_CFLAGS) $(CFLAGS) -c -o nfsdctl-nfsdctl.o `test -f 'nfsdctl.c' || echo '$(srcdir)/'`nfsdctl.c
+
+nfsdctl-nfsdctl.obj: nfsdctl.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(nfsdctl_CFLAGS) $(CFLAGS) -MT nfsdctl-nfsdctl.obj -MD -MP -MF $(DEPDIR)/nfsdctl-nfsdctl.Tpo -c -o nfsdctl-nfsdctl.obj `if test -f 'nfsdctl.c'; then $(CYGPATH_W) 'nfsdctl.c'; else $(CYGPATH_W) '$(srcdir)/nfsdctl.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/nfsdctl-nfsdctl.Tpo $(DEPDIR)/nfsdctl-nfsdctl.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='nfsdctl.c' object='nfsdctl-nfsdctl.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(nfsdctl_CFLAGS) $(CFLAGS) -c -o nfsdctl-nfsdctl.obj `if test -f 'nfsdctl.c'; then $(CYGPATH_W) 'nfsdctl.c'; else $(CYGPATH_W) '$(srcdir)/nfsdctl.c'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo
@@ -691,7 +704,7 @@ distdir-am: $(DISTFILES)
 	done
 check-am: all-am
 check: check-am
-all-am: Makefile $(PROGRAMS) $(MANS)
+all-am: Makefile $(PROGRAMS) $(MANS) $(HEADERS)
 installdirs:
 	for dir in "$(DESTDIR)$(sbindir)" "$(DESTDIR)$(man8dir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
@@ -733,10 +746,7 @@ clean-am: clean-generic clean-libtool clean-sbinPROGRAMS \
 	mostlyclean-am
 
 distclean: distclean-am
-		-rm -f ./$(DEPDIR)/device-discovery.Po
-	-rm -f ./$(DEPDIR)/device-inq.Po
-	-rm -f ./$(DEPDIR)/device-process.Po
-	-rm -f ./$(DEPDIR)/dm-device.Po
+		-rm -f ./$(DEPDIR)/nfsdctl-nfsdctl.Po
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -782,10 +792,7 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-am
-		-rm -f ./$(DEPDIR)/device-discovery.Po
-	-rm -f ./$(DEPDIR)/device-inq.Po
-	-rm -f ./$(DEPDIR)/device-process.Po
-	-rm -f ./$(DEPDIR)/dm-device.Po
+		-rm -f ./$(DEPDIR)/nfsdctl-nfsdctl.Po
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 

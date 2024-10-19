@@ -489,7 +489,10 @@ success:
 static int
 change_identity(uid_t uid)
 {
-	struct passwd	*pw;
+	struct passwd  pw;
+	struct passwd *ppw;
+	char *pw_tmp;
+	long tmplen;
 	int res;
 
 	/* drop list of supplimentary groups first */
@@ -502,15 +505,25 @@ change_identity(uid_t uid)
 		return errno;
 	}
 
+	tmplen = sysconf(_SC_GETPW_R_SIZE_MAX);
+	if (tmplen < 0)
+		tmplen = 16384;
+
+	pw_tmp = malloc(tmplen);
+	if (!pw_tmp) {
+		printerr(0, "WARNING: unable to allocate passwd buffer\n");
+		return errno ? errno : ENOMEM;
+	}
+
 	/* try to get pwent for user */
-	pw = getpwuid(uid);
-	if (!pw) {
+	res = getpwuid_r(uid, &pw, pw_tmp, tmplen, &ppw);
+	if (!ppw) {
 		/* if that doesn't work, try to get one for "nobody" */
-		errno = 0;
-		pw = getpwnam("nobody");
-		if (!pw) {
+		res = getpwnam_r("nobody", &pw, pw_tmp, tmplen, &ppw);
+		if (!ppw) {
 			printerr(0, "WARNING: unable to determine gid for uid %u\n", uid);
-			return errno ? errno : ENOENT;
+			free(pw_tmp);
+			return res ? res : ENOENT;
 		}
 	}
 
@@ -521,12 +534,13 @@ change_identity(uid_t uid)
 	 * other threads. To bypass this, we have to call syscall() directly.
 	 */
 #ifdef __NR_setresgid32
-	res = syscall(SYS_setresgid32, pw->pw_gid, pw->pw_gid, pw->pw_gid);
+	res = syscall(SYS_setresgid32, pw.pw_gid, pw.pw_gid, pw.pw_gid);
 #else 
-	res = syscall(SYS_setresgid, pw->pw_gid, pw->pw_gid, pw->pw_gid);
+	res = syscall(SYS_setresgid, pw.pw_gid, pw.pw_gid, pw.pw_gid);
 #endif
+	free(pw_tmp);
 	if (res != 0) {
-		printerr(0, "WARNING: failed to set gid to %u!\n", pw->pw_gid);
+		printerr(0, "WARNING: failed to set gid to %u!\n", pw.pw_gid);
 		return errno;
 	}
 

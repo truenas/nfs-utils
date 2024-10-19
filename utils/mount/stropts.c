@@ -1143,7 +1143,7 @@ static int nfsmount_fg(struct nfsmount_info *mi)
 		}
 	}
 
-	mount_error(mi->spec, mi->node, errno);
+	mount_error(mi->spec, mi->node, errno, mi->options);
 	return EX_FAIL;
 }
 
@@ -1160,7 +1160,7 @@ static int nfsmount_parent(struct nfsmount_info *mi)
 		return EX_SUCCESS;
 
 	if (nfs_is_permanent_error(errno)) {
-		mount_error(mi->spec, mi->node, errno);
+		mount_error(mi->spec, mi->node, errno, mi->options);
 		return EX_FAIL;
 	}
 
@@ -1237,7 +1237,7 @@ static int nfs_remount(struct nfsmount_info *mi)
 {
 	if (nfs_sys_mount(mi, mi->options))
 		return EX_SUCCESS;
-	mount_error(mi->spec, mi->node, errno);
+	mount_error(mi->spec, mi->node, errno, mi->options);
 	return EX_FAIL;
 }
 
@@ -1261,7 +1261,7 @@ static int nfsmount_start(struct nfsmount_info *mi)
 	 * NFS v2 has been deprecated
 	 */
 	if (mi->version.major == 2) {
-		mount_error(mi->spec, mi->node, EOPNOTSUPP);
+		mount_error(mi->spec, mi->node, EOPNOTSUPP, mi->options);
 		return EX_FAIL;
 	}
 

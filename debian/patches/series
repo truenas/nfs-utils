@@ -1,2 +1,3 @@
 multiarch-kerberos-paths.patch
 always-run-generator.patch
+exports-Fix-referrals-when-enable-junction-no.patch

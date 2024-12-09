@@ -1,9 +1,9 @@
-nfs-utils (1:2.8.1-2) UNRELEASED; urgency=medium
+nfs-utils (1:2.8.1-2) unstable; urgency=medium
 
   * exports: Fix referrals when --enable-junction=no
     (Closes: #1083098, #1035908)
 
- -- Salvatore Bonaccorso <carnil@debian.org>  Mon, 09 Dec 2024 19:05:42 +0100
+ -- Salvatore Bonaccorso <carnil@debian.org>  Mon, 09 Dec 2024 19:12:25 +0100
 
 nfs-utils (1:2.8.1-1) unstable; urgency=medium
 

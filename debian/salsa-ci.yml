@@ -7,4 +7,6 @@ variables:
   # We only build arch:any packages
   SALSA_CI_DISABLE_BUILD_PACKAGE_ALL: 'true'
   # Currently triggering falsely (bugs #973313, #1000977)
-  SALSA_CI_LINTIAN_SUPPRESS_TAGS: 'groff-message,elf-error'
+  # Suppress 'aliased-location' as usrmerge-migration happened only
+  # in nfs-utils/1:2.6.3-4~exp1
+  SALSA_CI_LINTIAN_SUPPRESS_TAGS: 'groff-message,elf-error,aliased-location'

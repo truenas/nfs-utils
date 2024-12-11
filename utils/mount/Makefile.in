@@ -291,6 +291,7 @@ ETAGS = @ETAGS@
 EXEEXT = @EXEEXT@
 FGREP = @FGREP@
 FILECMD = @FILECMD@
+GETGROUPS_LIB = @GETGROUPS_LIB@
 GREP = @GREP@
 GSSAPI_CFLAGS = @GSSAPI_CFLAGS@
 GSSAPI_LIBS = @GSSAPI_LIBS@
@@ -948,7 +949,7 @@ install-exec-hook:
 	  ln -sf mount.nfs mount.nfs4 && \
 	  ln -sf mount.nfs umount.nfs && \
 	  ln -sf mount.nfs umount.nfs4 && \
-	  chmod 4511 mount.nfs )
+	  chmod 4711 mount.nfs )
 uninstall-hook:
 	(cd $(DESTDIR)$(sbindir) && \
 	    rm -f mount.nfs4 umount.nfs umount.nfs4)

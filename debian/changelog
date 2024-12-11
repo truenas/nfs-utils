@@ -1,3 +1,9 @@
+nfs-utils (1:2.8.2-1) UNRELEASED; urgency=medium
+
+  * New upstream version 2.8.2
+
+ -- Salvatore Bonaccorso <carnil@debian.org>  Wed, 11 Dec 2024 09:02:15 +0100
+
 nfs-utils (1:2.8.1-2) unstable; urgency=medium
 
   * exports: Fix referrals when --enable-junction=no

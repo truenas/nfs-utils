@@ -2,12 +2,12 @@
 .\"     Title: nfsdctl
 .\"    Author: Jeff Layton
 .\" Generator: Asciidoctor 2.0.20
-.\"      Date: 2024-07-22
+.\"      Date: 2024-11-18
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "NFSDCTL" "8" "2024-07-22" "\ \&" "\ \&"
+.TH "NFSDCTL" "8" "2024-11-18" "\ \&" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -173,6 +173,14 @@ MINOR: the minor version integet value
 .fam C
 The minorversion field is optional. If not given, it will disable or enable
 all minorversions for that major version.
+.fam
+.fi
+.if n .RE
+.sp
+.if n .RS 4
+.nf
+.fam C
+Note that versions can only be set when there are no nfsd threads running.
 .fam
 .fi
 .if n .RE

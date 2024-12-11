@@ -215,15 +215,18 @@ or smaller than the
 setting. The largest read payload supported by the Linux NFS client
 is 1,048,576 bytes (one megabyte).
 .IP
-The
+The allowed
 .B rsize
-value is a positive integral multiple of 1024.
+value is a positive integral multiple of
+system's page size
+or a power of two if it is less than
+system's page size.
 Specified
 .B rsize
 values lower than 1024 are replaced with 4096; values larger than
 1048576 are replaced with 1048576. If a specified value is within the supported
-range but not a multiple of 1024, it is rounded down to the nearest
-multiple of 1024.
+range but not such an allowed value, it is rounded down to the nearest
+allowed value.
 .IP
 If an
 .B rsize
@@ -257,16 +260,19 @@ setting. The largest write payload supported by the Linux NFS client
 is 1,048,576 bytes (one megabyte).
 .IP
 Similar to
-.B rsize
-, the
+.BR rsize ,
+the allowed
 .B wsize
-value is a positive integral multiple of 1024.
+value is a positive integral multiple of
+system's page size
+or a power of two if it is less than
+system's page size.
 Specified
 .B wsize
 values lower than 1024 are replaced with 4096; values larger than
 1048576 are replaced with 1048576. If a specified value is within the supported
-range but not a multiple of 1024, it is rounded down to the nearest
-multiple of 1024.
+range but not such an allowed value, it is rounded down to the nearest
+allowed value.
 .IP
 If a
 .B wsize

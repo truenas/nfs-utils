@@ -32,7 +32,7 @@
 #include "xcommon.h"
 
 #ifndef NFSD_NPROC
-#define NFSD_NPROC 8
+#define NFSD_NPROC 16
 #endif
 
 static void	usage(const char *);

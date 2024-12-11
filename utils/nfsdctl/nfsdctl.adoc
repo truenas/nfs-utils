@@ -93,6 +93,8 @@ Each subcommand can also accept its own set of options and arguments. The
   The minorversion field is optional. If not given, it will disable or enable
   all minorversions for that major version.
 
+  Note that versions can only be set when there are no nfsd threads running.
+
 *pool-mode*::
 
   Get/set the host's pool mode. This will cause the server to start threads

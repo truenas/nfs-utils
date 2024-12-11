@@ -764,9 +764,9 @@ static void version_usage(void)
 	printf("    Display currently enabled and disabled versions:\n");
 	printf("        version\n");
 	printf("    Disable NFSv4.0:\n");
-	printf("        version -v4.0\n");
+	printf("        version -4.0\n");
 	printf("    Enable v4.1, v4.2, disable v2, v3 and v4.0:\n");
-	printf("        version -2 -3 -v4.0 +4.1 +v4.2\n");
+	printf("        version -2 -3 -4.0 +4.1 +4.2\n");
 }
 
 static int version_func(struct nl_sock *sock, int argc, char ** argv)

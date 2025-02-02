@@ -10,7 +10,6 @@ debian/tmp/usr/sbin/rpc.nfsd
 debian/nfs-kernel-server.default /usr/share/nfs-kernel-server/conffiles/
 debian/etc.exports /usr/share/nfs-kernel-server/conffiles/
 debian/tmp/usr/lib/systemd/system/fsidd.service
-debian/tmp/usr/lib/systemd/system/nfs-blkmap.service
 debian/tmp/usr/lib/systemd/system/nfs-mountd.service
 debian/tmp/usr/lib/systemd/system/nfs-server.service
 debian/tmp/usr/lib/systemd/system/nfsdcld.service

@@ -1,3 +1,13 @@
+nfs-utils (1:2.8.2-2~exp1) UNRELEASED; urgency=medium
+
+  * Move nfs-blkmap.service to nfs-common package.
+    Add Replaces and Breaks relation for nfs-common package on the
+    nfs-kernel-server package with (<< 1:2.8.2-2~exp1~) constraints to
+    properly take over the nfs-blkmap.service service file.
+    (Closes: #1072611)
+
+ -- Salvatore Bonaccorso <carnil@debian.org>  Sun, 02 Feb 2025 20:15:50 +0100
+
 nfs-utils (1:2.8.2-1) unstable; urgency=medium
 
   * New upstream version 2.8.2

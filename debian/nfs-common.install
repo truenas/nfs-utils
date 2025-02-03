@@ -24,6 +24,7 @@ debian/tmp/usr/lib/systemd/system-generators/rpc-pipefs-generator
 debian/tmp/usr/lib/systemd/system/rpc_pipefs.target
 debian/tmp/usr/lib/systemd/system/*.mount
 debian/tmp/usr/lib/systemd/system/*rpc*.service
+debian/tmp/usr/lib/systemd/system/nfs-blkmap.service
 debian/tmp/usr/lib/systemd/system/nfs-idmapd.service
 debian/tmp/usr/lib/systemd/system/nfs-client.target
 debian/tmp/usr/lib/systemd/system/nfs-utils.service

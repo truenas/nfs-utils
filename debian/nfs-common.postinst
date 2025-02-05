@@ -4,6 +4,13 @@ set -e
 
 case "$1" in
     configure)
+        # begin-remove-after: released:trixie
+        # DEP17 P1 M8: Protective diversion for moved file
+        if dpkg --compare-versions "$2" lt 1:2.8.2-2~exp1~; then
+            dpkg-divert --remove --no-rename --divert /lib/systemd/system/nfs-blkmap.service.usr-is-merged /lib/systemd/system/nfs-blkmap.service
+        fi
+
+        # end-remove-after: released:trixie
         ucf --three-way /usr/share/nfs-common/conffiles/idmapd.conf /etc/idmapd.conf
         ucf --three-way /usr/share/nfs-common/conffiles/nfs-common.default /etc/default/nfs-common
         ucf --three-way /usr/share/nfs-common/conffiles/nfs.conf /etc/nfs.conf

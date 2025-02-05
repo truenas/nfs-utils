@@ -1,8 +1,11 @@
-nfs-utils (1:2.8.2-2~exp2) UNRELEASED; urgency=medium
+nfs-utils (1:2.8.2-2) UNRELEASED; urgency=medium
 
   [ Helmut Grohne ]
   * Mitigate file loss in concurrent canonicalization and move between
     packages. (DEP17 P1 M8, Closes: #1095202)
+
+  [ Salvatore Bonaccorso ]
+  * Upload to unstable
 
  -- Salvatore Bonaccorso <carnil@debian.org>  Wed, 05 Feb 2025 12:19:19 +0100
 

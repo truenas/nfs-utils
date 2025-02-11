@@ -294,6 +294,8 @@ putexportent(struct exportent *ep)
 				"no" : "");
 	fprintf(fp, "%scrossmnt,", (ep->e_flags & NFSEXP_CROSSMOUNT)?
 				"" : "no");
+	fprintf(fp, "%szfs_snapdir,", (ep->e_flags & NFSEXP_SNAPDIR)?
+				"" : "no");
 	fprintf(fp, "%ssecure,", (ep->e_flags & NFSEXP_INSECURE_PORT)?
 				"in" : "");
 	fprintf(fp, "%sroot_squash,", (ep->e_flags & NFSEXP_ROOTSQUASH)?
@@ -684,6 +686,12 @@ parseopts(char *cp, struct exportent *ep, int *had_subtree_opt_ptr)
 			setflags(NFSEXP_CROSSMOUNT, active, ep);
 		else if (!strcmp(opt, "nocrossmnt"))
 			clearflags(NFSEXP_CROSSMOUNT, active, ep);
+		/* Add TrueNAS-specific changes */
+		else if (!strcmp(opt, "zfs_snapdir"))
+			setflags(NFSEXP_SNAPDIR, active, ep);
+		else if (!strcmp(opt, "no_zfs_snapdir"))
+			clearflags(NFSEXP_SNAPDIR, active, ep);
+		/* End  TrueNAS */
 		else if (!strcmp(opt, "wdelay"))
 			setflags(NFSEXP_GATHERED_WRITES, active, ep);
 		else if (!strcmp(opt, "no_wdelay"))

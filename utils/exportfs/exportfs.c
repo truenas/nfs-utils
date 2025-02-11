@@ -704,6 +704,8 @@ dump(int verbose, int export_format)
 				c = dumpopt(c, "hide");
 			if (ep->e_flags & NFSEXP_CROSSMOUNT)
 				c = dumpopt(c, "crossmnt");
+			if (ep->e_flags & NFSEXP_SNAPDIR)
+				c = dumpopt(c, "zfs_snapdir");
 			if (ep->e_flags & NFSEXP_NOSUBTREECHECK)
 				c = dumpopt(c, "no_subtree_check");
 			if (ep->e_flags & NFSEXP_NOAUTHNLM)

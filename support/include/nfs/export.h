@@ -28,6 +28,7 @@
 #define NFSEXP_NOACL		0x8000 /* reserved for possible ACL related use */
 #define NFSEXP_V4ROOT		0x10000
 #define NFSEXP_PNFS            0x20000
+#define NFSEXP_SNAPDIR		0x40000
 /*
  * All flags supported by the kernel before addition of the
  * export_features interface:
@@ -40,4 +41,5 @@
 #define NFSEXP_OLD_SECINFO_FLAGS (NFSEXP_READONLY | NFSEXP_ROOTSQUASH \
 					| NFSEXP_ALLSQUASH)
 
+#define NFSEXP_ALLOW_SUBMOUNT (NFSEXP_CROSSMOUNT | NFSEXP_SNAPDIR)
 #endif /* _NSF_EXPORT_H */

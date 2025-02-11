@@ -54,6 +54,9 @@ enum nfsd_fsid {
 };
 
 #undef is_mountpoint
+
+#define ZFSCTL_INO_SNAPDIR 0x0000FFFFFFFFFFFDULL
+
 static int is_mountpoint(const char *path)
 {
 	return check_is_mountpoint(path, nfsd_path_lstat);
@@ -540,15 +543,41 @@ static int is_subdirectory(char *child, char *parent)
 	return (same_path(child, parent, l) && child[l] == '/');
 }
 
+static int is_zfs_snapdir(nfs_export *exp, char *path)
+{
+	char p[PATH_MAX] = { 0 };
+	struct stat st;
+
+	/* Snapdir access disabled */
+	if ((exp->m_export.e_flags & NFSEXP_SNAPDIR) == 0)
+		return 0;
+
+	snprintf(p, sizeof(p), "%s/.zfs/snapshot", exp->m_export.e_path);
+
+	if (!is_subdirectory(path, p))
+		return 0;
+
+	/* Make sure our snapdir is an _actual_ snapdir */
+	if (nfsd_path_lstat(p, &st) != 0)
+		return 0;
+
+	return st.st_ino == ZFSCTL_INO_SNAPDIR;
+}
+
 static int path_matches(nfs_export *exp, char *path)
 {
 	/* Does the path match the export?  I.e. is it an
 	 * exact match, or does the export have CROSSMOUNT, and path
 	 * is a descendant?
 	 */
-	return same_path(path, exp->m_export.e_path, 0)
-		|| ((exp->m_export.e_flags & NFSEXP_CROSSMOUNT)
-		    && is_subdirectory(path, exp->m_export.e_path));
+	if (same_path(path, exp->m_export.e_path, 0))
+		return 1;
+
+	if ((exp->m_export.e_flags & NFSEXP_CROSSMOUNT)
+	    && is_subdirectory(path, exp->m_export.e_path))
+		return 1;
+
+	return is_zfs_snapdir(exp, path);
 }
 
 static int
@@ -562,8 +591,32 @@ static bool subexport(struct exportent *e1, struct exportent *e2)
 {
 	char *p1 = e1->e_path, *p2 = e2->e_path;
 
-	return e2->e_flags & NFSEXP_CROSSMOUNT
-		&& is_subdirectory(p1, p2);
+	if (e2->e_flags & NFSEXP_CROSSMOUNT) {
+		return is_subdirectory(p1, p2);
+	}
+
+	/* Snapdir check is more strict than simple CROSSMNT */
+	/* If we're not exposing snapdir, fail */
+	if ((e2->e_flags & NFSEXP_SNAPDIR) == 0)
+		return 0;
+
+	/* Snapdir must be subdirectory of main export */
+	if (!is_subdirectory(p1, p2))
+		return 0;
+
+	/*
+	 * If the path doesn't contain the ctldir then it can't
+	 * be a snapdir export
+	 */
+	if (strstr(p1, ".zfs/snapshot") == NULL)
+		return 0;
+
+	/*
+	 * Currently these checks don't perform file io. In future
+	 * We may wish to lstat the .zfs/snapshot to ensure it's
+	 * actually in the snapdir.
+	 */
+	return 1;
 }
 
 struct parsed_fsid {
@@ -795,7 +848,7 @@ static void nfsd_fh(int f)
 		for (exp = exportlist[i].p_head; exp; exp = next_exp) {
 			char *path;
 
-			if (exp->m_export.e_flags & NFSEXP_CROSSMOUNT) {
+			if (exp->m_export.e_flags & NFSEXP_ALLOW_SUBMOUNT) {
 				static nfs_export *prev = NULL;
 				static void *mnt = NULL;
 				
@@ -1042,8 +1095,8 @@ lookup_export(char *dom, char *path, struct addrinfo *ai)
 			}
 
 			/* If one is a CROSSMOUNT, then prefer the longest path */
-			if (((found->m_export.e_flags & NFSEXP_CROSSMOUNT) ||
-			     (exp->m_export.e_flags & NFSEXP_CROSSMOUNT)) &&
+			if (((found->m_export.e_flags & NFSEXP_ALLOW_SUBMOUNT) ||
+			     (exp->m_export.e_flags & NFSEXP_ALLOW_SUBMOUNT)) &&
 			    strlen(found->m_export.e_path) !=
 			    strlen(exp->m_export.e_path)) {
 
@@ -1573,7 +1626,7 @@ static int cache_export_ent(char *buf, int buflen, char *domain, struct exporten
 		     " fsid= required", exp->e_path);
 	}
 
-	while (err == 0 && (exp->e_flags & NFSEXP_CROSSMOUNT) && path) {
+	while (err == 0 && (exp->e_flags & NFSEXP_ALLOW_SUBMOUNT) && path) {
 		/* really an 'if', but we can break out of
 		 * a 'while' more easily */
 		/* Look along 'path' for other filesystems

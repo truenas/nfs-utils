@@ -507,12 +507,24 @@ get_rootfh(struct svc_req *rqstp, dirpath *path, nfs_export **expret,
 		return NULL;
 	}
 	if (estb.st_dev != stb.st_dev
-	    && !(exp->m_export.e_flags & NFSEXP_CROSSMOUNT)) {
+	    && !(exp->m_export.e_flags & NFSEXP_ALLOW_SUBMOUNT)) {
 		xlog(L_WARNING, "request to export directory %s below nearest filesystem %s",
 		     p, exp->m_export.e_path);
 		*error = MNT3ERR_ACCES;
 		return NULL;
 	}
+	/* Reject submount if we only want snapdirs */
+	if (estb.st_dev != stb.st_dev
+	    && (exp->m_export.e_flags & NFSEXP_SNAPDIR)
+	    && (strstr(rpath, ".zfs/snapshot") == NULL)) {
+		xlog(L_WARNING,
+		     "request to export directory %s below nearest filesystem %s and "
+		     "is not a zfs snapshot directory.",
+		     p, exp->m_export.e_path);
+		*error = MNT3ERR_ACCES;
+		return NULL;
+	}
+
 	if (exp->m_export.e_mountpoint &&
 		   !check_is_mountpoint(exp->m_export.e_mountpoint[0]?
 				  exp->m_export.e_mountpoint:

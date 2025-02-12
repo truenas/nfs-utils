@@ -220,6 +220,14 @@ This option is not relevant when NFSv4 is use.  NFSv4 never hides
 subordinate filesystems.  Any filesystem that is exported will be
 visible where expected when using NFSv4.
 .TP
+.IR zfs_snapdir
+This option exposes auto-mounted ZFS snapshots within the ZFS
+snapshot directory .zfs/snapshot at the root of a ZFS filesystem
+without exposing subordinate filesystems such as with the
+.I
+crossmnt
+option.
+.TP
 .I crossmnt
 This option is similar to
 .I nohide

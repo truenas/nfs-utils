@@ -587,7 +587,7 @@ parseopts(char *cp, struct exportent *ep, int warn, int *had_subtree_opt_ptr)
 		/* Add TrueNAS-specific changes */
 		else if (!strcmp(opt, "zfs_snapdir"))
 			setflags(NFSEXP_SNAPDIR, active, ep);
-		else if (!strcmp(opt, "no_zfs_snapdir"))
+		else if (!strcmp(opt, "nozfs_snapdir"))
 			clearflags(NFSEXP_SNAPDIR, active, ep);
 		/* End  TrueNAS */
 		else if (!strcmp(opt, "wdelay"))

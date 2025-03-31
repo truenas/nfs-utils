@@ -1,3 +1,2 @@
 multiarch-kerberos-paths.patch
 always-run-generator.patch
-Patch-for-broken-libnfsimapd-static-and-regex-plugin.patch

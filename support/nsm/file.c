@@ -184,7 +184,8 @@ static char *
 nsm_make_temp_pathname(const char *pathname)
 {
 	size_t size;
-	char *path, *base;
+	char *path;
+	const char *base;
 	int len;
 
 	size = strlen(pathname) + sizeof(".new") + 1;
@@ -197,7 +198,7 @@ nsm_make_temp_pathname(const char *pathname)
 
 	base = strrchr(pathname, '/');
 	if (base == NULL)
-		base = pathname;
+		base = (char*)(&pathname);
 	else
 		base++;
 

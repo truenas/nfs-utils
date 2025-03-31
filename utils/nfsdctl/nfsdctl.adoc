@@ -30,6 +30,9 @@ To get information about different subcommand usage, pass the subcommand the
 *-h, --help*::
   Print program help text
 
+*-s, --syslog*::
+  Log to syslog instead of to stderr (the default)
+
 *-V, --version*::
   Print program version
 
@@ -64,6 +67,11 @@ Each subcommand can also accept its own set of options and arguments. The
   addresses must be in dotted-quad form. IPv6 addresses should be in standard
   colon separated form, and must be enclosed in square brackets.
 
+*nlm*::
+
+  Get information about NLM (lockd) settings in the current net namespace. This
+  subcommand takes no arguments.
+
 *status*::
 
   Get information about RPCs currently executing in the server. This subcommand
@@ -88,7 +96,7 @@ Each subcommand can also accept its own set of options and arguments. The
 
     + to enable a version, - to disable
     MAJOR: the major version integer value
-    MINOR: the minor version integet value
+    MINOR: the minor version integer value
 
   The minorversion field is optional. If not given, it will disable or enable
   all minorversions for that major version.
@@ -143,7 +151,7 @@ Change the number of running threads in first pool to 256:
 
 Set the pool-mode to "pernode":
 
-  nfsctl pool-mode pernode
+  nfsdctl pool-mode pernode
 
 == NOTES
 
@@ -157,4 +165,4 @@ privileges.
 
 == SEE ALSO
 
-nfs.conf(5), rpc.nfsd(8), rpc.mountd(8), exports(5), exportfs(8), nfs.conf(5), rpc.rquotad(8),  nfsstat(8), netconfig(5)
+nfs.conf(5), rpc.nfsd(8), rpc.mountd(8), exports(5), exportfs(8), rpc.rquotad(8), nfsstat(8), netconfig(5)

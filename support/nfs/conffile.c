@@ -169,13 +169,15 @@ static void free_conftrans(struct conf_trans *ct)
  * Insert a tag-value combination from LINE (the equal sign is at POS)
  */
 static int
-conf_remove_now(const char *section, const char *tag)
+conf_remove_now(const char *section, const char *arg, const char *tag)
 {
 	struct conf_binding *cb, *next;
 
 	cb = LIST_FIRST(&conf_bindings[conf_hash (section)]);
 	for (; cb; cb = next) {
 		next = LIST_NEXT(cb, link);
+		if (arg && (cb->arg == NULL || strcasecmp(arg, cb->arg) != 0))
+			continue;
 		if (strcasecmp(cb->section, section) == 0
 				&& strcasecmp(cb->tag, tag) == 0) {
 			LIST_REMOVE(cb, link);
@@ -217,7 +219,7 @@ conf_set_now(const char *section, const char *arg, const char *tag,
 	struct conf_binding *node = 0;
 
 	if (override)
-		conf_remove_now(section, tag);
+		conf_remove_now(section, arg, tag);
 	else if (conf_get_section(section, arg, tag)) {
 		if (!is_default) {
 			xlog(LOG_INFO, "conf_set: duplicate tag [%s]:%s, ignoring...",
@@ -1254,7 +1256,7 @@ conf_end(int transaction, int commit)
 						node->is_default);
 					break;
 				case CONF_REMOVE:
-					conf_remove_now(node->section, node->tag);
+					conf_remove_now(node->section, node->arg, node->tag);
 					break;
 				case CONF_REMOVE_SECTION:
 					conf_remove_section_now(node->section);

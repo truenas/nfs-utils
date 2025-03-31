@@ -32,6 +32,7 @@
 #include "xio.h"
 #include "pseudoflavors.h"
 #include "reexport.h"
+#include "nfsd_path.h"
 
 #define EXPORT_DEFAULT_FLAGS	\
   (NFSEXP_READONLY|NFSEXP_ROOTSQUASH|NFSEXP_GATHERED_WRITES|NFSEXP_NOSUBTREECHECK)
@@ -200,7 +201,7 @@ getexportent(int fromkernel)
 		return NULL;
 	}
 	/* resolve symlinks */
-	if (realpath(ee.e_path, rpath) != NULL) {
+	if (nfsd_realpath(ee.e_path, rpath) != NULL) {
 		rpath[sizeof (rpath) - 1] = '\0';
 		strncpy(ee.e_path, rpath, sizeof (ee.e_path) - 1);
 		ee.e_path[sizeof (ee.e_path) - 1] = '\0';

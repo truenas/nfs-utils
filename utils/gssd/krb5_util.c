@@ -168,7 +168,8 @@ static int select_krb5_ccache(const struct dirent *d);
 static int gssd_find_existing_krb5_ccache(uid_t uid, char *dirname,
 		const char **cctype, struct dirent **d);
 static int gssd_get_single_krb5_cred(krb5_context context,
-		krb5_keytab kt, struct gssd_k5_kt_princ *ple, int force_renew);
+		krb5_keytab kt, struct gssd_k5_kt_princ *ple, int force_renew,
+		krb5_ccache ccache);
 static int query_krb5_ccache(const char* cred_cache, char **ret_princname,
 		char **ret_realm);
 
@@ -395,21 +396,14 @@ static int
 gssd_get_single_krb5_cred(krb5_context context,
 			  krb5_keytab kt,
 			  struct gssd_k5_kt_princ *ple,
-			  int force_renew)
+			  int force_renew,
+			  krb5_ccache ccache)
 {
-#ifdef HAVE_KRB5_GET_INIT_CREDS_OPT_SET_ADDRESSLESS
-	krb5_get_init_creds_opt *init_opts = NULL;
-#else
-	krb5_get_init_creds_opt options;
-#endif
-	krb5_get_init_creds_opt *opts;
+	krb5_get_init_creds_opt *opts = NULL;
 	krb5_creds my_creds;
-	krb5_ccache ccache = NULL;
 	char kt_name[BUFSIZ];
-	char cc_name[BUFSIZ];
 	int code;
 	time_t now = time(0);
-	char *cache_type;
 	char *pname = NULL;
 	char *k5err = NULL;
 	int nocache = 0;
@@ -443,35 +437,33 @@ gssd_get_single_krb5_cred(krb5_context context,
 	if ((krb5_unparse_name(context, ple->princ, &pname)))
 		pname = NULL;
 
-#ifdef HAVE_KRB5_GET_INIT_CREDS_OPT_SET_ADDRESSLESS
-	code = krb5_get_init_creds_opt_alloc(context, &init_opts);
+	code = krb5_get_init_creds_opt_alloc(context, &opts);
 	if (code) {
 		k5err = gssd_k5_err_msg(context, code);
 		printerr(0, "ERROR: %s allocating gic options\n", k5err);
 		goto out;
 	}
-	if (krb5_get_init_creds_opt_set_addressless(context, init_opts, 1))
+#ifdef HAVE_KRB5_GET_INIT_CREDS_OPT_SET_ADDRESSLESS
+	if (krb5_get_init_creds_opt_set_addressless(context, opts, 1))
 		printerr(1, "WARNING: Unable to set option for addressless "
 			 "tickets.  May have problems behind a NAT.\n");
+#else
+	krb5_get_init_creds_opt_set_address_list(opts, NULL);
+#endif
 #ifdef TEST_SHORT_LIFETIME
 	/* set a short lifetime (for debugging only!) */
 	printerr(1, "WARNING: Using (debug) short machine cred lifetime!\n");
-	krb5_get_init_creds_opt_set_tkt_life(init_opts, 5*60);
-#endif
-	opts = init_opts;
-
-#else	/* HAVE_KRB5_GET_INIT_CREDS_OPT_SET_ADDRESSLESS */
-
-	krb5_get_init_creds_opt_init(&options);
-	krb5_get_init_creds_opt_set_address_list(&options, NULL);
-#ifdef TEST_SHORT_LIFETIME
-	/* set a short lifetime (for debugging only!) */
-	printerr(0, "WARNING: Using (debug) short machine cred lifetime!\n");
-	krb5_get_init_creds_opt_set_tkt_life(&options, 5*60);
-#endif
-	opts = &options;
+	krb5_get_init_creds_opt_set_tkt_life(opts, 5*60);
 #endif
 
+	if ((code = krb5_get_init_creds_opt_set_out_ccache(context, opts,
+							   ccache))) {
+		k5err = gssd_k5_err_msg(context, code);
+		printerr(1, "WARNING: %s while initializing ccache for "
+			 "principal '%s' using keytab '%s'\n", k5err,
+			 pname ? pname : "<unparsable>", kt_name);
+		goto out;
+	}
 	if ((code = krb5_get_init_creds_keytab(context, &my_creds, ple->princ,
 					       kt, 0, NULL, opts))) {
 		k5err = gssd_k5_err_msg(context, code);
@@ -481,63 +473,18 @@ gssd_get_single_krb5_cred(krb5_context context,
 		goto out;
 	}
 
-	/*
-	 * Initialize cache file which we're going to be using
-	 */
-
 	pthread_mutex_lock(&ple_lock);
-	if (use_memcache)
-	    cache_type = "MEMORY";
-	else
-	    cache_type = "FILE";
-	snprintf(cc_name, sizeof(cc_name), "%s:%s/%s%s_%s",
-		cache_type,
-		ccachesearch[0], GSSD_DEFAULT_CRED_PREFIX,
-		GSSD_DEFAULT_MACHINE_CRED_SUFFIX, ple->realm);
 	ple->endtime = my_creds.times.endtime;
-	if (ple->ccname == NULL || strcmp(ple->ccname, cc_name) != 0) {
-		free(ple->ccname);
-		ple->ccname = strdup(cc_name);
-		if (ple->ccname == NULL) {
-			printerr(0, "ERROR: no storage to duplicate credentials "
-				    "cache name '%s'\n", cc_name);
-			code = ENOMEM;
-			pthread_mutex_unlock(&ple_lock);
-			goto out;
-		}
-	}
 	pthread_mutex_unlock(&ple_lock);
-	if ((code = krb5_cc_resolve(context, cc_name, &ccache))) {
-		k5err = gssd_k5_err_msg(context, code);
-		printerr(0, "ERROR: %s while opening credential cache '%s'\n",
-			 k5err, cc_name);
-		goto out;
-	}
-	if ((code = krb5_cc_initialize(context, ccache, ple->princ))) {
-		k5err = gssd_k5_err_msg(context, code);
-		printerr(0, "ERROR: %s while initializing credential "
-			 "cache '%s'\n", k5err, cc_name);
-		goto out;
-	}
-	if ((code = krb5_cc_store_cred(context, ccache, &my_creds))) {
-		k5err = gssd_k5_err_msg(context, code);
-		printerr(0, "ERROR: %s while storing credentials in '%s'\n",
-			 k5err, cc_name);
-		goto out;
-	}
 
 	code = 0;
-	printerr(2, "%s(0x%lx): principal '%s' ccache:'%s'\n", 
-		__func__, tid, pname, cc_name);
+	printerr(2, "%s(0x%lx): principal '%s' ccache:'%s'\n",
+		__func__, tid, pname, ple->ccname);
   out:
-#ifdef HAVE_KRB5_GET_INIT_CREDS_OPT_SET_ADDRESSLESS
-	if (init_opts)
-		krb5_get_init_creds_opt_free(context, init_opts);
-#endif
+	if (opts)
+		krb5_get_init_creds_opt_free(context, opts);
 	if (pname)
 		k5_free_unparsed_name(context, pname);
-	if (ccache)
-		krb5_cc_close(context, ccache);
 	krb5_free_cred_contents(context, &my_creds);
 	free(k5err);
 	return (code);
@@ -1164,10 +1111,12 @@ gssd_refresh_krb5_machine_credential_internal(char *hostname,
 {
 	krb5_error_code code = 0;
 	krb5_context context;
-	krb5_keytab kt = NULL;;
+	krb5_keytab kt = NULL;
+	krb5_ccache ccache = NULL;
 	int retval = 0;
-	char *k5err = NULL;
+	char *k5err = NULL, *cache_type;
 	const char *svcnames[] = { "$", "root", "nfs", "host", NULL };
+	char cc_name[BUFSIZ];
 
 	/*
 	 * If a specific service name was specified, use it.
@@ -1226,7 +1175,38 @@ gssd_refresh_krb5_machine_credential_internal(char *hostname,
 			goto out_free_kt;
 		}
 	}
-	retval = gssd_get_single_krb5_cred(context, kt, ple, force_renew);
+
+	if (use_memcache)
+		cache_type = "MEMORY";
+	else
+		cache_type = "FILE";
+	snprintf(cc_name, sizeof(cc_name), "%s:%s/%s%s_%s",
+		 cache_type,
+		 ccachesearch[0], GSSD_DEFAULT_CRED_PREFIX,
+		 GSSD_DEFAULT_MACHINE_CRED_SUFFIX, ple->realm);
+
+	pthread_mutex_lock(&ple_lock);
+	if (ple->ccname == NULL || strcmp(ple->ccname, cc_name) != 0) {
+		free(ple->ccname);
+		ple->ccname = strdup(cc_name);
+		if (ple->ccname == NULL) {
+			printerr(0, "ERROR: no storage to duplicate credentials "
+				    "cache name '%s'\n", cc_name);
+			code = ENOMEM;
+			pthread_mutex_unlock(&ple_lock);
+			goto out_free_kt;
+		}
+	}
+	pthread_mutex_unlock(&ple_lock);
+	if ((code = krb5_cc_resolve(context, cc_name, &ccache))) {
+		k5err = gssd_k5_err_msg(context, code);
+		printerr(0, "ERROR: %s while opening credential cache '%s'\n",
+			 k5err, cc_name);
+		goto out_free_kt;
+	}
+
+	retval = gssd_get_single_krb5_cred(context, kt, ple, force_renew, ccache);
+	krb5_cc_close(context, ccache);
 out_free_kt:
 	krb5_kt_close(context, kt);
 out_free_context:

@@ -62,7 +62,7 @@ static ssize_t cache_read(int fd, char *buf, size_t len)
 	return nfsd_path_read(fd, buf, len);
 }
 
-static ssize_t cache_write(int fd, const char *buf, size_t len)
+static ssize_t cache_write(int fd, void *buf, size_t len)
 {
 	return nfsd_path_write(fd, buf, len);
 }

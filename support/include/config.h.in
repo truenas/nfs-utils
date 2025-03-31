@@ -626,6 +626,9 @@
 #endif
 
 
+/* "Use system's linux/lockd_netlink.h" */
+#undef USE_SYSTEM_LOCKD_NETLINK_H
+
 /* "Use system's linux/nfsd_netlink.h" */
 #undef USE_SYSTEM_NFSD_NETLINK_H
 

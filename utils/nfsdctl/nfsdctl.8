@@ -2,12 +2,12 @@
 .\"     Title: nfsdctl
 .\"    Author: Jeff Layton
 .\" Generator: Asciidoctor 2.0.20
-.\"      Date: 2024-11-18
+.\"      Date: 2025-01-09
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "NFSDCTL" "8" "2024-11-18" "\ \&" "\ \&"
+.TH "NFSDCTL" "8" "2025-01-09" "\ \&" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -58,6 +58,11 @@ Enable debug logging
 \fB\-h, \-\-help\fP
 .RS 4
 Print program help text
+.RE
+.sp
+\fB\-s, \-\-syslog\fP
+.RS 4
+Log to syslog instead of to stderr (the default)
 .RE
 .sp
 \fB\-V, \-\-version\fP
@@ -122,6 +127,12 @@ colon separated form, and must be enclosed in square brackets.
 .if n .RE
 .RE
 .sp
+\fBnlm\fP
+.RS 4
+Get information about NLM (lockd) settings in the current net namespace. This
+subcommand takes no arguments.
+.RE
+.sp
 \fBstatus\fP
 .RS 4
 Get information about RPCs currently executing in the server. This subcommand
@@ -163,7 +174,7 @@ The fields are:
 .fam C
 + to enable a version, \- to disable
 MAJOR: the major version integer value
-MINOR: the minor version integet value
+MINOR: the minor version integer value
 .fam
 .fi
 .if n .RE
@@ -291,7 +302,7 @@ Set the pool\-mode to "pernode":
 .if n .RS 4
 .nf
 .fam C
-nfsctl pool\-mode pernode
+nfsdctl pool\-mode pernode
 .fam
 .fi
 .if n .RE
@@ -306,7 +317,7 @@ user, but configuring the server typically requires an account with elevated
 privileges.
 .SH "SEE ALSO"
 .sp
-nfs.conf(5), rpc.nfsd(8), rpc.mountd(8), exports(5), exportfs(8), nfs.conf(5), rpc.rquotad(8),  nfsstat(8), netconfig(5)
+nfs.conf(5), rpc.nfsd(8), rpc.mountd(8), exports(5), exportfs(8), rpc.rquotad(8), nfsstat(8), netconfig(5)
 .SH "AUTHOR"
 .sp
 Jeff Layton

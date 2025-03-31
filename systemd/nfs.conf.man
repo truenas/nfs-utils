@@ -159,19 +159,6 @@ is equivalent to providing the
 option.
 
 .TP
-.B nfsdcltrack
-Recognized values:
-.BR storagedir .
-
-The
-.B nfsdcltrack
-program is run directly by the Linux kernel and there is no
-opportunity to provide command line arguments, so the configuration
-file is the only way to configure this program.  See
-.BR nfsdcltrack (8)
-for details.
-
-.TP
 .B nfsd
 Recognized values:
 .BR threads ,
@@ -329,7 +316,6 @@ for deatils.
 Various configuration files read in order.  Later settings override
 earlier settings.
 .SH SEE ALSO
-.BR nfsdcltrack (8),
 .BR rpc.nfsd (8),
 .BR rpc.mountd (8),
 .BR nfsmount.conf (5).

@@ -91,7 +91,7 @@ Most NFS daemons can be restarted at any time.  They will reload any
 state that they need, and continue servicing requests.  This is rarely
 necessary though.
 .PP
-When configuration changesare make, it can be hard to know exactly
+When configuration changes are made, it can be hard to know exactly
 which services need to be restarted to ensure that the configuration
 takes effect.  The simplest approach, which is often the best, is to
 restart everything.  To help with this, the

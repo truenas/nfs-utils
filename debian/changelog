@@ -1,6 +1,7 @@
 nfs-utils (1:2.8.3-1) UNRELEASED; urgency=medium
 
   * New upstream version 2.8.3
+  * debian/nfs.conf: Sync base version with upstream's nfs.conf
 
  -- Salvatore Bonaccorso <carnil@debian.org>  Mon, 31 Mar 2025 18:47:08 +0200
 

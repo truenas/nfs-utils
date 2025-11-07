@@ -168,6 +168,8 @@ export_d_read(const char *dname, int ignore_hosts)
 	struct dirent **namelist = NULL;
 	int volumes = 0;
 
+	/* TrueNAS: disable exports from any directory */
+	return 0;
 
 	n = scandir(dname, &namelist, NULL, versionsort);
 	if (n < 0) {

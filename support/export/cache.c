@@ -809,6 +809,7 @@ static void nfsd_fh(int f)
 	nfs_export *exp;
 	int i;
 	int dev_missing = 0;
+	int has_snapdir = 0;
 	char buf[RPC_CHAN_BUF_SIZE], *bp;
 	int blen;
 
@@ -875,6 +876,8 @@ static void nfsd_fh(int f)
 			if (!is_ipaddr_client(dom)
 					&& !namelist_client_matches(exp, dom))
 				continue;
+			if (exp->m_export.e_flags & NFSEXP_SNAPDIR)
+				has_snapdir = 1;
 			if (exp->m_export.e_mountpoint &&
 			    !is_mountpoint(exp->m_export.e_mountpoint[0]?
 					   exp->m_export.e_mountpoint:
@@ -944,8 +947,17 @@ static void nfsd_fh(int f)
 	 * remove this from the kernel, so use a really log
 	 * timeout.  Maybe this should be configurable on the command
 	 * line.
+	 *
+	 * For negative responses with zfs_snapdir exports, use a
+	 * short TTL. ZFS snapshots mount and unmount dynamically,
+	 * so a snapshot that is unavailable now may be automounted
+	 * shortly after. A permanent negative would prevent the
+	 * kernel from ever retrying the fsid resolution.
 	 */
-	qword_addint(&bp, &blen, 0x7fffffff);
+	if (!found && has_snapdir)
+		qword_addint(&bp, &blen, time(0) + 30);
+	else
+		qword_addint(&bp, &blen, 0x7fffffff);
 	if (found)
 		qword_add(&bp, &blen, found_path);
 	qword_addeol(&bp, &blen);

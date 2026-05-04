@@ -3,8 +3,3 @@ nfs-common: elevated-privileges 4755 root/root [usr/sbin/mount.nfs]
 # lintian doesn't notice that
 nfs-common: no-manual-page [usr/sbin/mount.nfs4]
 nfs-common: no-manual-page [usr/sbin/umount.nfs4]
-# begin-remove-after: released:trixie
-# DEP17 P1 M8: Protective diversion for moved file
-nfs-common: diversion-for-unknown-file lib/systemd/system/nfs-blkmap.service [preinst:*]
-nfs-common: systemd-diversion lib/systemd/system/nfs-blkmap.service [preinst:*]
-# end-remove-after: released:trixie

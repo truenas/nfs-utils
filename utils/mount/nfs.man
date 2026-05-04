@@ -557,7 +557,7 @@ If
 .BR pos " or " positive
 is specified, the client assumes positive entries are valid
 until their parent directory's cached attributes expire, but
-always revalidates negative entires before an application
+always revalidates negative entries before an application
 can use them.
 .IP
 If

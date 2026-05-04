@@ -140,6 +140,38 @@ XprtRdmaCounters = [
     'reply_waits_for_send',
 ]
 
+# Counters that should be summed across transports when nconnect > 1.
+# Each is stored in a per-transport structure in the kernel
+# (xprt->stat or rpcrdma_xprt.rx_stats) and represents a cumulative
+# event count or utilization value.  Per-connection properties (port,
+# bind_count, connect_count, connect_time, idle_time, maxslots,
+# inflightsends) retain the value from the last transport seen.
+XprtAccumulatedCounters = {
+    'rpcsends',
+    'rpcreceives',
+    'badxids',
+    'backlogutil',
+    'sendutil',
+    'pendutil',
+    'read_segments',
+    'write_segments',
+    'reply_segments',
+    'total_rdma_req',
+    'total_rdma_rep',
+    'pullup',
+    'fixup',
+    'hardway',
+    'failed_marshal',
+    'bad_reply',
+    'nomsg_calls',
+    'recovered_mrs',
+    'orphaned_mrs',
+    'allocated_mrs',
+    'local_invalidates',
+    'empty_sendctx_q',
+    'reply_waits_for_send',
+}
+
 Nfsv3ops = [
     'NULL',
     'GETATTR',
@@ -291,23 +323,22 @@ class DeviceData:
         elif words[0] == 'xprt:':
             self.__rpc_data['protocol'] = words[1]
             if words[1] == 'udp':
-                i = 2
-                for key in XprtUdpCounters:
-                    if i < len(words):
-                        self.__rpc_data[key] = int(words[i])
-                    i += 1
+                counters = XprtUdpCounters
             elif words[1] == 'tcp':
-                i = 2
-                for key in XprtTcpCounters:
-                    if i < len(words):
-                        self.__rpc_data[key] = int(words[i])
-                    i += 1
+                counters = XprtTcpCounters
             elif words[1] == 'rdma':
-                i = 2
-                for key in XprtRdmaCounters:
-                    if i < len(words):
-                        self.__rpc_data[key] = int(words[i])
-                    i += 1
+                counters = XprtRdmaCounters
+            else:
+                counters = []
+            i = 2
+            for key in counters:
+                if i < len(words):
+                    val = int(words[i])
+                    if key in XprtAccumulatedCounters and key in self.__rpc_data:
+                        self.__rpc_data[key] += val
+                    else:
+                        self.__rpc_data[key] = val
+                i += 1
         elif words[0] == 'per-op':
             self.__rpc_data['per-op'] = words
         else:

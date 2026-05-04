@@ -10,6 +10,7 @@ noinst_HEADERS = \
 	misc.h \
 	nfs_mntent.h \
 	nfs_paths.h \
+	nfs_ucred.h \
 	nfsd_path.h \
 	nfslib.h \
 	nfsrpc.h \

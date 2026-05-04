@@ -91,6 +91,7 @@ extern TAILQ_HEAD(active_thread_list_head, upcall_thread_info) active_thread_lis
 /* Encryption types supported by the kernel rpcsec_gss code */
 int num_krb5_enctypes = 0;
 krb5_enctype *krb5_enctypes = NULL;
+char *krb5_enctypes_string = NULL;
 
 /* Args for the cleanup_handler() */
 struct cleanup_args  {
@@ -121,6 +122,8 @@ parse_enctypes(char *enctypes)
 		free(krb5_enctypes);
 		krb5_enctypes = NULL;
 		num_krb5_enctypes = 0;
+		free(krb5_enctypes_string);
+		krb5_enctypes_string = NULL;
 	}
 
 	/* count the number of commas */
@@ -156,6 +159,18 @@ parse_enctypes(char *enctypes)
 	if ((cached_types = malloc(strlen(enctypes)+1)))
 		strcpy(cached_types, enctypes);
 
+	if (num_krb5_enctypes > 0) {
+		if (enctypes_list_to_string(krb5_enctypes, num_krb5_enctypes,
+					    &krb5_enctypes_string) != 0) {
+			printerr(2, "%s: warning: enctypes_list_to_string() failed\n",
+				 __func__);
+			goto out;
+		}
+		printerr(2, "kernel supported enctypes: %s\n",
+			 krb5_enctypes_string);
+	}
+
+out:
 	return 0;
 }
 

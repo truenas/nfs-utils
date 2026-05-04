@@ -79,7 +79,7 @@ static int nfs_pdn_missing_brace_err(void)
 /*
  * Standard hostname:path format
  */
-static int nfs_parse_simple_hostname(const char *dev,
+static int nfs_parse_simple_hostname(char *dev,
 				     char **hostname, char **pathname)
 {
 	size_t host_len, path_len;
@@ -134,7 +134,7 @@ static int nfs_parse_simple_hostname(const char *dev,
  * There could be anything in between the brackets, but we'll
  * let DNS resolution sort it out later.
  */
-static int nfs_parse_square_bracket(const char *dev,
+static int nfs_parse_square_bracket(char *dev,
 				    char **hostname, char **pathname)
 {
 	size_t host_len, path_len;
@@ -185,7 +185,7 @@ static int nfs_parse_square_bracket(const char *dev,
  * with the mount request and failing with a cryptic error message
  * later.
  */
-static int nfs_parse_nfs_url(__attribute__((unused)) const char *dev,
+static int nfs_parse_nfs_url(__attribute__((unused)) char *dev,
 			     __attribute__((unused)) char **hostname,
 			     __attribute__((unused)) char **pathname)
 {

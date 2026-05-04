@@ -589,8 +589,8 @@ client are listed.
 
     (options, args) = parser.parse_args(sys.argv)
     for arg in args[1:]:
-        if arg in mountstats:
-            origdevices += [arg]
+        if os.path.normpath(arg) in mountstats:
+            origdevices += [os.path.normpath(arg)]
         elif not interval_seen:
             try:
                 interval = int(arg)

@@ -1034,10 +1034,6 @@ read_gss_conf(void)
 	root_uses_machine_creds = conf_get_bool("gssd", "use-machine-creds",
 						root_uses_machine_creds);
 	avoid_dns = conf_get_bool("gssd", "avoid-dns", avoid_dns);
-#ifdef HAVE_SET_ALLOWABLE_ENCTYPES
-	limit_to_legacy_enctypes = conf_get_bool("gssd", "limit-to-legacy-enctypes",
-						 limit_to_legacy_enctypes);
-#endif
 	context_timeout = conf_get_num("gssd", "context-timeout", context_timeout);
 	rpc_timeout = conf_get_num("gssd", "rpc-timeout", rpc_timeout);
 	upcall_timeout = conf_get_num("gssd", "upcall-timeout", upcall_timeout);
@@ -1084,7 +1080,7 @@ main(int argc, char *argv[])
 	verbosity = conf_get_num("gssd", "verbosity", verbosity);
 	rpc_verbosity = conf_get_num("gssd", "rpc-verbosity", rpc_verbosity);
 
-	while ((opt = getopt(argc, argv, "HDfvrlmnMp:k:d:t:T:R:U:C")) != -1) {
+	while ((opt = getopt(argc, argv, "HDfvrmnMp:k:d:t:T:R:U:C")) != -1) {
 		switch (opt) {
 			case 'f':
 				fg = 1;
@@ -1122,13 +1118,6 @@ main(int argc, char *argv[])
 				break;
 			case 'R':
 				preferred_realm = strdup(optarg);
-				break;
-			case 'l':
-#ifdef HAVE_SET_ALLOWABLE_ENCTYPES
-				limit_to_legacy_enctypes = 1;
-#else 
-				errx(1, "Encryption type limits not supported by Kerberos libraries.");
-#endif
 				break;
 			case 'D':
 				avoid_dns = false;
@@ -1233,6 +1222,9 @@ main(int argc, char *argv[])
 	daemon_init(fg);
 
 #ifdef HAVE_SET_ALLOWABLE_ENCTYPES
+	rc = get_krb5_library_permitted_enctypes();
+	if (rc)
+		exit(EXIT_FAILURE);
 	rc = get_allowed_enctypes();
 	if (rc)
 		exit(EXIT_FAILURE);

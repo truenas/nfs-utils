@@ -84,6 +84,19 @@ Each subcommand can also accept its own set of options and arguments. The
   value of 0 will shut down the NFS server. Run this without arguments to
   get the current number of running threads in each pool.
 
+[source,bash]
+----
+These options are specific to the "threads" subcommand:
+
+-m, --min-threads=
+    If set to a positive, non-zero value, then dynamic threading is enabled for
+    nfsd.  In this mode, the traditional "threads" values are treated as a maximum
+    number of threads. This specifies the minimum number of threads per pool. The
+    kernel will start the minimum number and dynamically start and stop threads as
+    needed. If the minimum is larger than the maximum, then dynamic threadis is
+    disabled, and the maximum number is started.
+----
+
 *version*::
 
   Get/set the enabled NFS versions for the server. Run without arguments to

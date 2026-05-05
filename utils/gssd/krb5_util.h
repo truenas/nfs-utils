@@ -24,10 +24,13 @@ void gssd_k5_get_default_realm(char **def_realm);
 int gssd_acquire_user_cred(gss_cred_id_t *gss_cred);
 int gssd_k5_remove_bad_service_cred(char *srvname);
 
+int enctypes_list_to_string(krb5_enctype *enctypes, int num_enctypes,
+			    char **enctype_string);
+
 #ifdef HAVE_SET_ALLOWABLE_ENCTYPES
-extern int limit_to_legacy_enctypes;
 int limit_krb5_enctypes(struct rpc_gss_sec *sec);
 int get_allowed_enctypes(void);
+int get_krb5_library_permitted_enctypes(void);
 #endif
 
 /*

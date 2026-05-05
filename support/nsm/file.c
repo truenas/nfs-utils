@@ -394,6 +394,7 @@ _Bool
 nsm_drop_privileges(const int pidfd)
 {
 	struct stat st;
+	uid_t uid;
 
 	(void)umask(S_IRWXO);
 
@@ -406,6 +407,16 @@ nsm_drop_privileges(const int pidfd)
 	if (lstat(NSM_MONITOR_DIR, &st) == -1) {
 		xlog(L_ERROR, "Failed to stat %s/%s: %m", nsm_base_dirname, NSM_MONITOR_DIR);
 		return false;
+	}
+
+	/*
+	 * Check if we are running as non-root user and we are the owner of
+	 * the monitor directory.  Then there is no reason to drop privileges
+	 * and change groups etc.
+	 */
+	uid = getuid();
+	if (uid != 0 && uid == st.st_uid) {
+		return true;
 	}
 
 	if (!prune_bounding_set())

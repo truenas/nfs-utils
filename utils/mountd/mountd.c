@@ -31,6 +31,7 @@
 #include "nfsd_path.h"
 #include "nfslib.h"
 #include "export.h"
+#include "nfs_ucred.h"
 
 extern void my_svc_run(void);
 
@@ -40,6 +41,7 @@ static struct nfs_fh_len *get_rootfh(struct svc_req *, dirpath *, nfs_export **,
 
 int reverse_resolve = 0;
 int manage_gids;
+int apply_root_cred;
 int use_ipaddr = -1;
 
 /* PRC: a high-availability callout program can be specified with -H
@@ -74,9 +76,10 @@ static struct option longopts[] =
 	{ "log-auth", 0, 0, 'l'},
 	{ "cache-use-ipaddr", 0, 0, 'i'},
 	{ "ttl", 1, 0, 'T'},
+	{ "apply-root-cred", 0, 0, 'c' },
 	{ NULL, 0, 0, 0 }
 };
-static char shortopts[] = "o:nFd:p:P:hH:N:V:vurs:t:gliT:";
+static char shortopts[] = "o:nFd:p:P:hH:N:V:vurs:t:gliT:c";
 
 #define NFSVERSBIT(vers)	(0x1 << (vers - 1))
 #define NFSVERSBIT_ALL		(NFSVERSBIT(2) | NFSVERSBIT(3) | NFSVERSBIT(4))
@@ -392,7 +395,10 @@ get_rootfh(struct svc_req *rqstp, dirpath *path, nfs_export **expret,
 	struct nfs_fh_len *fh;
 	char		rpath[MAXPATHLEN+1];
 	char		*p = *path;
+	char		*subpath;
 	char		buf[INET6_ADDRSTRLEN];
+	size_t		epathlen;
+	int		dirfd;
 
 	if (*p == '\0')
 		p = "/";
@@ -412,24 +418,93 @@ get_rootfh(struct svc_req *rqstp, dirpath *path, nfs_export **expret,
 		*error = MNT3ERR_ACCES;
 		return NULL;
 	}
-	if (nfsd_path_stat(p, &stb) < 0) {
-		xlog(L_WARNING, "can't stat exported dir %s: %s",
-				p, strerror(errno));
-		if (errno == ENOENT)
-			*error = MNT3ERR_NOENT;
-		else
-			*error = MNT3ERR_ACCES;
+
+	dirfd = nfsd_openat(AT_FDCWD, exp->m_export.e_path, O_PATH);
+	if (dirfd == -1) {
+		xlog(L_WARNING, "can't open export point %s: %s",
+		     p, strerror(errno));
+		*error = MNT3ERR_NOENT;
 		return NULL;
 	}
+	if (fstat(dirfd, &estb) == -1) {
+		xlog(L_WARNING, "can't stat export point %s: %s",
+		     p, strerror(errno));
+		*error = MNT3ERR_ACCES;
+		close(dirfd);
+		return NULL;
+	}
+	if (exp->m_export.e_mountpoint &&
+		   !check_is_mountpoint(exp->m_export.e_mountpoint[0]?
+				  exp->m_export.e_mountpoint:
+				  exp->m_export.e_path,
+				  nfsd_path_lstat)) {
+		xlog(L_WARNING, "request to export an unmounted filesystem: %s",
+		     p);
+		*error = MNT3ERR_NOENT;
+		close(dirfd);
+		return NULL;
+	}
+
+	epathlen = strlen(exp->m_export.e_path);
+	if (epathlen > strlen(p)) {
+		xlog(L_WARNING, "raced with change of exported path: %s", p);
+		*error = MNT3ERR_NOENT;
+		close(dirfd);
+		return NULL;
+	}
+	subpath = &p[epathlen];
+	while (*subpath == '/')
+		subpath++;
+	if (*subpath != '\0') {
+		struct nfs_ucred *cred = NULL;
+		int fd;
+
+		/* Load the user cred */
+		if (!apply_root_cred) {
+			nfs_ucred_get(&cred, rqstp, &exp->m_export);
+			if (cred == NULL) {
+				xlog(L_WARNING, "can't retrieve credential");
+				*error = MNT3ERR_ACCES;
+				close(dirfd);
+				return NULL;
+			}
+			if (manage_gids)
+				nfs_ucred_reload_groups(cred, &exp->m_export);
+		}
+
+		/* Just perform a lookup of the path */
+		fd = nfsd_cred_openat(cred, dirfd, subpath, O_PATH);
+		close(dirfd);
+		if (cred)
+			nfs_ucred_free(cred);
+		if (fd == -1) {
+			xlog(L_WARNING, "can't open exported dir %s: %s", p,
+			     strerror(errno));
+			if (errno == ENOENT)
+				*error = MNT3ERR_NOENT;
+			else
+				*error = MNT3ERR_ACCES;
+			return NULL;
+		}
+		if (fstat(fd, &stb) == -1) {
+			xlog(L_WARNING, "can't open exported dir %s: %s", p,
+			     strerror(errno));
+			if (errno == ENOENT)
+				*error = MNT3ERR_NOENT;
+			else
+				*error = MNT3ERR_ACCES;
+			close(fd);
+			return NULL;
+		}
+		close(fd);
+	} else {
+		close(dirfd);
+		stb = estb;
+	}
+
 	if (!S_ISDIR(stb.st_mode) && !S_ISREG(stb.st_mode)) {
 		xlog(L_WARNING, "%s is not a directory or regular file", p);
 		*error = MNT3ERR_NOTDIR;
-		return NULL;
-	}
-	if (nfsd_path_stat(exp->m_export.e_path, &estb) < 0) {
-		xlog(L_WARNING, "can't stat export point %s: %s",
-		     p, strerror(errno));
-		*error = MNT3ERR_NOENT;
 		return NULL;
 	}
 	if (estb.st_dev != stb.st_dev
@@ -448,17 +523,6 @@ get_rootfh(struct svc_req *rqstp, dirpath *path, nfs_export **expret,
 		     "is not a zfs snapshot directory.",
 		     p, exp->m_export.e_path);
 		*error = MNT3ERR_ACCES;
-		return NULL;
-	}
-
-	if (exp->m_export.e_mountpoint &&
-		   !check_is_mountpoint(exp->m_export.e_mountpoint[0]?
-				  exp->m_export.e_mountpoint:
-				  exp->m_export.e_path,
-				  nfsd_path_lstat)) {
-		xlog(L_WARNING, "request to export an unmounted filesystem: %s",
-		     p);
-		*error = MNT3ERR_NOENT;
 		return NULL;
 	}
 
@@ -648,6 +712,8 @@ read_mountd_conf(char **argv)
 	ttl = conf_get_num("mountd", "ttl", default_ttl);
 	if (ttl > 0)
 		default_ttl = ttl;
+	apply_root_cred = conf_get_bool("mountd", "apply-root-cred",
+					apply_root_cred);
 }
 
 int
@@ -760,6 +826,9 @@ main(int argc, char **argv)
 				usage(argv[0], 1);
 			}
 			default_ttl = ttl;
+			break;
+		case 'c':
+			apply_root_cred = 1;
 			break;
 		case 0:
 			break;

@@ -24,12 +24,4 @@ case "$1" in
 	    
 	dpkg-statoverride --remove /sbin/mount.nfs || true
 	;;
-    # begin-remove-after: released:trixie
-    abort-upgrade)
-        # DEP17 P1 M8: Protective diversion for moved file
-        if dpkg --compare-versions "$2" lt 1:2.8.2-2~exp1~; then
-            dpkg-divert --remove --no-rename --divert /lib/systemd/system/nfs-blkmap.service.usr-is-merged /lib/systemd/system/nfs-blkmap.service
-        fi
-	;;
-    # end-remove-after: released:trixie
 esac

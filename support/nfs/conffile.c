@@ -1704,12 +1704,13 @@ static bool
 is_tag(const char *line, const char *tagname)
 {
 	char *end;
+	const char *equal;
 	char *name;
 	bool found = false;
 
 	/* quick check, is this even an assignment line */
-	end = strchr(line, '=');
-	if (end == NULL)
+	equal = strchr(line, '=');
+	if (equal == NULL)
 		return false;
 
 	/* skip leading white space before tag name */
@@ -1807,6 +1808,7 @@ static bool
 is_taggedcomment(const char *line, const char *field)
 {
 	char *end;
+	const char *equal;
 	char *name;
 	bool found = false;
 
@@ -1822,8 +1824,8 @@ is_taggedcomment(const char *line, const char *field)
 	line++;
 
 	/* quick check, is this even a likely formatted line */
-	end = strchr(line, ':');
-	if (end == NULL)
+	equal = strchr(line, ':');
+	if (equal == NULL)
 		return false;
 
 	/* skip leading white space before field name */

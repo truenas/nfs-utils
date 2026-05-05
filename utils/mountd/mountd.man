@@ -55,7 +55,7 @@ The
 daemon registers every successful MNT request by adding an entry to the
 .I /var/lib/nfs/rmtab
 file.
-When receivng a UMNT request from an NFS client,
+When receiving a UMNT request from an NFS client,
 .B rpc.mountd
 simply removes the matching entry from
 .IR /var/lib/nfs/rmtab ,
@@ -242,6 +242,32 @@ can support both NFS version 2 and the newer version 3.
 Print the version of
 .B rpc.mountd
 and exit.
+.TP
+.B \-c " or " \-\-apply-root-cred
+When mountd is asked to allow a NFSv3 mount to a subdirectory of the
+exported directory, then it will check if the user asking to mount has
+lookup rights to the directories below that exported directory. When
+performing the check, mountd will apply any root squash or all squash
+rules that were specified for that client.
+
+Performing lookup checks as the user requires that the mountd daemon
+be run as root or that it be given CAP_SETUID and CAP_SETGID privileges
+so that it can change its own effective user and effective group settings.
+When troubleshooting, please also note that LSM frameworks such as SELinux
+can sometimes prevent the daemon from changing the effective user/groups
+despite the capability settings.
+
+In earlier versions of mountd, the same checks were performed using the
+mountd daemon's root privileges, meaning that it could authorise access
+to directories that are not normally accessible to the user requesting
+to mount them. This option enables that legacy behaviour.
+
+.BR Note:
+If there is a need to provide access to specific subdirectories that
+are not normally accessible to a client, it is always possible to add
+export entries that explicitly grant such access. That ability does
+not depend on this option being enabled.
+
 .TP
 .B \-g " or " \-\-manage-gids
 Accept requests from the kernel to map user id numbers into  lists of

@@ -162,6 +162,7 @@ option.
 .B nfsd
 Recognized values:
 .BR threads ,
+.BR min-threads ,
 .BR host ,
 .BR scope ,
 .BR port ,
@@ -179,7 +180,7 @@ Recognized values:
 Version and protocol values are Boolean values as described above,
 and are also used by
 .BR rpc.mountd .
-Threads and the two times are integers.
+Threads, min-threads and the two times are integers.
 .B port
 and
 .B rdma
@@ -265,7 +266,7 @@ Recognized values:
 .BR use-machine-creds ,
 .BR use-gss-proxy ,
 .BR avoid-dns ,
-.BR limit-to-legacy-enctypes ,
+.BR allowed-enctypes ,
 .BR context-timeout ,
 .BR rpc-timeout ,
 .BR keytab-file ,
@@ -301,7 +302,7 @@ Recognized values:
 
 See
 .BR nfsrahead (5)
-for deatils.
+for details.
 
 .SH FILES
 .I /usr/etc/nfs.conf

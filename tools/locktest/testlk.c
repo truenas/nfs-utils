@@ -28,6 +28,7 @@ main(int argc, char **argv)
 		switch (c) {
 		case 'h':
 			usage(0);
+			break;
 		case 'r':
 			cmd = F_SETLK;
 			typ = F_RDLCK;

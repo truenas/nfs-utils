@@ -1,3 +1,9 @@
+nfs-utils (1:2.8.7+truenas-1) unstable; urgency=medium
+
+  * Merge upstream nfs-utils 2.8.7.
+
+ -- Ameer Hamza <ameer.hamza@truenas.com>  Mon, 04 May 2026 18:00:00 +0000
+
 nfs-utils (1:2.8.3-2) UNRELEASED; urgency=medium
 
   * d/salsa-ci.yml: Remove obsolete lintian error suppressions

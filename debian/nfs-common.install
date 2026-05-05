@@ -2,7 +2,6 @@ debian/tmp/usr/sbin/mount.nfs
 debian/tmp/usr/sbin/mount.nfs4
 debian/tmp/usr/sbin/umount.nfs
 debian/tmp/usr/sbin/umount.nfs4
-debian/tmp/usr/sbin/blkmapd
 debian/tmp/usr/sbin/rpc.statd
 debian/tmp/usr/sbin/sm-notify
 debian/tmp/usr/sbin/showmount
@@ -21,10 +20,10 @@ debian/nfs.conf usr/share/nfs-common/conffiles/
 debian/nfs-common.default usr/share/nfs-common/conffiles/
 debian/id_resolver.conf etc/request-key.d/
 debian/tmp/usr/lib/systemd/system-generators/rpc-pipefs-generator
+debian/tmp/usr/lib/systemd/system-generators/nfsroot-generator
 debian/tmp/usr/lib/systemd/system/rpc_pipefs.target
 debian/tmp/usr/lib/systemd/system/*.mount
 debian/tmp/usr/lib/systemd/system/*rpc*.service
-debian/tmp/usr/lib/systemd/system/nfs-blkmap.service
 debian/tmp/usr/lib/systemd/system/nfs-idmapd.service
 debian/tmp/usr/lib/systemd/system/nfs-client.target
 debian/tmp/usr/lib/systemd/system/nfs-utils.service

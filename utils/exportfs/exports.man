@@ -496,7 +496,7 @@ option becomes handy. It will automatically assign a numerical fsid
 to exported NFS shares. The fsid and path relations are stored in a SQLite
 database. If
 .IR auto-fsidnum
-is selected, the fsid is also autmatically allocated.
+is selected, the fsid is also automatically allocated.
 .IR predefined-fsidnum
 assumes pre-allocated fsid numbers and will just look them up.
 This option depends also on the kernel, you will need at least kernel version

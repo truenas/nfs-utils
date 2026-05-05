@@ -87,7 +87,10 @@ def printer(data_list, argument):
     client_info = file_to_dict(client_info_path)
     for i in data_list:
         for key in i:
-            inode = i[key]['superblock'].split(':')[-1]
+            try:
+                inode = i[key]['superblock'].split(':')[-1]
+            except:
+                inode = 'N/A'
             # The ip address is quoted, so we dequote it.
             try:
                 client_ip = client_info['address'][1:-1]

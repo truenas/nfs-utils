@@ -5,6 +5,7 @@
 #define NFSD_PATH_H
 
 #include <sys/stat.h>
+#include <dirent.h>
 
 struct file_handle;
 struct statfs;
@@ -19,11 +20,14 @@ char *		nfsd_path_prepend_dir(const char *dir, const char *pathname);
 
 int 		nfsd_path_stat(const char *pathname, struct stat *statbuf);
 int 		nfsd_path_lstat(const char *pathname, struct stat *statbuf);
+DIR *		nfsd_path_opendir(const char *pathname);
 int		nfsd_cred_openat(const struct nfs_ucred *cred, int dirfd,
 				 const char *path, int flags);
 
 int		nfsd_path_statfs(const char *pathname,
 				   struct statfs *statbuf);
+int		nfsd_path_statfs_nomount(const char *pathname,
+					 struct statfs *statbuf);
 
 char *		nfsd_realpath(const char *path, char *resolved_path);
 

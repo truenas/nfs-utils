@@ -5,6 +5,7 @@
 #define NFSD_PATH_H
 
 #include <sys/stat.h>
+#include <dirent.h>
 
 struct file_handle;
 struct statfs64;
@@ -17,9 +18,12 @@ char *		nfsd_path_prepend_dir(const char *dir, const char *pathname);
 
 int 		nfsd_path_stat(const char *pathname, struct stat *statbuf);
 int 		nfsd_path_lstat(const char *pathname, struct stat *statbuf);
+DIR *		nfsd_path_opendir(const char *pathname);
 
 int		nfsd_path_statfs64(const char *pathname,
 				   struct statfs64 *statbuf);
+int		nfsd_path_statfs64_nomount(const char *pathname,
+					   struct statfs64 *statbuf);
 
 char *		nfsd_realpath(const char *path, char *resolved_path);
 

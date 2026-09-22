@@ -184,6 +184,44 @@ nfsd_path_lstat(const char *pathname, struct stat *statbuf)
 	return nfsd_run_stat(nfsd_wq, nfsd_lstatfunc, pathname, statbuf);
 }
 
+struct nfsd_opendir_data {
+	const char *pathname;
+	DIR *dir;
+	int err;
+};
+
+static void
+nfsd_opendirfunc(void *data)
+{
+	struct nfsd_opendir_data *d = data;
+
+	d->dir = opendir(d->pathname);
+	if (!d->dir)
+		d->err = errno;
+}
+
+/*
+ * opendir() resolves a path, so it runs in the chrooted worker like the
+ * stat helpers.  readdir() and closedir() on the result do not need to.
+ */
+DIR *
+nfsd_path_opendir(const char *pathname)
+{
+	struct nfsd_opendir_data data = {
+		pathname,
+		NULL,
+		0
+	};
+
+	if (!nfsd_wq)
+		return opendir(pathname);
+
+	xthread_work_run_sync(nfsd_wq, nfsd_opendirfunc, &data);
+	if (!data.dir)
+		errno = data.err;
+	return data.dir;
+}
+
 struct nfsd_statfs64_data {
 	const char *pathname;
 	struct statfs64 *statbuf;
@@ -224,6 +262,48 @@ nfsd_path_statfs64(const char *pathname, struct statfs64 *statbuf)
 	if (!nfsd_wq)
 		return statfs64(pathname, statbuf);
 	return nfsd_run_statfs64(nfsd_wq, pathname, statbuf);
+}
+
+static void
+nfsd_statfs64_nomountfunc(void *data)
+{
+	struct nfsd_statfs64_data *d = data;
+	int fd;
+
+	fd = open(d->pathname, O_PATH | O_CLOEXEC);
+	if (fd < 0) {
+		d->ret = -1;
+		d->err = errno;
+		return;
+	}
+	d->ret = fstatfs64(fd, d->statbuf);
+	if (d->ret < 0)
+		d->err = errno;
+	close(fd);
+}
+
+/*
+ * statfs64() without triggering an automount: an O_PATH open stops at the
+ * automount point and fstatfs64() then describes the entry itself, which
+ * for a zfs snapshot entry is its snapshot's fsid.
+ */
+int
+nfsd_path_statfs64_nomount(const char *pathname, struct statfs64 *statbuf)
+{
+	struct nfsd_statfs64_data data = {
+		pathname,
+		statbuf,
+		0,
+		0
+	};
+
+	if (!nfsd_wq)
+		nfsd_statfs64_nomountfunc(&data);
+	else
+		xthread_work_run_sync(nfsd_wq, nfsd_statfs64_nomountfunc, &data);
+	if (data.ret < 0)
+		errno = data.err;
+	return data.ret;
 }
 
 struct nfsd_realpath_data {

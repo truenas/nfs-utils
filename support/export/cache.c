@@ -26,6 +26,7 @@
 #include <pwd.h>
 #include <grp.h>
 #include <mntent.h>
+#include <dirent.h>
 #include "misc.h"
 #include "nfsd_path.h"
 #include "nfslib.h"
@@ -405,6 +406,19 @@ static int uuid_by_path(char *path, int type, size_t uuidlen, char *uuid)
 		return 0;
 
 	get_uuid(val, uuidlen, uuid);
+	return 1;
+}
+
+/* uuid_by_path() for an fsid already read by statfs() */
+static int uuid_by_statfs(const struct statfs *st, size_t uuidlen, char *uuid)
+{
+	char fsid_val[17];
+
+	if (!(st->f_fsid.__val[0] || st->f_fsid.__val[1]))
+		return 0;
+	snprintf(fsid_val, sizeof(fsid_val), "%08x%08x",
+		 st->f_fsid.__val[0], st->f_fsid.__val[1]);
+	get_uuid(fsid_val, uuidlen, uuid);
 	return 1;
 }
 
@@ -809,6 +823,138 @@ static struct addrinfo *lookup_client_addr(char *dom)
 	return ret;
 }
 
+/*
+ * Upcalls are serviced serially, so bound how long one walk may block
+ * mountd.  A cut-off walk restarts on the next lookup.
+ */
+#define SNAPDIR_UNCOVER_BUDGET_MS 1500
+
+static long
+elapsed_ms(const struct timespec *start)
+{
+	struct timespec now;
+
+	if (clock_gettime(CLOCK_MONOTONIC, &now) != 0)
+		return 0;
+	return (now.tv_sec - start->tv_sec) * 1000 +
+	       (now.tv_nsec - start->tv_nsec) / 1000000;
+}
+
+/*
+ * match_fsid() only recognises a snapshot's fsid while the snapshot is
+ * mounted, and a client holding a file handle into a snapshot never
+ * triggers the automount, so once the snapshot is unmounted (failover,
+ * expiry) the handle stays ESTALE.  Walk the snapshot directory, read
+ * each entry's fsid without mounting it and mount only the match.  The
+ * zfs analogue of reexpdb_uncover_subvolume().
+ */
+static struct exportent *
+uncover_snapshot_fsid(struct parsed_fsid *parsed, char *dom,
+		      struct addrinfo *ai, char **pathp)
+{
+	struct timespec start;
+	int i;
+
+	/* only the uuid fsid types are derived from the path */
+	switch (parsed->fsidtype) {
+	case FSID_UUID4_INUM:
+	case FSID_UUID8:
+	case FSID_UUID16:
+	case FSID_UUID16_INUM:
+		break;
+	default:
+		return NULL;
+	}
+
+	if (clock_gettime(CLOCK_MONOTONIC, &start) != 0)
+		return NULL;
+
+	for (i = 0; i < MCL_MAXTYPES; i++) {
+		nfs_export *exp;
+
+		for (exp = exportlist[i].p_head; exp; exp = exp->m_next) {
+			char snapdir[PATH_MAX], sub[PATH_MAX];
+			struct dirent *de;
+			struct stat st;
+			DIR *dir;
+
+			if ((exp->m_export.e_flags & NFSEXP_SNAPDIR) == 0)
+				continue;
+			/* an explicit fsid= is matched on that uuid alone */
+			if (exp->m_export.e_uuid)
+				continue;
+			if (!client_matches(exp, dom, ai))
+				continue;
+			if (snprintf(snapdir, sizeof(snapdir), "%s/.zfs/snapshot",
+				     exp->m_export.e_path) >= (int)sizeof(snapdir))
+				continue;
+
+			/* Make sure our snapdir is an _actual_ snapdir */
+			if (nfsd_path_lstat(snapdir, &st) != 0 ||
+			    st.st_ino != ZFSCTL_INO_SNAPDIR)
+				continue;
+
+			dir = nfsd_path_opendir(snapdir);
+			if (dir == NULL)
+				continue;
+
+			while ((de = readdir(dir)) != NULL) {
+				struct statfs stf;
+				char u[16];
+
+				/* snapshot names may start with a dot,
+				 * so skip only "." and ".." */
+				if (de->d_name[0] == '.' &&
+				    (de->d_name[1] == '\0' ||
+				     (de->d_name[1] == '.' &&
+				      de->d_name[2] == '\0')))
+					continue;
+				if (snprintf(sub, sizeof(sub), "%s/%s", snapdir,
+					     de->d_name) >= (int)sizeof(sub))
+					continue;
+
+				if (elapsed_ms(&start) > SNAPDIR_UNCOVER_BUDGET_MS) {
+					xlog(L_WARNING, "%s: uncover budget "
+					     "exhausted, retrying on the next "
+					     "lookup", snapdir);
+					closedir(dir);
+					return NULL;
+				}
+
+				/* read the entry's fsid without mounting it */
+				if (nfsd_path_statfs_nomount(sub, &stf) != 0) {
+					if (errno == EIO) {
+						/* no zfs support, give up */
+						closedir(dir);
+						return NULL;
+					}
+					continue;
+				}
+				if (!uuid_by_statfs(&stf, parsed->uuidlen, u) ||
+				    memcmp(u, parsed->fhuuid, parsed->uuidlen) != 0)
+					continue;
+
+				/* statfs() through the automount mounts it,
+				 * match_fsid() confirms it */
+				if (nfsd_path_statfs(sub, &stf) != 0 ||
+				    match_fsid(parsed, exp, sub) != 1)
+					continue;
+
+				closedir(dir);
+				free(*pathp);
+				*pathp = strdup(sub);
+				if (*pathp == NULL)
+					return NULL;
+				xlog(D_AUTH, "uncovered snapshot %s for fsid "
+				     "lookup", sub);
+				return &exp->m_export;
+			}
+			closedir(dir);
+		}
+	}
+	return NULL;
+}
+
 #define RETRY_SEC 120
 struct delayed {
 	char *message;
@@ -941,6 +1087,10 @@ static int nfsd_handle_fh(int f, char *bp, int blen)
 			}
 		}
 	}
+
+	/* the fsid may belong to a snapshot that is not mounted */
+	if (!found && has_snapdir)
+		found = uncover_snapshot_fsid(&parsed, dom, ai, &found_path);
 
 	if (!found) {
 		/* The missing dev could be what we want, so just be
